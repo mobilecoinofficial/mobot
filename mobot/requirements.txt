@@ -1,0 +1,4 @@
+# requirements for signald
+attrs
+
+django==3.0.4
