@@ -2,13 +2,14 @@
 Mobilecoin/Signal Chatbot integration
 
 ## Config
+
 | Variable | Description |
 | --- | --- |
 | `DATABASE` | Type of DB `postgresql` or `sqlite` |
 | `DATABASE_NAME` | PostgreSQL database name |
 | `DATABASE_USER` | PostgreSQL database user |
 | `DATABASE_PASSWORD` | PostgreSQL database password |
-| `DATABASE_SSLMODE` | PostgreSQL database SSL mode (`preferred`) |
+| `DATABASE_SSL_MODE` | PostgreSQL database SSL mode (`preferred`) |
 | `DATABASE_HOST` | PostgreSQL database host |
 | `SIGNALD_ADDRESS` | `signald` service host |
 | `FULLSERVICE_ADDRESS` | `full-service` service host |
@@ -69,4 +70,7 @@ http://mobot.local:8000/admin/
 ### Subscribing a number
 
 1. Start apps
-    Mobot-client will fail on initail subscribe.
+    Mobot-client will fail on initial subscribe.
+
+1. Exec into signald container and use nc to register number and complete captcha, and text validation.
+
