@@ -11,7 +11,7 @@ signal = Signal(STORE_NUMBER, socket_path=(SIGNALD_ADDRESS, int(SIGNALD_PORT)))
 # catch all chat handler, will perform our own routing from here
 @signal.chat_handler("")
 def chat_router(message, match):
-    print(message)
+    return "Hello, World!"
 
 class Command(BaseCommand):
     help = 'Run MOBot Client'
