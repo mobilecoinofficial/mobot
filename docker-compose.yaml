@@ -1,0 +1,88 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres
+    restart: always
+    volumes:
+    - db:/var/lib/postgresql/data
+    env_file:
+    - .docker/env
+    expose:
+    - 5432
+    networks:
+      mobot:
+        ipv4_address: 10.200.0.5
+  signald:
+    image: mobilecoin/signald:latest
+    volumes:
+    - signald:/signald
+    expose:
+    - 15432
+    networks:
+      mobot:
+        ipv4_address: 10.200.0.6
+  # need full service
+  full-service:
+    image: mobilecoin/full-service:0.0.0-testnet_1.0.1_pre2
+    volumes:
+    - full-service:/data
+    tty: true
+    command:
+    - --peer=mc://node1.test.mobilecoin.com/
+    - --peer=mc://node2.test.mobilecoin.com/
+    - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node1.test.mobilecoin.com/
+    - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node2.test.mobilecoin.com/
+    expose:
+    - 9090
+    networks:
+      mobot:
+        ipv4_address: 10.200.0.7
+  admin:
+    restart: always
+    build:
+      context: .
+      dockerfile: ./.docker/Dockerfile.admin
+    env_file:
+    - .docker/env
+    volumes:
+    - ./mobot:/app
+    depends_on:
+    - db
+    - signald
+    - full-service
+    expose:
+    - 8000
+    networks:
+      mobot:
+        ipv4_address: 10.200.0.8
+  mobot-client:
+    restart: always
+    build: 
+      context: .
+      dockerfile: ./.docker/Dockerfile.mobot-client
+    env_file:
+    - .docker/env
+    volumes:
+    - ./mobot:/app
+    - signald:/data/signald
+    depends_on:
+    - db
+    - signald
+    - full-service
+    - admin
+    networks:
+      mobot:
+        ipv4_address: 10.200.0.9
+
+volumes:
+  db:
+  signald:
+  full-service:
+
+networks:
+  mobot:
+    ipam:
+      driver: default
+      config:
+          - subnet: 10.200.0.0/24
