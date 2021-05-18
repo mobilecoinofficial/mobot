@@ -14,7 +14,7 @@ services:
       mobot:
         ipv4_address: 10.200.0.5
   signald:
-    image: mobilecoin/signald:0.12.0-mc.0.0.1
+    image: mobilecoin/signald:latest
     volumes:
     - signald:/signald
     expose:

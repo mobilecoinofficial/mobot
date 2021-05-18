@@ -20,6 +20,13 @@ Mobilecoin/Signal Chatbot integration
 
 ## Running with docker-compose
 
+This compose file has been set up to run in production mode. 
+
+TODO:
+
+* run in a development context (restart on code changes, runtime debug...)
+* we probably don't need 2 builds, use same dockerfile with admin and mobot-client startup scripts.
+
 ```
 COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose up --build
 ```
@@ -30,10 +37,10 @@ This will start up:
 * signald
 * full-service
 
-Build:
+This will build:
 
-* admin (./mobot/mobot)
-* mobot-client (./mobot/mobot_client
+* admin
+* mobot-client
 
 ### Setup
 
@@ -57,3 +64,9 @@ Bonus add a `/etc/hosts` entry to `mobot.local` and browse to a more friendly ad
 ```
 
 http://mobot.local:8000/admin/
+
+
+### Subscribing a number
+
+1. Start apps
+    Mobot-client will fail on initail subscribe.
