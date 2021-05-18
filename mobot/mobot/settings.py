@@ -25,6 +25,8 @@ SECRET_KEY = os.environ['SECRET_KEY']
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', False)
 
+DATABASE = os.environ.get('DATABASE', 'sqlite')
+
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1').split(',')
 
 # Application definition
@@ -73,19 +75,18 @@ WSGI_APPLICATION = 'mobot.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-if not DEBUG:
+if DATABASE == "postgresql":
     try:
         DATABASE_NAME = os.environ["DATABASE_NAME"]
         DATABASE_USER = os.environ["DATABASE_USER"]
-        DATABASE_PASSWORD = os.environ["DATABSE_PASSWORD"]
+        DATABASE_PASSWORD = os.environ["DATABASE_PASSWORD"]
         DATABASE_HOST = os.environ["DATABASE_HOST"]
-        DATABASE_SSL_MODE = os.environ.get("DATABASE_SSL_MODE", "require")
     except KeyError:
         print("expecting environment variables for database fields")
 
     DATABASE_PORT = os.environ.get("DATABASE_PORT", "5432")
+    DATABASE_SSL_MODE = os.environ.get("DATABASE_SSL_MODE", "require")
 
-if not DEBUG:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -161,6 +162,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = '/static'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
