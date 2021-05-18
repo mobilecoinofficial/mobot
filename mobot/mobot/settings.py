@@ -20,12 +20,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-u#b3zht+i3v-8-a_-t(n%=jlnl3s8+q&$&r-wy$gspa^lb(v$w'
+SECRET_KEY = os.environ['SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', False)
 
-ALLOWED_HOSTS = [os.environ.get('HOST', '127.0.0.1')]
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1').split(',')
 
 # Application definition
 
@@ -79,6 +79,7 @@ if not DEBUG:
         DATABASE_USER = os.environ["DATABASE_USER"]
         DATABASE_PASSWORD = os.environ["DATABSE_PASSWORD"]
         DATABASE_HOST = os.environ["DATABASE_HOST"]
+        DATABASE_SSL_MODE = os.environ.get("DATABASE_SSL_MODE", "require")
     except KeyError:
         print("expecting environment variables for database fields")
 
@@ -94,7 +95,7 @@ if not DEBUG:
             'HOST': DATABASE_HOST,
             'PORT': DATABASE_PORT,
             'OPTIONS': {
-                'sslmode': 'require',
+                'sslmode': DATABASE_SSL_MODE,
             },
         }
     }
