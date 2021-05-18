@@ -101,12 +101,14 @@ class Signal:
             except json.JSONDecodeError:
                 print("Invalid JSON")
 
+            if message.get("type") == "unreadable_message":
+                self.send_message(message.source, "Could you repeat that?")
+
             if message.get("type") != "message" or (
                 not message["data"].get("isReceipt") and message["data"].get("dataMessage") is None
             ):
-                # If the message type isn't "message", or if it's a weird message whose
-                # purpose I don't know, return. I think the weird message is a typing
-                # notification.
+                # We need to do more digging to figure out what all of the other message types could
+                # be, and how to properly handle them when they occur
                 continue
 
             message = message["data"]
