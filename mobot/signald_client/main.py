@@ -102,7 +102,7 @@ class Signal:
                 print("Invalid JSON")
 
             if message.get("type") == "unreadable_message":
-                self.send_message(message.source, "Could you repeat that?")
+                self.send_message(message["source"], "Could you repeat that?")
 
             if message.get("type") != "message" or (
                 not message["data"].get("isReceipt") and message["data"].get("dataMessage") is None
