@@ -85,7 +85,8 @@ if DATABASE == "postgresql":
         print("expecting environment variables for database fields")
 
     DATABASE_PORT = os.environ.get("DATABASE_PORT", "5432")
-    DATABASE_SSL_MODE = os.environ.get("DATABASE_SSL_MODE", "require")
+    DATABASE_SSL_MODE = os.environ.get("DATABASE_SSL_MODE", "prefer")
+    DATABASE_SSL_ROOT_CERT = os.environ.get("DATABASE_SSL_ROOT_CERT", "")
 
     DATABASES = {
         'default': {
@@ -97,6 +98,7 @@ if DATABASE == "postgresql":
             'PORT': DATABASE_PORT,
             'OPTIONS': {
                 'sslmode': DATABASE_SSL_MODE,
+                'sslrootcert': DATABASE_SSL_ROOT_CERT,
             },
         }
     }
