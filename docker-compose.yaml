@@ -7,12 +7,13 @@ services:
     volumes:
     - db:/var/lib/postgresql/data
     env_file:
-    - .docker/env
+    - ./docker/env
     expose:
     - 5432
     networks:
       mobot:
         ipv4_address: 10.200.0.5
+
   signald:
     image: mobilecoin/signald:latest
     volumes:
@@ -22,54 +23,57 @@ services:
     networks:
       mobot:
         ipv4_address: 10.200.0.6
-  # need full service
-  full-service:
-    image: mobilecoin/full-service:0.0.0-testnet_1.0.1_pre2
-    volumes:
-    - full-service:/data
-    tty: true
-    command:
-    - --peer=mc://node1.test.mobilecoin.com/
-    - --peer=mc://node2.test.mobilecoin.com/
-    - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node1.test.mobilecoin.com/
-    - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node2.test.mobilecoin.com/
-    expose:
-    - 9090
-    networks:
-      mobot:
-        ipv4_address: 10.200.0.7
+
+  # full-service:
+  #   image: mobilecoin/full-service:0.0.0-testnet_1.0.1_pre2
+  #   volumes:
+  #   - full-service:/data
+  #   tty: true
+  #   command:
+  #   - --peer=mc://node1.test.mobilecoin.com/
+  #   - --peer=mc://node2.test.mobilecoin.com/
+  #   - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node1.test.mobilecoin.com/
+  #   - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node2.test.mobilecoin.com/
+  #   expose:
+  #   - 9090
+  #   networks:
+  #     mobot:
+  #       ipv4_address: 10.200.0.7
+
   admin:
     restart: always
     build:
       context: .
-      dockerfile: ./.docker/Dockerfile.admin
+      dockerfile: ./Dockerfile
+    command: /usr/local/bin/admin_start.sh
     env_file:
-    - .docker/env
+    - ./docker/env
     volumes:
     - ./mobot:/app
+    - signald:/signald
     depends_on:
     - db
-    - signald
-    - full-service
     expose:
     - 8000
     networks:
       mobot:
         ipv4_address: 10.200.0.8
+
   mobot-client:
     restart: always
     build: 
       context: .
-      dockerfile: ./.docker/Dockerfile.mobot-client
+      dockerfile: ./Dockerfile
+    command: /usr/local/bin/mobot_client_start.sh
     env_file:
-    - .docker/env
+    - ./docker/env
     volumes:
     - ./mobot:/app
-    - signald:/data/signald
+    - signald:/signald
     depends_on:
     - db
     - signald
-    - full-service
+    # - full-service
     - admin
     networks:
       mobot:

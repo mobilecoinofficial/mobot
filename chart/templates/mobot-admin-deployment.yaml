@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "chart.fullname" . }}-mobot-admin
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.mobotAdmin.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+      app: mobot-admin
+  template:
+    metadata:
+      annotations:
+        {{- toYaml .Values.mobotAdmin.podAnnotations | nindent 8 }}
+      labels:
+        {{- include "chart.selectorLabels" . | nindent 8 }}
+        app: mobot-admin
+    spec:
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+      - name: mobot-admin
+        args:
+        - /usr/local/bin/admin_start.sh
+        env:
+        - name: DATABASE
+          value: postgresql
+        - name: DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chart.mobotDatabaseConfigMapName" . }}
+              key: postgresql-hostname
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chart.mobotDatabaseConfigMapName" . }}
+              key: postgresql-database
+        - name: DATABASE_USER
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chart.mobotDatabaseConfigMapName" . }}
+              key: postgresql-username
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "chart.mobotDatabaseSecretName" . }}
+              key: postgresql-password
+        - name: DATABASE_SSL_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chart.mobotDatabaseConfigMapName" . }}
+              key: postgresql-ssl-mode
+        - name: DATABASE_SSL_ROOT_CERT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chart.mobotDatabaseConfigMapName" . }}
+              key: postgresql-ssl-root-cert
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "chart.mobotSecretName" . }}
+              key: SECRET_KEY
+        - name: ALLOWED_HOSTS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chart.mobotConfigMapName" . }}
+              key: HOSTNAME
+        - name: SIGNALD_ADDRESS
+          value: {{ include "chart.fullname" . }}-signald
+        - name: FULL_SERVICE_ADDRESS
+          value: {{ include "chart.fullname" . }}-full-service
+        securityContext:
+          capabilities:
+            drop:
+            - all
+          readOnlyRootFilesystem: true
+        image: "{{ .Values.mobotAdmin.image.repository }}:{{ .Values.mobotAdmin.image.tag }}"
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /signald
+          name: mobot
+        resources:
+          {{- toYaml .Values.mobotAdmin.resources | nindent 12 }}
+      nodeSelector:
+        {{- toYaml .Values.mobotAdmin.nodeSelector | nindent 8 }}
+      affinity:
+        {{- toYaml .Values.mobotAdmin.affinity | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.mobotAdmin.tolerations | nindent 8 }}
+      volumes:
+      - name: mobot
+        persistentVolumeClaim:
+          claimName: mobot

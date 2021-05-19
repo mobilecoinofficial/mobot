@@ -1,0 +1,16 @@
+{{- if eq .Values.mobotDatabase.configMap.external false }}
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: {{ include "chart.mobotDatabaseConfigMapName" . }}
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+data:
+  postgresql-database: {{ .Values.mobotDatabase.database | quote }}
+  postgresql-hostname: {{ .Values.mobotDatabase.hostname | quote }}
+  postgresql-port: {{ .Values.mobotDatabase.port | quote }}
+  postgresql-ssl-options: ""
+  postgresql-ssl-mode: {{ .Values.mobotDatabase.sslMode | quote }}
+  postgresql-ssl-root-cert: {{ .Values.mobotDatabase.sslRootCert | quote }}
+  postgresql-username: {{ .Values.mobotDatabase.username | quote }}
+{{- end }}

@@ -70,7 +70,36 @@ http://mobot.local:8000/admin/
 ### Subscribing a number
 
 1. Start apps
-    Mobot-client will fail on initial subscribe.
+    Mobot-client may fail on initial subscribe.
 
 1. Exec into signald container and use nc to register number and complete captcha, and text validation.
+
+    ```
+    docker-compose exec -it signald bash
+    nc 0.0.0.0 15432
+    ```
+
+    First register will produce an error. (can we skip this and just generate a captcha code?)
+
+    ```
+    {"type": "register", "username":"+12034058799"}
+    ```
+
+    Generate captcha code https://signalcaptchas.org/registration/generate.html
+
+    ```
+    {"type": "register", "username":"+12034058799", "captcha": ""}
+    ```
+
+    Verify with text message.
+
+    ```
+    {"type": "verify", "username":"+12034058799", "code": ""}
+    ```
+
+    Subscribe to see messages flow.
+
+    ```
+    {"type": "subscribe", "username":"+12034058799"}
+    ```
 
