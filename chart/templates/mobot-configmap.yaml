@@ -1,0 +1,12 @@
+{{ if eq .Values.mobotConfig.configMap.external false }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "chart.mobotConfigMapName" . }}
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+data:
+  HOSTNAME: {{ .Values.mobotConfig.hostname }}
+  STORE_NUMBERS: |-
+    {{ toYaml .Values.mobotConfig.storeNumbers | nindent 4 }}
+{{- end }}

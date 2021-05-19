@@ -1,0 +1,49 @@
+# This should probably be a statefulSet so we can leverage PVC
+{{- if .Values.fullService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "chart.fullname" . }}-full-service
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.fullService.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+      app: full-service
+  template:
+    metadata:
+      annotations:
+        {{- toYaml .Values.fullService.podAnnotations | nindent 8 }}
+      labels:
+        {{- include "chart.selectorLabels" . | nindent 8 }}
+        app: full-service
+    spec:
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+      - name: full-service
+        securityContext:
+          capabilities:
+            drop:
+            - all
+          readOnlyRootFilesystem: true
+        image: "{{ .Values.fullService.image.repository }}:{{ .Values.fullService.image.tag }}"
+        imagePullPolicy: Always
+        ports:
+        - name: full-service
+          containerPort: 9090
+          protocol: TCP
+        resources:
+          {{- toYaml .Values.fullService.resources | nindent 12 }}
+      nodeSelector:
+        {{- toYaml .Values.fullService.nodeSelector | nindent 8 }}
+      affinity:
+        {{- toYaml .Values.fullService.affinity | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.fullService.tolerations | nindent 8 }}
+{{- end }}
