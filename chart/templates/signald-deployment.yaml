@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "chart.fullname" . }}-signald
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.signald.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+      app: signald
+  template:
+    metadata:
+      annotations:
+        {{- toYaml .Values.signald.podAnnotations | nindent 8 }}
+      labels:
+        {{- include "chart.selectorLabels" . | nindent 8 }}
+        app: signald
+    spec:
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+      - name: signald
+        securityContext:
+          capabilities:
+            drop:
+            - all
+          readOnlyRootFilesystem: true
+        image: "{{ .Values.signald.image.repository }}:{{ .Values.signald.image.tag }}"
+        imagePullPolicy: Always
+        ports:
+        - name: signald
+          containerPort: 15432
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /signald
+          name: mobot
+        - mountPath: /tmp
+          name: tmp
+        resources:
+          {{- toYaml .Values.signald.resources | nindent 12 }}
+      nodeSelector:
+        {{- toYaml .Values.signald.nodeSelector | nindent 8 }}
+      affinity:
+        {{- toYaml .Values.signald.affinity | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.signald.tolerations | nindent 8 }}
+      volumes:
+      - name: mobot
+        persistentVolumeClaim:
+          claimName: mobot
+      - name: tmp
+        emptyDir: {}
