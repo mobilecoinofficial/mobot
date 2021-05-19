@@ -19,6 +19,8 @@ SESSION_STATE_ALLOW_CONTACT_REQUESTED = 1
 MESSAGE_DIRECTION_RECEIVED = 0
 MESSAGE_DIRECTION_SENT = 1
 
+signal.set_profile("MOBot", None, "avatar.png", False)
+
 # catch all chat handler, will perform our own routing from here
 @signal.chat_handler("")
 def chat_router(message, match):
