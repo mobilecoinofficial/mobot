@@ -1,0 +1,98 @@
+nameOverride: ""
+fullnameOverride: ""
+
+imagePullSecrets:
+- name: docker-credentials
+
+signald:
+  replicaCount: 1
+  image:
+    repository: mobilecoin/signald
+    tag: 0.12.0-mc.0.0.2
+  podAnnotations:
+    fluentbit.io/include: 'true'
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+fullService:
+  enabled: false
+  replicaCount: 1
+  image:
+    repository: mobilecoin/full-service
+    tag: ""
+  podAnnotations:
+    fluentbit.io/include: 'true'
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+mobotClient:
+  replicaCount: 1
+  image:
+    repository: mobilecoin/mobot
+    tag: ""
+  podAnnotations:
+    fluentbit.io/include: 'true'
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+mobotAdmin:
+  replicaCount: 1
+  image:
+    repository: mobilecoin/mobot
+    tag: ""
+  podAnnotations:
+    fluentbit.io/include: 'true'
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  ingress:
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-production-http
+
+### mobot Configuration
+### Configure with chart external secrets or values below
+mobotConfig:
+  configMap:
+    external: true
+    name: mobot
+  secret:
+    external: true
+    name: mobot
+  
+  # These values are used when 'external: false'
+  # Ingress and django ALLOW_HOSTS
+  hostname: ""
+  # List of signal numbers attached to stores.
+  storeNumbers: []
+  # django secret key
+  secretKey: ""
+
+### Database Configuration
+### Configure with chart external secrets or values below
+mobotDatabase:
+  secret:
+    external: true
+    name: mobot-postgresql
+  configMap:
+    external: true
+    name: mobot-postgresql
+
+  ### helm install mobot bitnami/postgresql -n <namespace> --set postgresqlDatabase=mobot
+  ### For helm deployed postgres, set 'mobotDatabase.configMap.external: false'
+  ### and use these values below
+
+  # These values are used when 'external: false'
+  hostname: mobot-postgresql
+  password: set-by-postgres-helm-don't-need-to-change
+  username: postgres
+  database: mobot
+  port: "5432"
+  sslMode: "disable"
+  sslRootCert: ""
