@@ -7,6 +7,5 @@ metadata:
     {{- include "chart.labels" . | nindent 4 }}
 data:
   HOSTNAME: {{ .Values.mobotConfig.hostname }}
-  STORE_NUMBERS: |-
-    {{ toYaml .Values.mobotConfig.storeNumbers | nindent 4 }}
+  STORE_NUMBERS: {{ .Values.mobotConfig.storeNumbers | toJson | squote }}
 {{- end }}

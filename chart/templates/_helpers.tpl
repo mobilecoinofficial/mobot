@@ -110,7 +110,7 @@ Mobot Store Numbers
 */}}
 {{- define "chart.mobotStoreNumbers" -}}
   {{- if .Values.mobotConfig.configMap.external }}
-    {{- toYaml (lookup "v1" "ConfigMap" .Release.Namespace .Values.mobotDatabase.configMap.name ).data.STORE_NUMBERS }}
+{"numbers": {{ (lookup "v1" "ConfigMap" .Release.Namespace .Values.mobotConfig.configMap.name ).data.STORE_NUMBERS }}}
   {{- else }}
 {"numbers": {{ .Values.mobotConfig.storeNumbers | toJson }}}
   {{- end }}
@@ -121,7 +121,7 @@ Mobot Hostname
 */}}
 {{- define "chart.mobotHostname" -}}
   {{- if .Values.mobotConfig.configMap.external }}
-    {{- (lookup "v1" "ConfigMap" .Release.Namespace .Values.mobotDatabase.configMap.name ).data.HOSTNAME }}
+    {{- (lookup "v1" "ConfigMap" .Release.Namespace .Values.mobotConfig.configMap.name ).data.HOSTNAME }}
   {{- else }}
     {{- .Values.mobotConfig.hostname }}
   {{- end }}
