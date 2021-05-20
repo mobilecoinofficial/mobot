@@ -1,6 +1,8 @@
+from datetime import tzinfo
 import os
+import pytz
 
-from datetime import datetime
+from django.utils import timezone
 from django.core.management.base import BaseCommand
 from signald_client import Signal
 from mobot_client.models import Store, Customer, DropSession, Drop, CustomerStorePreferences, Message
@@ -67,19 +69,20 @@ def chat_router(message, match):
     #     log_and_send_message(customer, message.source, "Looks like you've already received a sticker pack! MOBot OUT. Buh-bye")
     #     return
 
-    drops_to_advertise = Drop.objects.filter(advertisment_start_time__lte=datetime.now()).filter(start_time__gt=datetime.now())
+    drops_to_advertise = Drop.objects.filter(advertisment_start_time__lte=timezone.now()).filter(start_time__gt=timezone.now())
+
     if len(drops_to_advertise) > 0:
         drop_to_advertise = drops_to_advertise[0]
 
         if not customer.phone_number.startswith(drop_to_advertise.number_restriction):
             log_and_send_message(customer, message.source, "Hi! MOBot here.\n\nSorry, we are not yet available in your country")
             return
-
-        response_message = "Hi! MOBot here.\n\nWe're currently closed.\n\nCome back on {0} at {1} for {2}".format(drop_to_advertise.start_time.strftime("%m/%d/%y"), drop_to_advertise.start_time.strftime("%H:%M"), drop_to_advertise.item.description)
+        bst_time = drop_to_advertise.start_time.astimezone(pytz.timezone(drop_to_advertise.timezone))
+        response_message = "Hi! MOBot here.\n\nWe're currently closed.\n\nCome back on {0} at {1} for {2}".format(bst_time.strftime("%A, %b %d"), bst_time.strftime("%-I:%M %p %Z"), drop_to_advertise.item.description)
         log_and_send_message(customer, message.source, response_message)
         return
 
-    active_drops = Drop.objects.filter(start_time__lte=datetime.now()).filter(end_time__gte=datetime.now())
+    active_drops = Drop.objects.filter(start_time__lte=timezone.now()).filter(end_time__gte=timezone.now())
     if len(active_drops) == 0:
         log_and_send_message(customer, message.source, "Hi! MOBot here.\n\nWe're currently closed. Buh-Bye!")
         return
