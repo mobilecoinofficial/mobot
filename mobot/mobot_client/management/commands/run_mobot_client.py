@@ -63,18 +63,19 @@ def chat_router(message, match):
     except:
         pass
 
-    if customer.received_sticker_pack:
-        log_and_send_message(customer, message.source, "Looks like you've already received a sticker pack! MOBot OUT. Buh-bye")
-        return
-    
-    if not customer.phone_number.startswith('+1'):
-        log_and_send_message(customer, message.source, "Hi! MOBot here.\n\nSorry, we are not yet available in your country")
-        return
+    # if customer.received_sticker_pack:
+    #     log_and_send_message(customer, message.source, "Looks like you've already received a sticker pack! MOBot OUT. Buh-bye")
+    #     return
 
     drops_to_advertise = Drop.objects.filter(advertisment_start_time__lte=datetime.now()).filter(start_time__gt=datetime.now())
     if len(drops_to_advertise) > 0:
         drop_to_advertise = drops_to_advertise[0]
-        response_message = "Hi! MOBot here.\n\nWe're currently closed.\n\nCome back on {0} at {1} for {2}".format(drop_to_advertise.start_time.strftime("%m/%d/%y"), drop_to_advertise.start_time.strftime("%H:%M"), drop_to_advertise.pre_drop_description)
+
+        if not customer.phone_number.startswith(drop_to_advertise.number_restriction):
+            log_and_send_message(customer, message.source, "Hi! MOBot here.\n\nSorry, we are not yet available in your country")
+            return
+
+        response_message = "Hi! MOBot here.\n\nWe're currently closed.\n\nCome back on {0} at {1} for {2}".format(drop_to_advertise.start_time.strftime("%m/%d/%y"), drop_to_advertise.start_time.strftime("%H:%M"), drop_to_advertise.item.description)
         log_and_send_message(customer, message.source, response_message)
         return
 
@@ -84,10 +85,13 @@ def chat_router(message, match):
         return
     
     active_drop = active_drops[0]
+    if not customer.phone_number.startswith(active_drop.number_restriction):
+        log_and_send_message(customer, message.source, "Hi! MOBot here.\n\nSorry, we are not yet available in your country")
+        return
     
     customer_payments_address = get_payments_address(message.source)
     if customer_payments_address is None:
-        log_and_send_message(customer, message.source, "Hi! MOBot here.\n\nI'm a bot from MobileCoin that assists in making purchases using Signal Messenger and MobileCoin\n\nUh oh! In-app payments are not enabled \n\nEnable payments to receive our commemorative Signal UK sticker pack\n\nMore info on enabling payments here: https://support.signal.org/hc/en-us/articles/360057625692-In-app-Payments")
+        log_and_send_message(customer, message.source, "Hi! MOBot here.\n\nI'm a bot from MobileCoin that assists in making purchases using Signal Messenger and MobileCoin\n\nUh oh! In-app payments are not enabled \n\nEnable payments to receive {0}\n\nMore info on enabling payments here: https://support.signal.org/hc/en-us/articles/360057625692-In-app-Payments".format(active_drop.item.description))
         return
 
     log_and_send_message(customer, message.source, "Looks like you have everything set up! Here's your digital sticker pack")
