@@ -29,6 +29,7 @@ class Drop(models.Model):
     end_time = models.DateTimeField()
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
     number_restriction = models.TextField()
+    timezone = models.TextField()
 
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'
