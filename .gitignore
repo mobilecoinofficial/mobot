@@ -129,3 +129,5 @@ dmypy.json
 .pyre/
 
 .values.yaml
+.stage.values.yaml
+.prod.values.yaml

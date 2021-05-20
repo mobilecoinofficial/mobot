@@ -69,7 +69,7 @@ mobotConfig:
   # These values are used when 'external: false'
   # Ingress and django ALLOW_HOSTS
   hostname: ""
-  # List of signal numbers attached to stores.
+  # List of signal numbers attached to stores. Don't include the "+".
   storeNumbers: []
   # django secret key
   secretKey: ""
