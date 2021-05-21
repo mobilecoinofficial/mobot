@@ -30,6 +30,10 @@ def chat_router(message, match):
     received_message = Message(customer=customer, store=store, direction=MESSAGE_DIRECTION_RECEIVED, text=message.text)
     received_message.save()
 
+    customer_name = get_signal_profile_name(message.source)
+    customer.name = customer_name
+    customer.save()
+
     try:
         drop_session = DropSession.objects.get(customer=customer, state__gte=SESSION_STATE_STARTED)
 
@@ -119,6 +123,14 @@ def log_and_send_message(customer, source, text):
     sent_message = Message(customer=customer, store=store, text=text, direction=MESSAGE_DIRECTION_SENT)
     sent_message.save()
     signal.send_message(source, text)
+
+def get_signal_profile_name(source):
+    customer_signal_profile = signal.get_profile(source, True)
+    try:
+        customer_name = customer_signal_profile['data']['name']
+        return customer_name
+    except:
+        return None
 
 def get_payments_address(source):
     customer_signal_profile = signal.get_profile(source, True)
