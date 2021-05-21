@@ -1,5 +1,4 @@
 # This will build on merge to develop or a semver tag.
-
 name: ci
 
 env:
@@ -116,4 +115,4 @@ jobs:
           echo "$VALUES" | sed -e "s/%TAG%/$TAG/" > "$VALUES_PATH"
       - name: Deploy to Rancher Cluster
         run: |
-          ./.github/workflows/rancher_deploy.sh
+          ./.github/workflows/helpers/rancher_deploy.sh
