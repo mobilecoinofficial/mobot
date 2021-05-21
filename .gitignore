@@ -131,3 +131,5 @@ dmypy.json
 .values.yaml
 .stage.values.yaml
 .prod.values.yaml
+
+.DS_Store
