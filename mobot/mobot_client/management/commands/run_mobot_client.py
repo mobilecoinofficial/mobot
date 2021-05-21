@@ -30,10 +30,6 @@ def chat_router(message, match):
     received_message = Message(customer=customer, store=store, direction=MESSAGE_DIRECTION_RECEIVED, text=message.text)
     received_message.save()
 
-    customer_name = get_signal_profile_name(message.source)
-    customer.name = customer_name
-    customer.save()
-
     try:
         drop_session = DropSession.objects.get(customer=customer, state__gte=SESSION_STATE_STARTED)
 
