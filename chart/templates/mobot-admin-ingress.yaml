@@ -30,3 +30,10 @@ spec:
             name: {{ include "chart.fullname" . }}-mobot-admin
             port:
               number: 80
+      - path: /privacy
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "chart.fullname" . }}-mobot-admin
+            port:
+              number: 80
