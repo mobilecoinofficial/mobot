@@ -39,7 +39,7 @@ class Customer(models.Model):
     received_sticker_pack = models.BooleanField(default=False)
     
     def __str__(self):
-        return f'{self.name} - {self.phone_number}'
+        return f'{self.phone_number}'
 
 class CustomerStorePreferences(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
