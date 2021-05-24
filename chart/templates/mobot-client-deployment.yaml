@@ -14,6 +14,8 @@ spec:
       {{- include "chart.selectorLabels" $ | nindent 6 }}
       app: mobot-client
       number: {{ . | quote }}
+  strategy:
+    type: Recreate
   template:
     metadata:
       annotations:

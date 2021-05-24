@@ -1,6 +1,18 @@
 # mobot
 Mobilecoin/Signal Chatbot integration
 
+## CI/CD
+
+Pushes to `develop` will build an image with a 'sha-12345678' type tag. Chart with new deployed to staging.
+
+Pushes to `main` will build an image with a semver `0.0.0` type tag. Chart with new tagged container will be deployed to production.
+
+# Auto Tagging
+
+Tags are semver `v0.0.0` style. 
+
+By default pushes to `main` will automatically bump the latest `patch`. To bump `major`, `minor` or no tag `none` add `#major`, `#minor`, `#patch`, `#none` to the commit message.
+
 ## Config
 
 | Variable | Description |
@@ -77,12 +89,6 @@ http://mobot.local:8000/admin/
     ```
     docker-compose exec -it signald bash
     nc 0.0.0.0 15432
-    ```
-
-    First register will produce an error. (can we skip this and just generate a captcha code?)
-
-    ```
-    {"type": "register", "username":"+12034058799"}
     ```
 
     Generate captcha code https://signalcaptchas.org/registration/generate.html
