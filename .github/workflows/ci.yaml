@@ -102,7 +102,7 @@ jobs:
     - name: Deploy
       run: |
         apk add --no-cache bash curl jq
-        # deploy to rancher cluster
+        pwd
         ./.github/workflows/helpers/rancher_deploy.sh
 
   deploy-production:
