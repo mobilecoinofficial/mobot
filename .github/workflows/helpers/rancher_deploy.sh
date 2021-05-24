@@ -44,7 +44,7 @@ if [[ -z "${CHART_RELEASE_NAME}" ]]; then
 fi
 
 # Parse Tag - grab the first tag - Format org/repo:tag,org/repo:tag
-TAG=$(echo -n "${TAGS}" | awk -F ',' '{print $1}' | awk -F ':' '{print $2}')
+TAG=$(echo -n "${TAGS}" | head -1 | awk -F ':' '{print $2}')
 echo "-- Found TAG: ${TAG}"
 
 # replace image tag in values content.
