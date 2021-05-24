@@ -70,7 +70,7 @@ jobs:
         mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
   deploy-staging:
-    if: ${{ github.ref == "refs/heads/develop" }}
+    if: github.ref == 'refs/heads/develop'
     needs: docker
     runs-on: ubuntu-latest
     container:
@@ -82,7 +82,7 @@ jobs:
       RANCHER_TOKEN: ${{ secrets.RANCHER_TOKEN }}
       RANCHER_CLUSTER: ${{ secrets.STAGING_CLUSTER }}
       RANCHER_CLUSTER_NAMESPACE: ${{ secrets.STAGING_NAMESPACE }}
-      TAGS: ${{ steps.needs.docker.outputs.tags }}
+      TAGS: ${{ needs.docker.outputs.tags }}
       VALUES_PATH: ./values.yaml
     steps:
     - name: Deploy
@@ -96,7 +96,7 @@ jobs:
         ./.github/workflows/helpers/rancher_deploy.sh
 
   deploy-production:
-    if: ${{ startsWith(github.ref, "refs/tags/") }}
+    if: startsWith(github.ref, 'refs/tags/')
     needs: docker
     runs-on: ubuntu-latest
     container:
@@ -109,7 +109,7 @@ jobs:
       RANCHER_CLUSTER_NAMESPACE: ${{ secrets.PRODUCTION_NAMESPACE }}
       VALUES: ${{ secrets.PRODUCTION_VALUES }}
       VALUES_PATH: ./values.yaml
-      TAGS: ${{ steps.needs.docker.outputs.tags }}
+      TAGS: ${{ needs.docker.outputs.tags }}
     steps:
     - name: Deploy
       run: |
