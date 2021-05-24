@@ -125,4 +125,4 @@ jobs:
     - name: Deploy
       run: |
         apk add --no-cache bash curl jq
-        $GITHUB_ACTION_PATH/helpers/rancher_deploy.sh
+        .github/workflows/helpers/rancher_deploy.sh
