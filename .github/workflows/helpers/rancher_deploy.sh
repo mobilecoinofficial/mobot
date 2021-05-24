@@ -49,9 +49,7 @@ echo "-- Found TAG: ${TAG}"
 
 # replace image tag in values content.
 echo "-- Generate values.yaml content"
-echo ""
-echo "${VALUES}" | sed -e "s/%TAG%/$TAG/g" | tee ./values.yaml
-echo ""
+echo "${VALUES}" | sed -e "s/%TAG%/$TAG/g" > ./values.yaml
 
 # Get kubeconfig generation url
 echo "-- Rancher: Get kubeconfig for ${RANCHER_CLUSTER} ${RANCHER_URL}"

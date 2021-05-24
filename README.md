@@ -1,19 +1,7 @@
 # mobot
 Mobilecoin/Signal Chatbot integration
 
-## CI/CD
-
-Pushes to `develop` will build an image with a 'sha-12345678' type tag. Chart with new deployed to staging.
-
-Pushes to `main` will build an image with a semver `0.0.0` type tag. Chart with new tagged container will be deployed to production.
-
-# Auto Tagging
-
-Tags are semver `v0.0.0` style. 
-
-By default pushes to `main` will automatically bump the latest `patch`. To bump `major`, `minor` or no tag `none` add `#major`, `#minor`, `#patch`, `#none` to the commit message.
-
-## Config
+## Local Config
 
 | Variable | Description |
 | --- | --- |
@@ -34,11 +22,6 @@ By default pushes to `main` will automatically bump the latest `patch`. To bump 
 ## Running with docker-compose
 
 This compose file has been set up to run in production mode. 
-
-TODO:
-
-* run in a development context (restart on code changes, runtime debug...)
-* we probably don't need 2 builds, use same dockerfile with admin and mobot-client startup scripts.
 
 ```
 COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose up --build
@@ -109,3 +92,35 @@ http://mobot.local:8000/admin/
     {"type": "subscribe", "username":"+12034058799"}
     ```
 
+## CI/CD
+
+Pushes to `develop` will build an image with a 'sha-12345678' type tag. Chart with new deployed to staging.
+
+Pushes to `main` will build an image with a semver `0.0.0` type tag. Chart with new tagged container will be deployed to production.
+
+### Auto Tagging
+
+Tags are semver `v0.0.0` style. 
+
+By default pushes to `main` will automatically bump the latest `patch`. To bump `major`, `minor` or no tag `none` add `#major`, `#minor`, `#patch`, `#none` to the commit message.
+
+### CI/CD Config
+
+**Configuration Values**
+
+Variables for CI/CD and configuration are defined in GitHub Secrets for this repo. These values are not actually secrets, but I wanted a way to change values without having to commit new code.
+
+A template for the Helm chart values is in `.github/workflows/helpers/vaules.template.yaml`
+
+| Variable | Description | Location |
+| --- | --- | --- |
+| `mobotConfig.storeNumbers` | List of store signal phone numbers | values.yaml file saved in `<environment>_VALUES` variable, GitHub Secrets |
+| `mobotConfig.hostname` | FQDN for ingress and django admin portal | values.yaml file saved in `<environment>_VALUES` variable, GitHub Secrets |
+
+**Secret Values**
+
+Secrets are predefined for the deployment environment via Terraform configuration.  Actual values are specified in variables attached to the `tf-cloud` workspace and passed down as variables to child workspaces in Terraform Cloud.
+
+| Variable | Location |
+| --- | --- |
+| `SECRET_KEY` | `<environment>_mobot_secret_key` variable in Terraform |
