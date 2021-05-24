@@ -3,6 +3,8 @@ name: tag
 # Create a tag on push to main.
 # Will automatically bump "#patch" by default
 # Use "#major", "#minor", "#patch". "#none" in commit message to adjust bump.
+#
+# Requires mobilecoin-ci user R/W access and ACTIONS_TOKEN
 
 on:
   push:
@@ -20,6 +22,6 @@ jobs:
     - name: Github Tag Bump
       uses: anothrNick/github-tag-action@1.35.0
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.ACTIONS_TOKEN }}
         WITH_V: "true"
         DEFAULT_BUMP: patch
