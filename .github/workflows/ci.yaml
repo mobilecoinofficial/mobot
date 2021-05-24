@@ -4,7 +4,6 @@ name: ci
 env:
   DOCKERHUB_REPO: mobilecoin/mobot
   CHART_RELEASE_NAME: mobot
-  CHART_PATH: ${{ env.GITHUB_WORKSPACE }}/chart
 
 # Expected secrets.
 # RANCHER_TOKEN
@@ -95,9 +94,12 @@ jobs:
       RANCHER_TOKEN: ${{ secrets.RANCHER_TOKEN }}
       RANCHER_CLUSTER: ${{ secrets.STAGING_CLUSTER }}
       RANCHER_CLUSTER_NAMESPACE: ${{ secrets.STAGING_NAMESPACE }}
+      CHART_PATH: ${{ env.GITHUB_WORKSPACE }}/chart
       VALUES: ${{ secrets.STAGING_VALUES }}
       TAGS: ${{ needs.docker.outputs.tags }}
     steps:
+    - name: Checkout
+      uses: actions/checkout@v2
     - name: Deploy
       run: |
         apk add --no-cache bash curl jq
@@ -115,11 +117,13 @@ jobs:
       RANCHER_TOKEN: ${{ secrets.RANCHER_TOKEN }}
       RANCHER_CLUSTER: ${{ secrets.PRODUCTION_CLUSTER }}
       RANCHER_CLUSTER_NAMESPACE: ${{ secrets.PRODUCTION_NAMESPACE }}
+      CHART_PATH: ${{ env.GITHUB_WORKSPACE }}/chart
       VALUES: ${{ secrets.PRODUCTION_VALUES }}
       TAGS: ${{ needs.docker.outputs.tags }}
     steps:
+    - name: Checkout
+      uses: actions/checkout@v2
     - name: Deploy
       run: |
         apk add --no-cache bash curl jq
-        # deploy to rancher cluster
         $GITHUB_ACTION_PATH/helpers/rancher_deploy.sh
