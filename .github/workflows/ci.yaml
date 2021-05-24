@@ -5,6 +5,21 @@ env:
   DOCKERHUB_REPO: mobilecoin/mobot
   CHART_PATH: ./chart
   CHART_RELEASE_NAME: mobot
+  VALUES_PATH: ./values.yaml
+
+# Expected secrets.
+# RANCHER_TOKEN
+# DOCKERHUB_USERNAME
+# DOCKERHUB_TOKEN
+
+# Expected not-secret-secrets.
+# RANCHER_URL
+# STAGING_CLUSTER
+# STAGING_NAMESPACE
+# STAGING_VALUES
+# PRODUCTION_CLUSTER
+# PRODUCTION_NAMESPACE
+# PRODUCTION_VALUES
 
 on:
   push:
@@ -77,21 +92,16 @@ jobs:
       image: alpine/helm
       options: --entrypoint /bin/sh
     env:
-      VALUES: ${{ secrets.STAGING_VALUES }}
       RANCHER_URL: ${{ secrets.RANCHER_URL }}
       RANCHER_TOKEN: ${{ secrets.RANCHER_TOKEN }}
       RANCHER_CLUSTER: ${{ secrets.STAGING_CLUSTER }}
       RANCHER_CLUSTER_NAMESPACE: ${{ secrets.STAGING_NAMESPACE }}
+      VALUES: ${{ secrets.STAGING_VALUES }}
       TAGS: ${{ needs.docker.outputs.tags }}
-      VALUES_PATH: ./values.yaml
     steps:
     - name: Deploy
       run: |
         apk add --no-cache bash curl jq
-        # grab the first tag
-        export TAG=$(echo -n "$TAGS" | awk -F ',' '{print $1}')
-        # replace image tag in values content.
-        echo "$VALUES" | sed -e "s/%TAG%/$TAG/" > "$VALUES_PATH"
         # deploy to rancher cluster
         ./.github/workflows/helpers/rancher_deploy.sh
 
@@ -108,15 +118,10 @@ jobs:
       RANCHER_CLUSTER: ${{ secrets.PRODUCTION_CLUSTER }}
       RANCHER_CLUSTER_NAMESPACE: ${{ secrets.PRODUCTION_NAMESPACE }}
       VALUES: ${{ secrets.PRODUCTION_VALUES }}
-      VALUES_PATH: ./values.yaml
       TAGS: ${{ needs.docker.outputs.tags }}
     steps:
     - name: Deploy
       run: |
         apk add --no-cache bash curl jq
-        # grab the first tag
-        export TAG=$(echo -n "$TAGS" | awk -F ',' '{print $1}')
-        # replace image tag in values content.
-        echo "$VALUES" | sed -e "s/%TAG%/$TAG/" > "$VALUES_PATH"
         # deploy to rancher cluster
         ./.github/workflows/helpers/rancher_deploy.sh
