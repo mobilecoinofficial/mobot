@@ -1,6 +1,8 @@
 # requirements for signald
 attrs
 
+git+git://github.com/mobilecoinofficial/mobilecoin-python-cli@main
+
 django==3.0.4
 psycopg2==2.8.6
 uwsgi==2.0.19.1
