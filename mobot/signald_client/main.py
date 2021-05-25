@@ -223,7 +223,7 @@ class Signal:
         should be located in the signald_data directory.
     """
     # TODO: Make public_address a required argument.
-    def set_profile(self, display_name, public_address=None, avatar_filename="MOBot-hat.png", block: bool = True):
+    def set_profile(self, display_name, public_address=None, avatar_filename=None, block: bool = True):
         payload = {
             "type": "set_profile",
             "version": "v1",
