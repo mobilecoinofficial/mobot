@@ -46,7 +46,7 @@ For testing, we build and run locally, using the Signal staging network, and the
 1. Run the docker image, exposing a port for communication, and mounting the avatar.png to be used in the signald profile.
    
     ```shell
-    docker run --name signald --publish 15432:15432 -v ~/avatar.png:/signald/logo.png -it mobilecoin/signald:0.12.0-mc.0.0.3-staging
+    docker run --name signald --publish 15432:15432 -v $(pwd)/avatar.png:/signald/logo.png -it mobilecoin/signald:0.12.0-mc.0.0.3-staging
     ```
    
 1. [Generate the Captcha](https://signalcaptchas.org/registration/generate.html), click "Open in Signal," inspect the page, 
@@ -92,209 +92,94 @@ For testing, we build and run locally, using the Signal staging network, and the
    
 ### Set Up and Run the MOBot Web Application
 
-1. Create a virtual environment and install the requirements.
+#### Environment Preparation
 
-    ```shell
-    git clone git@github.com:mobilecoinofficial/mobot.git
-    cd mobot/mobot
-    python3 -m venv venv
-    source venv/bin/activate
-    pip3 install -r requirements.txt
-    ```
-   
-    Note: If you are having issues with psycopg2, you may want to make sure that Python 3.9.5 is installed and postgresql is installed.
-   
-1. Prepare the environment for Django
+By installing the following, you will set up your environment to work seamlessly with the MOBot repository in PyCharm (these instructions for MacOS):
 
-    ```shell
-    export SECRET_KEY=123
-    export DEBUG=TRUE
-    ```
+# FIXME: Directions for MacOS as well as Linux (should we have a Brewfile)
 
-1. Run the database migrations
+```shell
+pip3 install pipenv
+brew install direnv
+brew install pyenv
+brew install postgresql
 
-    ```shell
-    python3 manage.py migrate
-    python3 manage.py makemigrations
-    ```
-   
-1. Create the admin account
-   
-    ```shell
-    python3 manage.py createsuperuser
-    ```
-   
-1. Run the Django server
-
-    ```shell
-    python3 manage.py runserver
-    ```
-   
-1. Set up the drop via the browser (open a browser and navigate to 127.0.0.1:8000)
-
-1. After logging in with the account you created, click on Stores > +Add and fill out the form.
-
-    Note: The phone number should include the area code, and have no delimiters (e.g. +15555555555)
-
-1. From the main page, select Chatbot settings > +Add, and provide the name of the avatar filename (from our `docker run signald` command above, it is named logo.png)
-
-#### Add Inventory
-
-1. From the main page, select Items > +Add, and fill out the form (e.g. Name: Coin if doing an airdrop; note that the airdrop code is a special use case of doing a drop of something for sale. It needs an item for "sale" which is being created here, but actually will be giving away coins that are configured elsewhere).
-
-#### Create a Drop
-
-These are the instructions for creating an AirDrop for Coins.
-
-1. From the main page, select Drops > +Add
-
-1. Select the store, and set the times. You can also set a number restriction to restrict to only certain phone number country codes.
-
-1. From the main page, select Bonus Coins > +Add, and fill out the form.
-
-### Set Up and Run the MOBot Client
-
-1. In a new terminal window, enter the previously set up virtual environment.
-
-    ```shell
-    cd mobot/mobot
-    source venv/bin/activate
-    ```    
-1. Prepare the environment for Django
-
-    ```shell
-    export SECRET_KEY=123
-    export DEBUG=TRUE
-    ```
-   
-1. Run the MOBot client
-
-    ```shell
-    python3 manage.py run_mobot_client
-    ```
-
-## Running Locally with Docker
-
-### Local Config
-
-| Variable | Description |
-| --- | --- |
-| `DATABASE` | Type of DB `postgresql` or `sqlite` |
-| `DATABASE_NAME` | PostgreSQL database name |
-| `DATABASE_USER` | PostgreSQL database user |
-| `DATABASE_PASSWORD` | PostgreSQL database password |
-| `DATABASE_SSL_MODE` | PostgreSQL database SSL mode (`preferred`) |
-| `DATABASE_HOST` | PostgreSQL database host |
-| `SIGNALD_ADDRESS` | `signald` service host |
-| `FULLSERVICE_ADDRESS` | `full-service` service host |
-| `DEBUG` | django - debug value |
-| `SECRET_KEY` | django - secret key value |
-| `ALLOWED_HOSTS` | django - Allowed request `Host` header values |
-| `STORE_NUMBER` | run_mobot_client - signal phone number |
-
-
-### Running with docker-compose
-
-This compose file has been set up to run in production mode. 
-
-```
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose up --build
+# You may need to make sure that your xcode is up to date
+sudo xcode-select --install
+pyenv install 3.9.5
 ```
 
-This will start up:
+#### Launch the MOBot Admin Container
 
-* postgresql
-* signald
-* full-service
+The instructions below are geared toward PyCharm users, where these actions are specified in the [.idea/RunConfigurations](.idea/runConfigurations) directory. 
 
-This will build:
+1. From within the mobot directory, launch the virtual environment:
 
-* admin
-* mobot-client
+    ```shell
+    pipenv shell
+    ```
 
-#### Setup
+1. From within the mobot directory, launch PyCharm from the terminal
 
-On first start up after database and apps are up, you'll need to create an admin user for the portal.
+    ```shell
+    /Applications/PyCharm\ CE.app/Contents/MacOS/pycharm
+    ```
+   
+    Note: `pyenv` and `direnv` make it possible to start the virtual environment automatically when you `cd` into the directory,
+    and then launching PyCharm from that directory allows PyCharm to pick up that virtual environment.
 
+1. Make sure docker is running on your local desktop.
+
+1. Install the Envfile plugin.
+
+1. Install the Docker plugin.
+
+1. Configure the Docker plugin to connect to your local Docker desktop. Preferences > Build, Execution & Deployment > Docker > Hit the + Button > Connect to Docker Daemon with Docker for Mac
+
+1. Run the "[Rebuild docker images without cache](./host_machine_scripts/rebuild-docker-containers.sh)" action.
+
+1. Create the docker volumes
+
+    ```shell
+    docker volume create --name=db
+    docker volume create --name=full-service
+    docker volume create --name=signald
+    ```
+
+1. Run the "[Run Admin](./.idea/runConfigurations/Run_Admin.xml)" action. This will execute a `docker compose up` command. (See Run with Docker-Compose for more info).
+
+#### Set up the Merchant Store and Run the Drop
+
+Exec into the docker container and run the setup scripts. These sample scripts will set up a Hoodie Drop with 4 sizes.
+
+```shell
+docker exec -it mobot_admin_1 /bin/bash
+
+# From inside the docker container
+python /app/mobot/manage.py merchant_admin
+python /app/mobot/manage.py run_chat --campaign-id 1 --store-id 1
 ```
-docker-compose exec admin python manage.py createsuperuser
-<follow prompts>
+
+### Troubleshooting
+
+Sometimes you need to hard reset the database, for example, when testing multiple sessions and purchases with the same phone number. In these instances, you can run the following from within the admin docker container:
+
+```shell
+ python /app/mobot/manage.py reset_schema --router=default --noinput
+ python /app/mobot/manage.py reset_db --router=default --noinput
 ```
 
-#### Admin Portal
+To interact with the database, after execing into the admin container, you can create a Django shell session.
 
-The docker compose uses static IP addresses in the 10.200.0.0/24 range. 
+```shell
+docker exec -it /bin/bash
 
-The portal can be reached at http://10.200.0.8:8000/admin/
+python mobot/manage.py shell
 
-Bonus add a `/etc/hosts` entry to `mobot.local` and browse to a more friendly address:
-
+# In the shell session, you can interact with the DB objects
+from mobot.apps.merchant_services.models import *
+c = Campaign.objects.first()
+p = c.product_group.products.get(id=1)
+cust = Customer.objects.first()
+o = Order.objects.get(product__product_group=c.product_group, customer=cust)
 ```
-10.200.0.8 mobot.local
-```
-
-http://mobot.local:8000/admin/
-
-
-#### Subscribing a number
-
-1. Start apps
-    Mobot-client may fail on initial subscribe.
-
-1. Exec into signald container and use nc to register number and complete captcha, and text validation.
-
-    ```
-    docker-compose exec -it signald bash
-    nc 0.0.0.0 15432
-    ```
-
-    Generate captcha code https://signalcaptchas.org/registration/generate.html
-
-    ```
-    {"type": "register", "username":"+12034058799", "captcha": ""}
-    ```
-
-    Verify with text message.
-
-    ```
-    {"type": "verify", "username":"+12034058799", "code": ""}
-    ```
-
-    Subscribe to see messages flow.
-
-    ```
-    {"type": "subscribe", "username":"+12034058799"}
-    ```
-
-## CI/CD
-
-Pushes to `develop` will build an image with a 'sha-12345678' type tag. Chart with new deployed to staging.
-
-Pushes to `main` will build an image with a semver `0.0.0` type tag. Chart with new tagged container will be deployed to production.
-
-### Auto Tagging
-
-Tags are semver `v0.0.0` style. 
-
-By default pushes to `main` will automatically bump the latest `patch`. To bump `major`, `minor` or no tag `none` add `#major`, `#minor`, `#patch`, `#none` to the commit message.
-
-### CI/CD Config
-
-**Configuration Values**
-
-Variables for CI/CD and configuration are defined in GitHub Secrets for this repo. These values are not actually secrets, but I wanted a way to change values without having to commit new code.
-
-A template for the Helm chart values is in `.github/workflows/helpers/vaules.template.yaml`
-
-| Variable | Description | Location |
-| --- | --- | --- |
-| `mobotConfig.storeNumbers` | List of store signal phone numbers | values.yaml file saved in `<environment>_VALUES` variable, GitHub Secrets |
-| `mobotConfig.hostname` | FQDN for ingress and django admin portal | values.yaml file saved in `<environment>_VALUES` variable, GitHub Secrets |
-
-**Secret Values**
-
-Secrets are predefined for the deployment environment via Terraform configuration.  Actual values are specified in variables attached to the `tf-cloud` workspace and passed down as variables to child workspaces in Terraform Cloud.
-
-| Variable | Location |
-| --- | --- |
-| `SECRET_KEY` | `<environment>_mobot_secret_key` variable in Terraform |
