@@ -9,8 +9,13 @@ https://docs.djangoproject.com/en/3.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
-import os
+import environ
 from pathlib import Path
+
+root = environ.Path(__file__) - 3
+env = environ.Env()
+environ.Env.read_env()
+SITE_ROOT = root()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -38,7 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'mobot_client.apps.MobotClientConfig'
+    'apps.mobot_client.apps.MobotClientConfig'
 ]
 
 MIDDLEWARE = [
