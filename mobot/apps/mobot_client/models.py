@@ -1,5 +1,7 @@
 from django.db import models
-
+from django.core.exceptions import ValidationError
+import datetime
+import pickle
 # Create your models here.
 
 class Store(models.Model):
@@ -55,6 +57,24 @@ class DropSession(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     drop = models.ForeignKey(Drop, on_delete=models.CASCADE)
     state = models.IntegerField(default=0)
+
+    def clean(self):
+        # Don't allow draft entries to have a pub_date.
+        if self.status == 'draft' and self.pub_date is not None:
+            raise ValidationError('Draft entries may not have a publication date.')
+        # Set the pub_date for published items if it hasn't been set already.
+        if self.status == 'published' and self.pub_date is None:
+            self.pub_date = datetime.date.today()
+
+
+class Validation(models.Model):
+    @staticmethod
+    def default_validation():
+        return True
+
+    name: models.TextField(default="SessionValidation")
+    fn: models.TextField(default=pickle(default_validation))
+
 
 class Message(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
