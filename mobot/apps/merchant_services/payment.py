@@ -1,6 +1,7 @@
 from typing import Protocol, Optional
 from string import Template
 from django.conf import settings
+import mobot.settings
 from mobilecoin import Client
 from mobot.signald_client import Signal
 
@@ -111,3 +112,4 @@ class PaymentService(Protocol):
 
         send_payment_receipt(source, tx_proposal)
         signal.send_message(source, "{} MOB refunded".format(float(amount_in_mob)))
+
