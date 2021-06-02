@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 django = ">=3.0.4"
+django-environ = "*"
 attrs = "*"
 psycopg2 = ">=2.8.6"
 uwsgi = ">= 2.0.19.1"

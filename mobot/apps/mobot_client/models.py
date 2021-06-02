@@ -34,6 +34,11 @@ class Drop(models.Model):
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'
 
+class Airdrop(Drop):
+    amount = models.FloatField()
+
+
+
 class Customer(models.Model):
     phone_number = models.TextField(primary_key=True)
     received_sticker_pack = models.BooleanField(default=False)
