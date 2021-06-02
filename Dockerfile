@@ -18,7 +18,7 @@ WORKDIR /app
 
 COPY ./mobot/requirements.txt /app/
 
-RUN pip install -r requirements.txt
+RUN pipenv install
 
 COPY ./mobot /app/
 COPY ./privacy /privacy/

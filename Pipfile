@@ -6,10 +6,12 @@ name = "pypi"
 [packages]
 django = ">=3.0.4"
 django-environ = "*"
+python-dotenv = "0.17.1"
 attrs = "*"
 psycopg2 = ">=2.8.6"
 uwsgi = ">= 2.0.19.1"
 pyzt = "*"
+django-vault-helpers = "0.8.1"
 mobilecoin = {editable = true, ref = "main", git = "git://github.com/mobilecoinofficial/mobilecoin-python-cli"}
 
 [dev-packages]
