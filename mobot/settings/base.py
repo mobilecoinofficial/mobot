@@ -8,6 +8,15 @@ DEBUG = env('DEBUG')
 
 # Raises django's ImproperlyConfigured exception if SECRET_KEY not in os.environ
 SECRET_KEY = env('SECRET_KEY')
+STORE_ADDRESS = env('STORE_ADDRESS')
+STORE_NUMBER = env('STORE_NUMBER')
+SIGNALD_ADDRESS = env('SIGNALD_ADDRESS')
+SIGNALD_PORT = env('SIGNALD_PORT')
+FULLSERVICE_ADDRESS = env('FULLSERVICE_ADDRESS', "127.0.0.1")
+FULLSERVICE_PORT = env('FULLSERVICE_PORT', "9090")
+FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
+PHONENUMBER_DB_FORMAT = "E164"
+
 
 # Parse database connection url strings like psql://user:pass@127.0.0.1:8458/db
 DATABASES = {

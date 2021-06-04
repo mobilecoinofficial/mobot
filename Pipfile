@@ -11,10 +11,14 @@ attrs = "*"
 psycopg2 = ">=2.8.6"
 uwsgi = ">= 2.0.19.1"
 pyzt = "*"
-dill = "*"
 mobilecoin = {editable = true, ref = "main", git = "git://github.com/mobilecoinofficial/mobilecoin-python-cli"}
+django-phonenumber-field = "5.2.0"
+phonenumbers = "8.12.24"
+ipython = "*"
+mypy-extensions = "*"
 
 [dev-packages]
+ipython = "*"
 
 [requires]
-python_version = "3.9"
+python_version = "3.8.2"
