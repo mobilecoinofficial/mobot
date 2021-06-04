@@ -1,4 +1,4 @@
-from mobot.apps.mobot_client.models import Drop, DropSession, Customer, BaseModel
+from mobot.apps.mobot_client.models import BaseModel
 from typing import TypeVar, Generic, Callable, Set
 import phonenumbers
 import datetime
@@ -56,18 +56,10 @@ class TwoModelValidation(Generic[T, V]):
         return self.validator(arg1, arg2)
 
 
-class ThreeModelValidation(Generic[T, V, S]):
-    def __init__(self, validator: Callable[[T, V, S], bool]):
-        self.validator = validator
-
-    def validate(self, arg1: T, arg2: V, arg3: S) -> bool:
-        return self.validator(arg1, arg2, arg3)
-
-
 user1 = MockUser("+44 7911 123456")
 product1 = MockProduct(name="AirDrop1", inventory=5)
 drop1 = MockDrop(country_codes_allowed={"+44"}, start_time=datetime.datetime.now(tz=pytz.UTC()),
-                 expires_after=datetime.timedelta(days=1))
+                 expires_after=datetime.timedelta(days=1), product=product1)
 drop2 = MockDrop(country_codes_allowed={"+44"}, start_time=datetime.datetime.now(tz=pytz.UTC()),
                  expires_after=datetime.timedelta(days=-1))
 
@@ -92,6 +84,7 @@ def check_merchant_has_signal(m: MockMerchant):
     return m.has_signal
 
 
+# @christian: Can you confirm whether the explicit [MockUser] is necessary? Scala would infer it from the validator signature.
 has_phone_number_validation = OneModelValidation[MockUser](validator=check_has_number)
 has_phone_number_validation.validate(user1)
 
