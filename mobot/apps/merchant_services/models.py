@@ -4,13 +4,11 @@ from phonenumber_field.modelfields import PhoneNumberField
 from django.contrib.postgres.fields import ArrayField
 
 
-class BaseModel(models.Model):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class BaseMCModel(models.Model):
+    pass
 
 
-
-class User(BaseModel):
+class User(BaseMCModel):
     phone_number = PhoneNumberField(primary_key=True)
     name = models.TextField()
 
@@ -28,7 +26,7 @@ class Merchant(User):
         return settings.ACCOUNT_ID
 
 
-class Store(BaseModel):
+class Store(BaseMCModel):
     name = models.TextField()
     phone_number = PhoneNumberField()
     description = models.TextField()
@@ -38,8 +36,8 @@ class Store(BaseModel):
         return f'{self.name} ({self.phone_number})'
 
 
-class Item(BaseModel):
-    store = models.ForeignKey(Store, on_delete=models.CASCADE)
+class Item(BaseMCModel):
+    store_ref = models.ForeignKey(Store, on_delete=models.CASCADE)
     name = models.TextField()
     description = models.TextField(default=None, blank=True, null=True)
     short_description = models.TextField(default=None, blank=True, null=True)
@@ -49,10 +47,9 @@ class Item(BaseModel):
         return f'{self.name}'
 
 
-class Product(BaseModel):
-
-    store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    item = models.ForeignKey(Item, on_delete=models.CASCADE)
+class Product(BaseMCModel):
+    store_ref = models.ForeignKey(Store, on_delete=models.CASCADE)
+    item_ref = models.ForeignKey(Item, on_delete=models.CASCADE)
     number_restriction = ArrayField(models.TextField(blank=False, null=False), unique=True, blank=True)
 
     def __str__(self):
@@ -80,14 +77,14 @@ class Customer(User):
         return f'{self.phone_number}'
 
 
-class CustomerStorePreferences(BaseModel):
+class CustomerStorePreferences(BaseMCModel):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    store = models.ForeignKey(Store, on_delete=models.CASCADE)
+    store_ref = models.ForeignKey(Store, on_delete=models.CASCADE)
     allows_contact = models.BooleanField()
     allows_payment = models.BooleanField()
 
 
-class Session(BaseModel):
+class Session(BaseMCModel):
 
     class SessionState(models.IntegerChoices):
         COMPLETED = -1
@@ -96,7 +93,7 @@ class Session(BaseModel):
         EXPIRED = 2
 
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    product_ref = models.ForeignKey(Product, on_delete=models.CASCADE)
     state = models.IntegerField(default=0, choices=SessionState.choices)
 
 
@@ -104,15 +101,9 @@ class DropSession(Session):
     pass
 
 
-class CustomerStorePreferences(BaseModel):
+class Message(BaseMCModel):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    allows_contact = models.BooleanField()
-
-
-class Message(BaseModel):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    store = models.ForeignKey(Store, on_delete=models.CASCADE)
+    store_ref = models.ForeignKey(Store, on_delete=models.CASCADE)
     text = models.TextField()
     date = models.DateTimeField(auto_now_add=True)
     direction = models.PositiveIntegerField()

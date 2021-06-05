@@ -1,17 +1,17 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "chart.fullname" . }}-mobot-admin
+  name: {{ include "chart.fullname" . }}-mobot_web-admin
   labels:
     {{- include "chart.labels" . | nindent 4 }}
-    app: mobot-admin
+    app: mobot_web-admin
   annotations:
     {{- toYaml .Values.mobotAdmin.ingress.annotations | nindent 4 }}
 spec:
   tls:
   - hosts:
     - {{ include "chart.mobotHostname" . }}
-    secretName: {{ include "chart.fullname" . }}-mobot-admin-tls
+    secretName: {{ include "chart.fullname" . }}-mobot_web-admin-tls
   rules:
   - host: {{ include "chart.mobotHostname" . }}
     http:
@@ -20,20 +20,20 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: {{ include "chart.fullname" . }}-mobot-admin
+            name: {{ include "chart.fullname" . }}-mobot_web-admin
             port:
               number: 80
       - path: /static
         pathType: Prefix
         backend:
           service:
-            name: {{ include "chart.fullname" . }}-mobot-admin
+            name: {{ include "chart.fullname" . }}-mobot_web-admin
             port:
               number: 80
       - path: /privacy
         pathType: Prefix
         backend:
           service:
-            name: {{ include "chart.fullname" . }}-mobot-admin
+            name: {{ include "chart.fullname" . }}-mobot_web-admin
             port:
               number: 80

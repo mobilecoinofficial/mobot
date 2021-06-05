@@ -1,28 +1,28 @@
-from mobot.apps.merchant_services.models import BaseModel, User, Customer, Drop, DropSession
+from mobot.apps.merchant_services.models import BaseMCModel, User, Customer, Drop, DropSession
 from typing import TypeVar, Generic, Callable, Set
 import phonenumbers
 import datetime
 import pytz
 
 
-T = TypeVar('T', bound=BaseModel)
-S = TypeVar('S', bound=BaseModel)
-V = TypeVar('V', bound=BaseModel)
+T = TypeVar('T', bound=BaseMCModel)
+S = TypeVar('S', bound=BaseMCModel)
+V = TypeVar('V', bound=BaseMCModel)
 
 
-class MockUser(BaseModel):
+class MockUser(BaseMCModel):
     def __init__(self, phone_number: str):
         self.phone_number: phonenumbers.PhoneNumber = phonenumbers.parse(phone_number)
 
 
-class MockProduct(BaseModel):
+class MockProduct(BaseMCModel):
     def __init__(self, name: str, inventory: int, price: float):
         self.name = name
         self.inventory = inventory
         self.price = price
 
 
-class MockDrop(BaseModel):
+class MockDrop(BaseMCModel):
     def __init__(self, country_codes_allowed: Set[str], product: MockProduct, start_time: datetime,
                  expires_after: datetime.timedelta):
         self.country_codes_allowed = country_codes_allowed
