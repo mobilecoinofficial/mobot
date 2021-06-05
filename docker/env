@@ -2,13 +2,15 @@
 POSTGRES_DB=mobot
 POSTGRES_USER=mobot
 POSTGRES_PASSWORD=mobot
-DATABASE_URL=psql://urser:un-githubbedpassword@db:5432/database
+POSTGRES_HOST=db
 DATABASE=postgresql
 DATABASE_NAME=mobot
 DATABASE_USER=mobot
 DATABASE_PASSWORD=mobot
 DATABASE_SSL_MODE=prefer
 DATABASE_HOST=db
+DATABASE_PORT=5432
+DATABASE_SSL_MODE=prefer
 SIGNALD_ADDRESS=signald
 FULLSERVICE_ADDRESS=full-service
 FULLSERVICE_PORT=9090
@@ -19,6 +21,4 @@ STORE_ADDRESS=SOME_ADDRESS
 ACCOUNT_ID=SECRET # will come from mc client
 STORE_NUMBER=+14752167758
 SIGNALD_PORT=15432
-CACHE_URL=memcache://127.0.0.1:11211,127.0.0.1:11212,127.0.0.1:11213
-REDIS_URL=rediscache://127.0.0.1:6379:1?client_class=redis_cache.client.DefaultClient&password=redis-un-githubbed-password
 SECRET_KEY=your-secret-key

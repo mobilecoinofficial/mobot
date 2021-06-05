@@ -13,6 +13,7 @@ import environ
 from pathlib import Path
 import os
 
+
 root = environ.Path(__file__) - 3
 runtime_env = environ.Env(
     # set casting, default value
@@ -35,7 +36,6 @@ SECRET_KEY = runtime_env("SECRET_KEY")
 DEBUG = runtime_env("DEBUG")
 
 DATABASE = runtime_env("DATABASE")
-DATABASE_URL = runtime_env.db()
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1').split(',')
 
@@ -79,24 +79,21 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'mobot.wsgi.application'
+WSGI_APPLICATION = 'wsgi.application'
 
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
 if DATABASE == "postgresql":
-    try:
-        DATABASE_NAME = os.environ["DATABASE_NAME"]
-        DATABASE_USER = os.environ["DATABASE_USER"]
-        DATABASE_PASSWORD = os.environ["DATABASE_PASSWORD"]
-        DATABASE_HOST = os.environ["DATABASE_HOST"]
-    except KeyError:
-        print("expecting environment variables for database fields")
-
-    DATABASE_PORT = os.environ.get("DATABASE_PORT", "5432")
-    DATABASE_SSL_MODE = os.environ.get("DATABASE_SSL_MODE", "prefer")
-    DATABASE_SSL_ROOT_CERT = os.environ.get("DATABASE_SSL_ROOT_CERT", "")
+    DATABASE_NAME = runtime_env("DATABASE_NAME", default="mobot")
+    DATABASE_USER = runtime_env("DATABASE_USER", default="mobot")
+    DATABASE_PASSWORD = runtime_env("DATABASE_PASSWORD", default="mobot")
+    DATABASE_HOST = runtime_env("DATABASE_HOST", default="db")
+    DATABASE_PORT = runtime_env("DATABASE_PORT", default=5432)
+    DATABASE_SSL_MODE = runtime_env("DATABASE_SSL_MODE", default="prefer")
+    DATABASE_SSL_ROOT_CERT = runtime_env("DATABASE_SSL_ROOT_CERT", default="")
+    DATABASE_URL = runtime_env.db()
 
     DATABASES = {
         'default': {
@@ -180,6 +177,3 @@ STATIC_ROOT = '/static'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-if __name__ == "__main__":
-    print(DATABASE_URL)
