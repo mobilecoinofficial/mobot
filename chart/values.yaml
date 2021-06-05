@@ -32,7 +32,7 @@ fullService:
 mobotClient:
   replicaCount: 1
   image:
-    repository: mobilecoin/mobot
+    repository: mobilecoin/mobot_web
     tag: ""
   podAnnotations:
     fluentbit.io/include: 'true'
@@ -44,7 +44,7 @@ mobotClient:
 mobotAdmin:
   replicaCount: 1
   image:
-    repository: mobilecoin/mobot
+    repository: mobilecoin/mobot_web
     tag: ""
   podAnnotations:
     fluentbit.io/include: 'true'
@@ -56,15 +56,15 @@ mobotAdmin:
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-production-http
 
-### mobot Configuration
+### mobot_web Configuration
 ### Configure with chart external secrets or values below
 mobotConfig:
   configMap:
     external: true
-    name: mobot
+    name: mobot_web
   secret:
     external: true
-    name: mobot
+    name: mobot_web
   
   # These values are used when 'external: false'
   # Ingress and django ALLOW_HOSTS
@@ -79,20 +79,20 @@ mobotConfig:
 mobotDatabase:
   secret:
     external: true
-    name: mobot-postgresql
+    name: mobot_web-postgresql
   configMap:
     external: true
-    name: mobot-postgresql
+    name: mobot_web-postgresql
 
-  ### helm install mobot bitnami/postgresql -n <namespace> --set postgresqlDatabase=mobot
+  ### helm install mobot_web bitnami/postgresql -n <namespace> --set postgresqlDatabase=mobot_web
   ### For helm deployed postgres, set 'mobotDatabase.configMap.external: false'
   ### and use these values below
 
   # These values are used when 'external: false'
-  hostname: mobot-postgresql
+  hostname: mobot_web-postgresql
   password: set-by-postgres-helm-don't-need-to-change
   username: postgres
-  database: mobot
+  database: mobot_web
   port: "5432"
   sslMode: "disable"
   sslRootCert: ""

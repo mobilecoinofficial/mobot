@@ -38,7 +38,7 @@ spec:
           protocol: TCP
         volumeMounts:
         - mountPath: /signald
-          name: mobot
+          name: mobot_web
         - mountPath: /tmp
           name: tmp
         resources:
@@ -50,8 +50,8 @@ spec:
       tolerations:
         {{- toYaml .Values.signald.tolerations | nindent 8 }}
       volumes:
-      - name: mobot
+      - name: mobot_web
         persistentVolumeClaim:
-          claimName: mobot
+          claimName: mobot_web
       - name: tmp
         emptyDir: {}

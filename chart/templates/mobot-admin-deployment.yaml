@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "chart.fullname" . }}-mobot-admin
+  name: {{ include "chart.fullname" . }}-mobot_web-admin
   labels:
     {{- include "chart.labels" . | nindent 4 }}
 spec:
@@ -9,14 +9,14 @@ spec:
   selector:
     matchLabels:
       {{- include "chart.selectorLabels" . | nindent 6 }}
-      app: mobot-admin
+      app: mobot_web-admin
   template:
     metadata:
       annotations:
         {{- toYaml .Values.mobotAdmin.podAnnotations | nindent 8 }}
       labels:
         {{- include "chart.selectorLabels" . | nindent 8 }}
-        app: mobot-admin
+        app: mobot_web-admin
     spec:
       imagePullSecrets:
         {{- toYaml .Values.imagePullSecrets | nindent 8 }}
@@ -24,7 +24,7 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
       containers:
-      - name: mobot-admin
+      - name: mobot_web-admin
         args:
         - /usr/local/bin/admin_start.sh
         env:
@@ -87,7 +87,7 @@ spec:
           protocol: TCP
         volumeMounts:
         - mountPath: /signald
-          name: mobot
+          name: mobot_web
         resources:
           {{- toYaml .Values.mobotAdmin.resources | nindent 12 }}
       nodeSelector:
@@ -97,6 +97,6 @@ spec:
       tolerations:
         {{- toYaml .Values.mobotAdmin.tolerations | nindent 8 }}
       volumes:
-      - name: mobot
+      - name: mobot_web
         persistentVolumeClaim:
-          claimName: mobot
+          claimName: mobot_web
