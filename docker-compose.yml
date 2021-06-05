@@ -20,25 +20,29 @@ services:
     - signald:/signald
     expose:
     - 15432
+    ports:
+    - "15432:15432"
     networks:
       mobot:
         ipv4_address: 10.200.0.6
 
-  # full-service:
-  #   image: mobilecoin/full-service:0.0.0-testnet_1.0.1_pre2
-  #   volumes:
-  #   - full-service:/data
-  #   tty: true
-  #   command:
-  #   - --peer=mc://node1.test.mobilecoin.com/
-  #   - --peer=mc://node2.test.mobilecoin.com/
-  #   - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node1.test.mobilecoin.com/
-  #   - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node2.test.mobilecoin.com/
-  #   expose:
-  #   - 9090
-  #   networks:
-  #     mobot:
-  #       ipv4_address: 10.200.0.7
+   full-service:
+     image: mobilecoin/full-service:v1.0.0-pre.6.testnet
+     volumes:
+     - full-service:/data
+     tty: true
+     command:
+     - --peer=mc://node1.test.mobilecoin.com/
+     - --peer=mc://node2.test.mobilecoin.com/
+     - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node1.test.mobilecoin.com/
+     - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node2.test.mobilecoin.com/
+     ports:
+     - "9090:9090"
+     expose:
+     - 9090
+     networks:
+       mobot:
+         ipv4_address: 10.200.0.7
 
   admin:
     restart: always

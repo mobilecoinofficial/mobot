@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 start_cmd=$1
-set -x
 
 source /.venv/bin/activate
 

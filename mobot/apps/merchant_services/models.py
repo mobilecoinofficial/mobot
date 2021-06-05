@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from phonenumber_field.modelfields import PhoneNumberField
+from django.contrib.postgres.fields import ArrayField
 
 
 class BaseModel(models.Model):
@@ -22,7 +23,7 @@ class Customer(User):
 class Merchant(User):
     @property
     def account_id(self):
-        return settings.SIGNALD_PORT
+        return settings.ACCOUNT_ID
 
 
 class Store(BaseModel):
@@ -47,10 +48,11 @@ class Item(BaseModel):
 
 
 class Product(BaseModel):
+
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
     timezone = models.TextField()
-    number_restriction = models.TextChoices()
+    number_restriction = ArrayField(str, unique=True)
 
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'
