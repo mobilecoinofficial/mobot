@@ -15,7 +15,7 @@ services:
         ipv4_address: 10.200.0.5
 
   signald:
-    image: mobilecoin/signald:latest
+    image: mobilecoin/signald:0.12.0-mc.0.0.3-staging
     volumes:
     - signald:/signald
     expose:
@@ -45,7 +45,7 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
-    command: /usr/local/bin/admin_start.sh
+    command: /usr/local/bin/init.sh admin
     env_file:
     - ./docker/env
     volumes:
@@ -64,7 +64,7 @@ services:
     build: 
       context: .
       dockerfile: ./Dockerfile
-    command: /usr/local/bin/mobot_client_start.sh
+    command: /usr/local/bin/init.sh client
     env_file:
     - ./docker/env
     volumes:

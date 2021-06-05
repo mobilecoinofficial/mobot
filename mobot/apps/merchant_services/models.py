@@ -6,7 +6,12 @@ from typing import TypeVar, Generic, Callable, Set
 import datetime
 import pytz
 # Create your models here.
+import os
+
+os.environ["DJANGO_SETTINGS_MODULE"]="mobot.settings"
 from django.db import models
+from django.conf import settings
+
 from uuid import uuid4
 from phonenumber_field.modelfields import PhoneNumberField
 
@@ -18,19 +23,28 @@ class User(BaseModel):
     phone_number = PhoneNumberField(primary_key=True)
     name = models.TextField()
 
+    def __str__(self):
+        return f'{self.phone_number}'
+
+
+class Customer(User):
+    received_sticker_pack = models.BooleanField(default=False)
+
+class Merchant(User):
+
+    @property
+    def account_id(self):
+        return settings.SIGNALD_PORT
+
 
 class Store(BaseModel):
     name = models.TextField()
+    phone_number = PhoneNumberField()
     description = models.TextField()
     privacy_policy_url = models.TextField()
 
     def __str__(self):
         return f'{self.name} ({self.phone_number})'
-
-
-class SignalStore(Store):
-    phone_number = models.TextField(blank=False)
-    store_number = PhoneNumberField(default=phone_number)
 
 
 class Item(BaseModel):
@@ -73,10 +87,10 @@ class Airdrop(Drop):
 
 class Customer(User):
     received_sticker_pack = models.BooleanField(default=False)
-    purchase_sessions = models.ManyToOneRel
     
     def __str__(self):
         return f'{self.phone_number}'
+
 
 class CustomerStorePreferences(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
@@ -84,27 +98,18 @@ class CustomerStorePreferences(BaseModel):
     allows_contact = models.BooleanField()
     allows_payment = models.BooleanField()
 
+
 class Session(models.Model):
+
+    class SessionState(models.IntegerChoices):
+        COMPLETED = -1
+        STARTED = 0
+        ALLOW_CONTACT_REQUESTED = 1
+        EXPIRED = 2
+
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    drop = models.ForeignKey(Drop, on_delete=models.CASCADE)
-    state = models.IntegerField(default=0)
-
-
-class DropSession(BaseModel):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    drop = models.ForeignKey(Drop, on_delete=models.CASCADE)
-    state = models.IntegerField(default=0)
-
-    def clean(self):
-        # Don't allow draft entries to have a pub_date.
-        if self.status == 'draft' and self.pub_date is not None:
-            raise ValidationError('Draft entries may not have a publication date.')
-        # Set the pub_date for published items if it hasn't been set already.
-        if self.status == 'published' and self.pub_date is None:
-            self.pub_date = datetime.date.today()
-
-class Sale(BaseModel):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    state = models.IntegerField(default=0, choices=SessionState.choices)
 
 
 class Message(BaseModel):
