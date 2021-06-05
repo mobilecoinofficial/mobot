@@ -58,11 +58,9 @@ COPY ./privacy /privacy/
 RUN chown app:app /scripts/*
 RUN chmod a+x /scripts/*
 
-RUN  apt-get update \
-  && apt-get upgrade -y \
-  && apt-get install -y vim
 
-#USER app
+
+USER app
 
 EXPOSE 8000
 VOLUME /signald

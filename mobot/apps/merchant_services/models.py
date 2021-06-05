@@ -1,22 +1,10 @@
-import phonenumbers
-from django.db import models
-from django.core.exceptions import ValidationError
-from django.contrib.postgres.fields import ArrayField
-from typing import TypeVar, Generic, Callable, Set
-import datetime
-import pytz
-# Create your models here.
-import os
-
-os.environ["DJANGO_SETTINGS_MODULE"]="mobot.settings"
 from django.db import models
 from django.conf import settings
-
-from uuid import uuid4
 from phonenumber_field.modelfields import PhoneNumberField
 
 
-class BaseModel(models.Model): ...
+class BaseModel(models.Model):
+    pass
 
 
 class User(BaseModel):
@@ -30,8 +18,8 @@ class User(BaseModel):
 class Customer(User):
     received_sticker_pack = models.BooleanField(default=False)
 
-class Merchant(User):
 
+class Merchant(User):
     @property
     def account_id(self):
         return settings.SIGNALD_PORT
@@ -99,7 +87,7 @@ class CustomerStorePreferences(BaseModel):
     allows_payment = models.BooleanField()
 
 
-class Session(models.Model):
+class Session(BaseModel):
 
     class SessionState(models.IntegerChoices):
         COMPLETED = -1
@@ -110,6 +98,16 @@ class Session(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     state = models.IntegerField(default=0, choices=SessionState.choices)
+
+
+class DropSession(Session):
+    pass
+
+
+class CustomerStorePreferences(BaseModel):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    store = models.ForeignKey(Store, on_delete=models.CASCADE)
+    allows_contact = models.BooleanField()
 
 
 class Message(BaseModel):

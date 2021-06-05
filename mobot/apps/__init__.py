@@ -1,1 +1,1 @@
-from mobot import *
+from .mobot import *
