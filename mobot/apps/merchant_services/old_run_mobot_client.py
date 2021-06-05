@@ -9,7 +9,9 @@ from signald_client import Signal
 from mobot_client.models import Store, Customer, DropSession, Drop, CustomerStorePreferences, Message
 import mobilecoin as mc
 from decimal import Decimal
+from django.conf import settings
 
+SIGNALD_ADDRESS = settings.
 SIGNALD_ADDRESS = os.getenv("SIGNALD_ADDRESS", "127.0.0.1")
 SIGNALD_PORT = os.getenv("SIGNALD_PORT", "15432")
 STORE_NUMBER = os.environ["STORE_NUMBER"]
