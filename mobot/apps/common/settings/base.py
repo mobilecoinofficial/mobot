@@ -26,12 +26,6 @@ DATABASES = {
     'extra': runtime_env.db('SQLITE_URL', default='sqlite:////tmp/my-tmp-sqlite.db')
 }
 
-CACHES = {
-    # read os.environ['CACHE_URL'] and raises ImproperlyConfigured exception if not found
-    'default': runtime_env.cache(),
-    # read os.environ['REDIS_URL']
-    'redis': runtime_env.cache('REDIS_URL')
-}
 
 if __name__ == "__main__":
     print(SECRET_KEY)

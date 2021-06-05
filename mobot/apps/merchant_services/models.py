@@ -53,7 +53,6 @@ class Product(BaseModel):
 
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
-    timezone = models.TextField()
     number_restriction = ArrayField(models.TextField(blank=False, null=False), unique=True, blank=True)
 
     def __str__(self):
@@ -65,8 +64,6 @@ class Drop(Product):
     advertisement_start_time = models.DateTimeField()
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
-    item = models.ForeignKey(Item, on_delete=models.CASCADE)
-    timezone = models.TextField()
 
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'

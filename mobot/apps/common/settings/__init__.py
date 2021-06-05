@@ -1,0 +1,1 @@
+from mobot.apps.common.settings.base import *
