@@ -1,5 +1,4 @@
 #!/bin/bash
 
 set -e
-
-/usr/local/bin/python manage.py run_mobot_client
+pipenv run -c python manage.py collectstatic --noinput

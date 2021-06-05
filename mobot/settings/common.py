@@ -14,7 +14,7 @@ from pathlib import Path
 import os
 
 root = environ.Path(__file__) - 3
-env = environ.Env(
+runtime_env = environ.Env(
     # set casting, default value
     DEBUG=(bool, False)
 )
@@ -29,13 +29,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env("SECRET_KEY")
+SECRET_KEY = runtime_env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env("DEBUG")
+DEBUG = runtime_env("DEBUG")
 
-DATABASE = env("DATABASE")
-DATABASE_URL = env.db()
+DATABASE = runtime_env("DATABASE")
+DATABASE_URL = runtime_env.db()
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1').split(',')
 
