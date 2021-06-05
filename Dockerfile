@@ -50,7 +50,9 @@ COPY ./privacy /privacy/
 COPY ./docker/admin_start.sh /usr/local/bin/admin_start.sh
 COPY ./docker/mobot_client_start.sh /usr/local/bin/mobot_client_start.sh
 COPY ./docker/init.sh /usr/local/bin/init.sh
-
+RUN chown app:app /usr/local/bin/init.sh
+RUN chown app:app /usr/local/bin/admin_start.sh
+RUN chown app:app /usr/local/bin/mobot_client_start.sh
 
 USER app
 
