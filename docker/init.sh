@@ -1,15 +1,17 @@
+#!/usr/bin/env bash
+start_cmd=$1
+set -x
+
 source /.venv/bin/activate
 
-cmd=$1
-
-case $cmd in
+case $start_cmd in
 
   admin)
-    exec /usr/local/bin/admin_start.sh
+    exec /scripts/admin_start.sh
     ;;
 
   client)
-    exec /usr/local/bin/mobot_client_start.sh
+    exec /scripts/mobot_client_start.sh
     ;;
 
   *)

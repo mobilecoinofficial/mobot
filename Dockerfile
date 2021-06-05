@@ -1,4 +1,4 @@
-FROM python:3.9.5 AS base
+FROM python:3.9.5-buster AS base
 
 # Setup env
 ENV LANG C.UTF-8
@@ -16,6 +16,7 @@ RUN  apt-get update \
   && apt-get upgrade -y \
   && apt-get install -y ca-certificates \
   && apt-get install -y --no-install-recommends gcc \
+  && apt-get install -y vim \
   && apt-get clean \
   && rm -r /var/lib/apt/lists
 
@@ -23,7 +24,7 @@ RUN  apt-get update \
 # Install python dependencies in /.venv
 COPY Pipfile .
 COPY Pipfile.lock .
-RUN PIPENV_VENV_IN_PROJECT=1 pipenv install --ignore-pipfile --deploy
+RUN PIPENV_VENV_IN_PROJECT=1 pipenv install --deploy
 
 FROM base AS runtime
 
@@ -36,9 +37,14 @@ RUN  addgroup --system --gid 1000 app \
   && adduser --system --ingroup app --uid 1000 app \
   && mkdir -p /signald \
   && mkdir -p /app \
+  && mkdir -p /scripts \
   && chown app:app /signald \
-  && chown app:app /app
+  && chown app:app /app \
+  && chown app:app /scripts
 
+COPY ./docker/init.sh /scripts/
+COPY ./docker/admin_start.sh /scripts/
+COPY ./docker/mobot_client_start.sh /scripts/
 
 WORKDIR /app
 
@@ -47,16 +53,16 @@ COPY ./mobot /app/
 COPY ./.env.local /app/
 COPY ./.env.staging /app/
 COPY ./privacy /privacy/
-COPY ./docker/admin_start.sh /usr/local/bin/admin_start.sh
-COPY ./docker/mobot_client_start.sh /usr/local/bin/mobot_client_start.sh
-COPY ./docker/init.sh /usr/local/bin/init.sh
-RUN chown app:app /usr/local/bin/init.sh
-RUN chown app:app /usr/local/bin/admin_start.sh
-RUN chown app:app /usr/local/bin/mobot_client_start.sh
 
-USER app
+
+RUN chown app:app /scripts/*
+RUN chmod a+x /scripts/*
+
+RUN  apt-get update \
+  && apt-get upgrade -y \
+  && apt-get install -y vim
+
+#USER app
 
 EXPOSE 8000
 VOLUME /signald
-
-CMD ["sh", "/usr/local/bin/init.sh"]

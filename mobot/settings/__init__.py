@@ -1,1 +1,1 @@
-from mobot.settings.base import *
+from .base import *
