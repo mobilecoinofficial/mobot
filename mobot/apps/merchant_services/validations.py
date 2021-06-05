@@ -1,4 +1,4 @@
-from mobot.apps.mobot_client.models import BaseModel
+from mobot.apps.merchant_services.models import BaseModel, User, Customer, Drop, DropSession
 from typing import TypeVar, Generic, Callable, Set
 import phonenumbers
 import datetime
@@ -56,7 +56,7 @@ class TwoModelValidation(Generic[T, V]):
         return self.validator(arg1, arg2)
 
 
-user1 = MockUser("+44 7911 123456")
+user1 = User("+44 7911 123456")
 product1 = MockProduct(name="AirDrop1", inventory=5)
 drop1 = MockDrop(country_codes_allowed={"+44"}, start_time=datetime.datetime.now(tz=pytz.UTC()),
                  expires_after=datetime.timedelta(days=1), product=product1)
