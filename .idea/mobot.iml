@@ -26,7 +26,7 @@
       <list>
         <option value="$MODULE_DIR$/mobot/apps" />
         <option value="$MODULE_DIR$/mobot/settings" />
-        <option value="$MODULE_DIR$/mobot/signald_client" />
+        <option value="$MODULE_DIR$/mobot/apps/signald_client" />
       </list>
     </option>
   </component>

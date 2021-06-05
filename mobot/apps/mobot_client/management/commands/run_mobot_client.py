@@ -1,11 +1,10 @@
-from datetime import tzinfo
 import os
 import time
 import pytz
 
 from django.utils import timezone
 from django.core.management.base import BaseCommand
-from mobot.signald_client import Signal
+from mobot.apps.signald_client import Signal
 from mobot.apps.merchant_services.models import Store, Customer, DropSession, Drop, CustomerStorePreferences, Message
 import mobilecoin as mc
 from decimal import Decimal

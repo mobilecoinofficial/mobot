@@ -1,4 +1,4 @@
 #!/bin/bash
 
 set -e
-python manage.py collectstatic --noinput
+python /app/mobot/manage.py collectstatic --noinput
