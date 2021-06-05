@@ -2,8 +2,8 @@
 
 set -e
 
-python mobot/manage.py createcachetable
+python /app/mobot/manage.py createcachetable
 
-python mobot/manage.py migrate
+python /app/mobot/manage.py migrate
 
 uwsgi --ini /app/mobot/uwsgi.ini
