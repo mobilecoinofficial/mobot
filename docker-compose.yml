@@ -77,7 +77,7 @@ services:
     depends_on:
     - db
     - signald
-    # - full-service
+    - full-service
     - admin
     networks:
       mobot:
