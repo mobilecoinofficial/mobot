@@ -26,7 +26,7 @@ services:
       mobot:
         ipv4_address: 10.200.0.6
 
-   full-service:
+  full-service:
      image: mobilecoin/full-service:v1.0.0-pre.6.testnet
      volumes:
      - full-service:/data
