@@ -1,4 +1,4 @@
-FROM python:3.9.5-buster AS base
+FROM python:3.9.5 AS base
 
 # Setup env
 ENV LANG C.UTF-8
@@ -16,7 +16,6 @@ RUN  apt-get update \
   && apt-get upgrade -y \
   && apt-get install -y ca-certificates \
   && apt-get install -y --no-install-recommends gcc \
-  && apt-get install -y vim \
   && apt-get clean \
   && rm -r /var/lib/apt/lists
 
@@ -54,11 +53,8 @@ COPY ./.env.local /app/
 COPY ./.env.staging /app/
 COPY ./privacy /privacy/
 
-
 RUN chown app:app /scripts/*
 RUN chmod a+x /scripts/*
-
-
 
 USER app
 
