@@ -16,8 +16,9 @@ DEBUG=True
 SECRET_KEY=badlocaldevsecretkey
 ALLOWED_HOSTS=10.200.0.8,mobot.local
 STORE_ADDRESS=SOME_ADDRESS
-ACCOUNT_ID=SECRET
+ACCOUNT_ID=SECRET # will come from mc client
 STORE_NUMBER=+14752167758
 SIGNALD_PORT=15432
 CACHE_URL=memcache://127.0.0.1:11211,127.0.0.1:11212,127.0.0.1:11213
 REDIS_URL=rediscache://127.0.0.1:6379:1?client_class=redis_cache.client.DefaultClient&password=redis-un-githubbed-password
+SECRET_KEY=your-secret-key
