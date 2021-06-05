@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "4f4bfc4f8612353c6a819cd75b773213f3604258493cbd32afa9b7ab4dd6d929"
+            "sha256": "66039f1895c6402f18a9df8048a5e0a04ee3530b47e2a980d030d02f315efc6b"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -192,8 +192,9 @@
         },
         "mobilecoin": {
             "editable": true,
-            "git": "git://github.com/mobilecoinofficial/mobilecoin-python-cli",
-            "ref": "1350686018052bb7871b15de00187e395f5fe92c"
+            "git": "https://github.com/mobilecoinofficial/full-service.git",
+            "ref": "7616af6e6f9f37d9b922836215f16e724d110ca7",
+            "subdirectory": "cli"
         },
         "mypy-extensions": {
             "hashes": [
