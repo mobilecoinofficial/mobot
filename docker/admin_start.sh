@@ -2,8 +2,8 @@
 
 set -e
 
-pipenv run -c python manage.py createcachetable
+python manage.py createcachetable
 
-pipenv run -c python manage.py migrate
+python manage.py migrate
 
-pipenv run -c uwsgi --ini /app/uwsgi.ini
+uwsgi --ini /app/uwsgi.ini

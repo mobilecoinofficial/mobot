@@ -45,7 +45,7 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
-    command: /usr/local/bin/init.sh admin
+    entrypoint: /bin/bash /scripts/init.sh admin
     env_file:
     - ./docker/env
     volumes:
@@ -64,7 +64,7 @@ services:
     build: 
       context: .
       dockerfile: ./Dockerfile
-    command: /usr/local/bin/init.sh client
+    entrypoint: /bin/bash /scripts/init.sh client
     env_file:
     - ./docker/env
     volumes:
