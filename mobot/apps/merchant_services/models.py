@@ -5,7 +5,9 @@ from django.contrib.postgres.fields import ArrayField
 
 
 class BaseModel(models.Model):
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
 
 
 class User(BaseModel):
@@ -52,14 +54,13 @@ class Product(BaseModel):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
     timezone = models.TextField()
-    number_restriction = ArrayField(str, unique=True)
+    number_restriction = ArrayField(models.TextField(blank=False, null=False), unique=True, blank=True)
 
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'
 
 
 class Drop(Product):
-    store = models.ForeignKey(Store, on_delete=models.CASCADE)
     pre_drop_description = models.TextField()
     advertisement_start_time = models.DateTimeField()
     start_time = models.DateTimeField()
