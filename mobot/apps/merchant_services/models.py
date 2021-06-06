@@ -8,7 +8,7 @@ from mobot.apps.signald_client import Signal
 from mobot.apps.payment_service.models import Payment
 
 
-class User(models.Model):
+class UserAccount(models.Model):
     phone_number = PhoneNumberField(primary_key=True)
     name = models.TextField()
 
@@ -19,7 +19,7 @@ class User(models.Model):
         signal_profile = signal.get_profile_from_phone_number(self.phone_number)
 
 
-class Merchant(User):
+class Merchant(UserAccount):
     @property
     def account_id(self):
         return settings.ACCOUNT_ID
@@ -77,7 +77,7 @@ class Airdrop(Drop):
     amount = models.FloatField()
 
 
-class Customer(User):
+class Customer(UserAccount):
     received_sticker_pack = models.BooleanField(default=False)
 
 

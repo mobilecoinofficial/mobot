@@ -1,5 +1,5 @@
 from django.contrib import admin
-from apps.merchant_services.models import Store, Customer, Drop, Item, CustomerStorePreferences, DropSession, Message
+from mobot.apps.merchant_services.models import Store, Customer, Drop, Item, CustomerStorePreferences, DropSession, Message
 
 class StoreAdmin(admin.ModelAdmin):
     pass
