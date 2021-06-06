@@ -1,9 +1,10 @@
-from mobot.apps.merchant_services.models import BaseMCModel, User, Customer, Drop, DropSession
-from typing import TypeVar, Generic, Callable, Set
+from mobot.apps.merchant_services.models import BaseMCModel, User, Drop
+from typing import TypeVar, Set
 import phonenumbers
 import datetime
 import pytz
 
+from mobot.apps.merchant_services.validations import OneModelValidation, TwoModelValidation
 
 T = TypeVar('T', bound=BaseMCModel)
 S = TypeVar('S', bound=BaseMCModel)
@@ -34,26 +35,9 @@ class MockDrop(BaseMCModel):
         return self.start_time + self.expires_after > datetime.datetime.now(tz=pytz.UTC())
 
 
-class MockMerchant(BaseModel):
+class MockMerchant(BaseMCModel):
     def __init__(self, has_signal: bool):
         self.has_signal = has_signal
-
-
-class OneModelValidation(Generic[T]):
-
-    def __init__(self, validator: Callable[[T], bool]):
-        self.validator = validator
-
-    def validate(self, arg: T) -> bool:
-        return self.validator(arg)
-
-
-class TwoModelValidation(Generic[T, V]):
-    def __init__(self, validator: Callable[[T, V], bool]):
-        self.validator = validator
-
-    def validate(self, arg1: T, arg2: V) -> bool:
-        return self.validator(arg1, arg2)
 
 
 user1 = User("+44 7911 123456")
@@ -84,9 +68,9 @@ def check_merchant_has_signal(m: MockMerchant):
     return m.has_signal
 
 
-# @christian: Can you confirm whether the explicit [MockUser] is necessary? Scala would infer it from the validator signature.
-has_phone_number_validation = OneModelValidation[MockUser](validator=check_has_number)
-has_phone_number_validation.validate(user1)
+ # @christian: Can you confirm whether the explicit [MockUser] is necessary? Scala would infer it from the validator signature.
+HAS_PHONE_NUMBER_VALIDATION = OneModelValidation[User](validator=check_has_number)
+HAS_PHONE_NUMBER_VALIDATION.validate(user1)
 
-country_code_validation = TwoModelValidation[MockUser, MockDrop](validator=check_number_country_code_matches_drop)
-country_code_validation.validate(user1, drop1)
+COUNTRY_CODE_VALIDATION = TwoModelValidation[User, Drop](validator=check_number_country_code_matches_drop)
+COUNTRY_CODE_VALIDATION.validate(user1, drop1)
