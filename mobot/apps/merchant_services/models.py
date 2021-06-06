@@ -56,6 +56,7 @@ class Product(BaseMCModel):
     store_ref = models.ForeignKey(Store, on_delete=models.CASCADE)
     item_ref = models.ForeignKey(Item, on_delete=models.CASCADE)
     number_restriction = ArrayField(models.TextField(blank=False, null=False), unique=True, blank=True)
+    allows_refund = models.BooleanField(default=True, blank=False)
 
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'
@@ -105,6 +106,8 @@ class Session(BaseMCModel):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     product_ref = models.ForeignKey(Product, on_delete=models.CASCADE)
     state = models.IntegerField(default=0, choices=SessionState.choices)
+    payment_ref = models.ForeignKey(Payment, blank=True)
+    refund = models.ForeignKey(Payment, blank=True)
 
 
 class DropSession(Session):
