@@ -21,16 +21,13 @@ STORE_ADDRESS = None
 
 try:
     fullservice_client = fullservice.Client(FULLSERVICE_URL)
-    get_all_accounts_response = fullservice_client.get_all_accounts()
-    account_id = get_all_accounts_response['result']['account_ids'][0]
-    account_obj = get_all_accounts_response['result']['account_map'][account_id]
-    main_address = account_obj['main_address']
-
-    ACCOUNT_ID = account_id
-    STORE_ADDRESS = main_address
-
+    accounts_map = fullservice_client.get_all_accounts()
+    account_id = next(iter(accounts_map))
+    account_obj = accounts_map[account_id]
     network_status_response = fullservice_client.get_network_status()
-    FEE_PMOB = int(network_status_response['result']['fee_pmob'])
+    STORE_ADDRESS = account_obj['main_address']
+    ACCOUNT_ID = account_obj['account_id']
+    FEE_PMOB = int(network_status_response['fee_pmob'])
 except Exception as e:
     print("Failed to get full service account ID")
     raise e
