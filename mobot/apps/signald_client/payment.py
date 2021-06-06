@@ -95,7 +95,7 @@ class PaymentService(Protocol):
         @param user_source: who we're sending refund to
         @type user_source: Source
         """
-        tx_proposal = self.mcc.build_transaction(merchant_source.account_id, amount_in_mob, customer_payments_address)
+        tx_proposal = self.mcc.build_transaction(merchant_source.account_id, amount_in_mob, user_source.payments_address())
         txo_id = submit_transaction(tx_proposal, account_id)
         for _ in range(10):
             try:
