@@ -47,9 +47,11 @@ class Item(BaseMCModel):
     description = models.TextField(default=None, blank=True, null=True)
     short_description = models.TextField(default=None, blank=True, null=True)
     image_link = models.TextField(default=None, blank=True, null=True)
+    price_in_picomob = models.IntegerField(default=0)
 
     def __str__(self):
         return f'{self.name}'
+
 
 
 class Product(BaseMCModel):

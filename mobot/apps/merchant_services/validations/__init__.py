@@ -1,7 +1,7 @@
 from typing import Generic, Callable
 
 from mobot.apps.merchant_services.validations import T, V
-from mobot.apps.merchant_services.validations.validations import T, V
+from mobot.apps.merchant_services.validations.drop_validations import T, V
 
 
 class OneModelValidation(Generic[T]):

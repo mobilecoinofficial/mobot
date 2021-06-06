@@ -1,4 +1,4 @@
-from mobot.apps.merchant_services.models import User, Drop
+from mobot.apps.merchant_services.models import User, Drop, DropSession
 from mobot.apps.common.models import BaseMCModel
 from typing import TypeVar, Set
 import phonenumbers
@@ -64,6 +64,20 @@ def check_drop_still_has_inventory(d: MockDrop):
 def check_merchant_has_signal(m: MockMerchant):
     return m.has_signal
 
+def check_user_has_not_gotten_coin(u: User, d: Drop):
+    session = DropSession.objects.first(customer=u, product_ref=d)
+    if session:
+        if session.SessionState == session.SessionState.COMPLETED:
+            return False
+    return True
+
+def check_user_has_gotten_coin(u: User, d: Drop):
+    return not check_user_has_not_gotten_coin(u, d)
+
+def check_funds_available(d: Drop):
+    _funds_available(d.item_ref.price_in_picomob)
+
+def _funds_available(account_id: str, amt_in_picomob: int) -> bool: ...
 
  # @christian: Can you confirm whether the explicit [MockUser] is necessary? Scala would infer it from the validator signature.
 HAS_PHONE_NUMBER_VALIDATION = OneModelValidation[User](validator=check_has_number)
@@ -71,3 +85,10 @@ HAS_PHONE_NUMBER_VALIDATION.validate(user1)
 
 COUNTRY_CODE_VALIDATION = TwoModelValidation[User, Drop](validator=check_number_country_code_matches_drop)
 COUNTRY_CODE_VALIDATION.validate(user1, drop1)
+HAS_ALREADY_GOTTEN_DROP = TwoModelValidation[User, Drop](validator=check_user_has_gotten_coin)
+
+HAS_NOT_ALREADY_GOTTEN_DROP = TwoModelValidation[User, Drop](validator=check_user_has_not_gotten_coin)
+
+FUNDS_ARE_AVAILABLE = OneModelValidation[Drop]
+
+# bonus_validations = [HAS_ALREADY_GOTTEN_DROP(customer, original_drop), HAS_NOT_ALREADY_GOTTEN_DROP(customer, bonus_drop)]
