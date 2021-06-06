@@ -50,7 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'apps.merchant_services.apps.MerchantServicesConfig',
     'apps.mobot_client',
-    'apps.common',
+    'apps.common.apps.CommonAppConfig'
 ]
 
 MIDDLEWARE = [
