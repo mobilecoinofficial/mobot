@@ -56,6 +56,11 @@ class Product(BaseMCModel):
         return f'{self.store.name} - {self.item.name}'
 
 
+class Validation(BaseMCModel):
+    validation_class = models.TextField()
+
+
+
 class Drop(Product):
     pre_drop_description = models.TextField()
     advertisement_start_time = models.DateTimeField()
