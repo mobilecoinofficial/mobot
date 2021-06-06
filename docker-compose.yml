@@ -88,4 +88,7 @@ volumes:
 
 networks:
   mobot:
-    external: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.200.0.0/24

@@ -1,4 +1,4 @@
-from mobot.apps.merchant_services.models import User, Drop, DropSession
+from mobot.apps.merchant_services.models import UserAccount, Drop, DropSession
 from mobot.apps.common.models import models.Model
 from django.conf import settings
 from typing import TypeVar, Set
@@ -39,7 +39,7 @@ class MockMerchant(models.Model):
         self.has_signal = has_signal
 
 
-user1 = User("+44 7911 123456")
+user1 = UserAccount("+44 7911 123456")
 product1 = MockProduct(name="AirDrop1", inventory=5)
 drop1 = MockDrop(country_codes_allowed={"+44"}, start_time=datetime.datetime.now(tz=pytz.UTC()),
                  expires_after=datetime.timedelta(days=1), product=product1)
@@ -66,14 +66,14 @@ def check_drop_still_has_inventory(d: MockDrop):
 def check_merchant_has_signal(m: MockMerchant):
     return m.has_signal
 
-def check_user_has_not_gotten_coin(u: User, d: Drop):
+def check_user_has_not_gotten_coin(u: UserAccount, d: Drop):
     session = DropSession.objects.first(customer=u, product_ref=d)
     if session:
         if session.SessionState == session.SessionState.COMPLETED:
             return False
     return True
 
-def check_user_has_gotten_coin(u: User, d: Drop):
+def check_user_has_gotten_coin(u: UserAccount, d: Drop):
     return not check_user_has_not_gotten_coin(u, d)
 
 def check_funds_available(d: Drop):
@@ -86,14 +86,14 @@ def _funds_available(amt_in_picomob: int) -> bool:
     return (amt_in_picomob + settings.FEE_PMOB) < unspent_pmob
 
  # @christian: Can you confirm whether the explicit [MockUser] is necessary? Scala would infer it from the validator signature.
-HAS_PHONE_NUMBER_VALIDATION = OneModelValidation[User](validator=check_has_number)
+HAS_PHONE_NUMBER_VALIDATION = OneModelValidation[UserAccount](validator=check_has_number)
 HAS_PHONE_NUMBER_VALIDATION.validate(user1)
 
-COUNTRY_CODE_VALIDATION = TwoModelValidation[User, Drop](validator=check_number_country_code_matches_drop)
+COUNTRY_CODE_VALIDATION = TwoModelValidation[UserAccount, Drop](validator=check_number_country_code_matches_drop)
 COUNTRY_CODE_VALIDATION.validate(user1, drop1)
-HAS_ALREADY_GOTTEN_DROP = TwoModelValidation[User, Drop](validator=check_user_has_gotten_coin)
+HAS_ALREADY_GOTTEN_DROP = TwoModelValidation[UserAccount, Drop](validator=check_user_has_gotten_coin)
 
-HAS_NOT_ALREADY_GOTTEN_DROP = TwoModelValidation[User, Drop](validator=check_user_has_not_gotten_coin)
+HAS_NOT_ALREADY_GOTTEN_DROP = TwoModelValidation[UserAccount, Drop](validator=check_user_has_not_gotten_coin)
 
 FUNDS_ARE_AVAILABLE = OneModelValidation[Drop]
 

@@ -32,7 +32,7 @@ except Exception as e:
     print("Failed to get full service account ID")
     raise e
 
-
+print(f"FULLSERVICE_ACCOUNT: {ACCOUNT_ID}")
 
 # Parse database connection url strings like psql://user:pass@127.0.0.1:8458/db
 DATABASES = {

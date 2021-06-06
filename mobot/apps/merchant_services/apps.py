@@ -3,4 +3,4 @@ from django.apps import AppConfig
 
 class MerchantServicesConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.merchant_services'
+    name = 'mobot.apps.merchant_services'
