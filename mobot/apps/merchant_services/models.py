@@ -2,6 +2,9 @@ from django.db import models
 from django.conf import settings
 from phonenumber_field.modelfields import PhoneNumberField
 from django.contrib.postgres.fields import ArrayField
+from mobot.apps.signald_client import Signal
+
+s = Signal()
 
 
 class BaseMCModel(models.Model):
@@ -15,9 +18,14 @@ class User(BaseMCModel):
     def __str__(self):
         return f'{self.phone_number}'
 
+    def signal_payments_enabled(self, signal: Signal) -> bool:
+        signal_profile = signal.get_profile_from_phone_number(self.phone_number)
+
 
 class Customer(User):
     received_sticker_pack = models.BooleanField(default=False)
+
+
 
 
 class Merchant(User):
