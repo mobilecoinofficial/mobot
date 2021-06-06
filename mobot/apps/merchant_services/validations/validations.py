@@ -1,14 +1,11 @@
-from mobot.apps.merchant_services.models import BaseMCModel, User, Drop
+from mobot.apps.merchant_services.models import User, Drop
+from mobot.apps.common.models import BaseMCModel
 from typing import TypeVar, Set
 import phonenumbers
 import datetime
 import pytz
 
 from mobot.apps.merchant_services.validations import OneModelValidation, TwoModelValidation
-
-T = TypeVar('T', bound=BaseMCModel)
-S = TypeVar('S', bound=BaseMCModel)
-V = TypeVar('V', bound=BaseMCModel)
 
 
 class MockUser(BaseMCModel):

@@ -2,13 +2,9 @@ from django.db import models
 from django.conf import settings
 from phonenumber_field.modelfields import PhoneNumberField
 from django.contrib.postgres.fields import ArrayField
+
+from mobot.apps.common.models import BaseMCModel
 from mobot.apps.signald_client import Signal
-
-s = Signal()
-
-
-class BaseMCModel(models.Model):
-    pass
 
 
 class User(BaseMCModel):
