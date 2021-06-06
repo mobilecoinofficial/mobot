@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 class PaymentServiceAppConfig(AppConfig):
-    name = 'apps.payment_service'
+    name = 'mobot.apps.payment_service'
     default_auto_field = 'django.db.models.BigAutoField'
     verbose_name = 'Payment Service models and service'

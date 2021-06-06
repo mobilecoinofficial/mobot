@@ -13,7 +13,7 @@ pipenv install
 
 if [[ "${CACHE}" == 'true' ]]
 then
-  docker-compose build
+  docker-compose build --build-arg CACHEBUST=0
 else
   docker-compose build --no-cache
 fi
