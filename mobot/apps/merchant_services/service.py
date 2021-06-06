@@ -1,11 +1,10 @@
 from typing import Protocol, Generic, TypeVar, List, Optional
 from asyncio import Future
 from models import Customer, Drop, DropSession
-from mobot.apps.payment_service import PaymentService
+from mobot.apps.payment_service.service import PaymentService
 from mobot.apps.payment_service.models import Payment
 from mobot.apps.signald_client import Signal
 from validations import TwoModelValidation
-from validations.drop_validations import COUNTRY_CODE_VALIDATION
 
 
 ## Todo: Make this Async

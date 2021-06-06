@@ -11,7 +11,7 @@ services:
     expose:
     - 5432
     networks:
-      mobot:
+      default:
         ipv4_address: 10.200.0.5
 
   signald:
@@ -23,7 +23,7 @@ services:
     ports:
     - "15432:15432"
     networks:
-      mobot:
+      default:
         ipv4_address: 10.200.0.6
 
   full-service:
@@ -41,7 +41,7 @@ services:
      expose:
      - 9090
      networks:
-       mobot:
+       default:
          ipv4_address: 10.200.0.7
 
   admin:
@@ -59,7 +59,7 @@ services:
     expose:
     - 8000
     networks:
-      mobot:
+      default:
         ipv4_address: 10.200.0.8
 
   mobot-client:
@@ -78,7 +78,7 @@ services:
     - full-service
     - admin
     networks:
-      mobot:
+      default:
         ipv4_address: 10.200.0.9
 
 volumes:
@@ -87,7 +87,7 @@ volumes:
   full-service:
 
 networks:
-  mobot:
+  default:
     ipam:
       driver: default
       config:

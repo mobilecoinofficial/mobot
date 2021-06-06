@@ -41,13 +41,18 @@ RUN  addgroup --system --gid 1000 app \
   && chown app:app /app \
   && chown app:app /scripts
 
-COPY ./docker/init.sh /scripts/
-COPY ./docker/admin_start.sh /scripts/
-COPY ./docker/mobot_client_start.sh /scripts/
+
 
 WORKDIR /app
 
 RUN mkdir -p /app/mobot
+
+ARG CACHEBUST=1
+
+### DO quick stuff like re-copying code without the cache, just to make sure new code is always there
+COPY ./docker/init.sh /scripts/
+COPY ./docker/admin_start.sh /scripts/
+COPY ./docker/mobot_client_start.sh /scripts/
 
 COPY ./mobot/requirements.txt /app/mobot/requirements.txt
 COPY ./mobot /app/mobot/
@@ -60,7 +65,7 @@ RUN mkdir -p /static/
 RUN chown app:app /static/
 RUN chown app:app /scripts/*
 RUN chmod a+x /scripts/*
-
+RUN chown -R app:app /app
 USER app
 
 EXPOSE 8000

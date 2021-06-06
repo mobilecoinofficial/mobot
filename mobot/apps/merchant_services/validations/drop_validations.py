@@ -1,5 +1,5 @@
 from mobot.apps.merchant_services.models import User, Drop, DropSession
-from mobot.apps.common.models import BaseMCModel
+from mobot.apps.common.models import models.Model
 from django.conf import settings
 from typing import TypeVar, Set
 import phonenumbers
@@ -10,19 +10,19 @@ import mobilecoin as fullservice
 from mobot.apps.merchant_services.validations import OneModelValidation, TwoModelValidation
 
 
-class MockUser(BaseMCModel):
+class MockUser(models.Model):
     def __init__(self, phone_number: str):
         self.phone_number: phonenumbers.PhoneNumber = phonenumbers.parse(phone_number)
 
 
-class MockProduct(BaseMCModel):
+class MockProduct(models.Model):
     def __init__(self, name: str, inventory: int, price: float):
         self.name = name
         self.inventory = inventory
         self.price = price
 
 
-class MockDrop(BaseMCModel):
+class MockDrop(models.Model):
     def __init__(self, country_codes_allowed: Set[str], product: MockProduct, start_time: datetime,
                  expires_after: datetime.timedelta):
         self.country_codes_allowed = country_codes_allowed
@@ -34,7 +34,7 @@ class MockDrop(BaseMCModel):
         return self.start_time + self.expires_after > datetime.datetime.now(tz=pytz.UTC())
 
 
-class MockMerchant(BaseMCModel):
+class MockMerchant(models.Model):
     def __init__(self, has_signal: bool):
         self.has_signal = has_signal
 

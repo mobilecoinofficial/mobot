@@ -42,15 +42,17 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1').split(',')
 # Application definition
 
 INSTALLED_APPS = [
+    'django-extensions',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'apps.merchant_services.apps.MerchantServicesConfig',
-    'apps.mobot_client',
-    'apps.common.apps.CommonAppConfig'
+    'mobot.apps.common.apps.CommonAppConfig',
+    'mobot.apps.payment_service.apps.PaymentServiceAppConfig',
+    'mobot.apps.merchant_services.apps.MerchantServicesConfig',
+    'mobot.apps.mobot_client.apps.MobotClientAppsConfig',
 ]
 
 MIDDLEWARE = [

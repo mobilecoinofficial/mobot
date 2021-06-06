@@ -1,9 +1,7 @@
 from django.db import models
 
-from mobot.apps.common.models import BaseMCModel
 
-
-class Transaction(BaseMCModel):
+class Transaction(models.Model):
     class Status(models.IntegerChoices):
         TransactionSubmitted = -1
         TransactionPending = 0
@@ -28,7 +26,7 @@ class Transaction(BaseMCModel):
         return self.transaction_status == self.Status.Other
 
 
-class Payment(BaseMCModel):
+class Payment(models.Model):
 
     class Status(models.IntegerChoices):
         PAYMENT_NOT_SUBMITTED = -1
