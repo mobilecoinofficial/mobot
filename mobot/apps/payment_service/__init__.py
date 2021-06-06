@@ -7,7 +7,7 @@ from dacite import from_dict
 # Type aliases
 from mobot.apps.payment_service.models import *
 
-AccountId = NewType('AccountId', str)
+AccountId = NewType('AccountId', str) # Full service account ID
 PaymentAmount = NewType('PaymentAmount', float)
 Address = NewType('Address', str)
 Receipt = NewType('Receipt', str) # is this true?
@@ -25,13 +25,13 @@ class TransactionLog:
 class PaymentService(Protocol):
     client: mobilecoin.Client
 
-    def submit_payment_intent(self, account_id: AccountId, amount: PaymentAmount, to_address: Address) -> Payment:
-        transaction_log = from_dict(TransactionLog, data=self.client.build_and_submit_transaction(account_id, amount, to_address))
-        transaction = Transaction(transaction_id=transaction_log.txo_id)
-        transaction.save()
-        payment = Payment(transaction=transaction)
-        payment.save()
-        return payment
+    # def submit_payment_intent(self, account_id: AccountId, amount: PaymentAmount, to_address: Address) -> Payment:
+    #     transaction_log = from_dict(TransactionLog, data=self.client.build_and_submit_transaction(account_id, amount, to_address))
+    #     transaction = Transaction(transaction_id=transaction_log.txo_id)
+    #     transaction.save()
+    #     payment = Payment(transaction=transaction)
+    #     payment.save()
+    #     return payment
 
     def get_payment_status(self, payment: Payment) -> Payment:
         ## TODO: Brian: Help with format of this returned object
@@ -39,7 +39,7 @@ class PaymentService(Protocol):
 
 
     ## All following methods are private to Payment Service
-    def _send_mob_to_user(self, account_id: AccountId, amount_in_mob: float, customer_payments_address: Address) -> Transaction:
+    def submit_payment_to_user(self, account_id: AccountId, amount_in_mob: float, customer_payments_address: Address) -> Transaction:
         tx_proposal = self.client.build_transaction(account_id, amount_in_mob, customer_payments_address)
         txo_id = self._submit_transaction(tx_proposal, account_id)
         receipt = self._create_receiver_receipt(tx_proposal)
@@ -50,6 +50,7 @@ class PaymentService(Protocol):
             self.client.poll_txo(txo_id)
             transaction.transaction_status = transaction.Status.TransactionSuccess
         except Exception:
+            transaction.transaction_status = transaction.Status.Other
             print("TxOut did not land yet, id: " + txo_id)
         finally:
             transaction.save()
