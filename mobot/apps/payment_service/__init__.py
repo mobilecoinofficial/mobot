@@ -5,8 +5,7 @@ from mobot.apps.common.events import Event
 from dacite import from_dict
 
 # Type aliases
-from mobot.apps.payment_service import Transaction, Payment
-from mobot.apps.payment_service.models import Transaction, Payment
+from mobot.apps.payment_service.models import *
 
 AccountId = NewType('AccountId', str)
 PaymentAmount = NewType('PaymentAmount', float)
