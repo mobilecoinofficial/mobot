@@ -12,6 +12,8 @@ import os
 from django.core.wsgi import get_wsgi_application
 import sys
 sys.path.append("/app/")
+import django
+
 # os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mobot_web.apps.common.settings')
 
 application = get_wsgi_application()
