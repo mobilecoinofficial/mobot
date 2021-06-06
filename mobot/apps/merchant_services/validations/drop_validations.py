@@ -1,9 +1,11 @@
 from mobot.apps.merchant_services.models import User, Drop, DropSession
 from mobot.apps.common.models import BaseMCModel
+from django.conf import settings
 from typing import TypeVar, Set
 import phonenumbers
 import datetime
 import pytz
+import mobilecoin as fullservice
 
 from mobot.apps.merchant_services.validations import OneModelValidation, TwoModelValidation
 
@@ -77,7 +79,11 @@ def check_user_has_gotten_coin(u: User, d: Drop):
 def check_funds_available(d: Drop):
     _funds_available(d.item_ref.price_in_picomob)
 
-def _funds_available(account_id: str, amt_in_picomob: int) -> bool: ...
+def _funds_available(amt_in_picomob: int) -> bool:
+    fullservice_client = fullservice.Client(settings.FULLSERVICE_URL)
+    account_balance_response = fullservice_client.get_balance_for_account(settings.ACCOUNT_ID)
+    unspent_pmob = int(account_balance_response['result']['balance']['unspent_pmob'])
+    return (amt_in_picomob + settings.FEE_PMOB) < unspent_pmob
 
  # @christian: Can you confirm whether the explicit [MockUser] is necessary? Scala would infer it from the validator signature.
 HAS_PHONE_NUMBER_VALIDATION = OneModelValidation[User](validator=check_has_number)
