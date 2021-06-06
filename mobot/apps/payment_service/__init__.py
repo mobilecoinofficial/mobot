@@ -79,10 +79,15 @@ class PaymentService(Protocol):
     def _submit_payment_intent(self, account_id: AccountId, amount: PaymentAmount, to_address: Address) -> Payment:
         transaction_log = from_dict(TransactionLog, data=self.client.build_and_submit_transaction(account_id, amount, to_address))
         transaction = Transaction(transaction_id=transaction_log.txo_id)
-        return transaction_log
+        transaction.save()
+        payment = Payment(transaction=transaction)
+        payment.save()
+        return payment
 
     def get_payment_status(self, payment: Payment) -> Payment:
-        txo = self.client.check_receiver_receipt_status(address=Address, receipt=payment.transaction.receipt)
+        ## TODO: Brian: Help with format of this returned object
+        txo: Transaction = self.client.check_receiver_receipt_status(address=Address, receipt=payment.transaction.receipt)
+
 
     def send_mob_to_user(self, account_id: AccountId, amount_in_mob: float, customer_payments_address: Address) -> Transaction:
         tx_proposal = self.client.build_transaction(account_id, amount_in_mob, customer_payments_address)
@@ -98,8 +103,6 @@ class PaymentService(Protocol):
             print("TxOut did not land yet, id: " + txo_id)
         finally:
             transaction.save()
-
-
 
     def create_receiver_receipt(self, tx_proposal) -> Receipt:
         receiver_receipts = self.client.create_receiver_receipts(tx_proposal)
