@@ -89,14 +89,15 @@ class PaymentService(Protocol):
         txo_id = self.submit_transaction(tx_proposal, account_id)
         receipt = self.create_receiver_receipt(tx_proposal)
         transaction = Transaction(transaction_id=txo_id, transaction_amt=amount_in_mob, receipt=receipt)
-        transaction.save()
 
         # Todo: Extract the polling
         try:
             self.client.poll_txo(txo_id)
-            transaction.
+            transaction.transaction_status = transaction.Status.TransactionSuccess
         except Exception:
             print("TxOut did not land yet, id: " + txo_id)
+        finally:
+            transaction.save()
 
 
 
