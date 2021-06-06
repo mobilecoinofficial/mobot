@@ -5,6 +5,7 @@ from django.contrib.postgres.fields import ArrayField
 
 from mobot.apps.common.models import BaseMCModel
 from mobot.apps.signald_client import Signal
+from mobot.apps.payment_service import Payment
 
 
 class User(BaseMCModel):
