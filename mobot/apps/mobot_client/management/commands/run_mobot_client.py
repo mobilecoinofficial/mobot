@@ -8,18 +8,20 @@ from mobot.apps.signald_client import Signal
 from mobot.apps.merchant_services.models import Store, Customer, DropSession, Drop, CustomerStorePreferences, Message
 import mobilecoin as mc
 from decimal import Decimal
+from django.conf import settings
 
-SIGNALD_ADDRESS = os.getenv("SIGNALD_ADDRESS", "127.0.0.1")
-SIGNALD_PORT = os.getenv("SIGNALD_PORT", "15432")
-STORE_NUMBER = os.environ["STORE_NUMBER"]
+
+SIGNALD_ADDRESS = settings.SIGNALD_ADDRESS
+SIGNALD_PORT = settings.SIGNALD_PORT
+STORE_NUMBER = settings.STORE_NUMBER
 signal = Signal(STORE_NUMBER, socket_path=(SIGNALD_ADDRESS, int(SIGNALD_PORT)))
 
-FULLSERVICE_ADDRESS = os.getenv("FULLSERVICE_ADDRESS", "127.0.0.1")
-FULLSERVICE_PORT = os.getenv("FULLSERVICE_PORT", "9090")
+FULLSERVICE_ADDRESS = settings.FULLSERVICE_ADDRESS
+FULLSERVICE_PORT = settings.FULLSERVICE_PORT
 FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
 mcc = mc.Client(url=FULLSERVICE_URL)
 
-PUBLIC_ADDRESS = os.environ["PUBLIC_ADDRESS"]
+PUBLIC_ADDRESS = settings.STORE_ADDRESS
 ACCOUNT_ID = os.environ["ACCOUNT_ID"]
 
 store = Store.objects.get(phone_number=STORE_NUMBER)
@@ -31,7 +33,7 @@ SESSION_STATE_ALLOW_CONTACT_REQUESTED = 1
 MESSAGE_DIRECTION_RECEIVED = 0
 MESSAGE_DIRECTION_SENT = 1
 
-signal.set_profile("MOBot - Local Brian", PUBLIC_ADDRESS, None, False)
+signal.set_profile("MOBot - Local Greg", PUBLIC_ADDRESS, None, False)
 
 
 def _signald_to_fullservice(r):
