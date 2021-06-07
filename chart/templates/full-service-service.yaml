@@ -4,9 +4,11 @@ kind: Service
 metadata:
   name: {{ include "chart.fullname" . }}-full-service
   labels:
+    app: full-service
     {{- include "chart.labels" . | nindent 4 }}
 spec:
   type: ClusterIP
+  publishNotReadyAddresses: true
   ports:
     - port: 9090
       targetPort: full-service

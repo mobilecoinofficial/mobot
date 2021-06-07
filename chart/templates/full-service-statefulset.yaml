@@ -1,7 +1,7 @@
 # This should probably be a statefulSet so we can leverage PVC
 {{- if .Values.fullService.enabled }}
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "chart.fullname" . }}-full-service
   labels:
@@ -10,21 +10,25 @@ spec:
   replicas: {{ .Values.fullService.replicaCount }}
   selector:
     matchLabels:
-      {{- include "chart.selectorLabels" . | nindent 6 }}
       app: full-service
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+  serviceName: {{ include "chart.fullname" . }}-full-service
   template:
     metadata:
       annotations:
         {{- toYaml .Values.fullService.podAnnotations | nindent 8 }}
       labels:
-        {{- include "chart.selectorLabels" . | nindent 8 }}
         app: full-service
+        {{- include "chart.selectorLabels" . | nindent 8 }}
     spec:
       imagePullSecrets:
         {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      terminationGracePeriodSeconds: 30
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
+        fsGroup: 2000
+        fsGroupChangePolicy: "OnRootMismatch"
       containers:
       - name: full-service
         securityContext:
@@ -34,10 +38,15 @@ spec:
           readOnlyRootFilesystem: true
         image: "{{ .Values.fullService.image.repository }}:{{ .Values.fullService.image.tag }}"
         imagePullPolicy: Always
+        args:
+          {{- toYaml .Values.fullService.args | nindent 10 }}
         ports:
         - name: full-service
           containerPort: 9090
           protocol: TCP
+        volumeMounts:
+        - name: data
+          mountPath: /data
         resources:
           {{- toYaml .Values.fullService.resources | nindent 12 }}
       nodeSelector:
@@ -46,4 +55,16 @@ spec:
         {{- toYaml .Values.fullService.affinity | nindent 8 }}
       tolerations:
         {{- toYaml .Values.fullService.tolerations | nindent 8 }}
+      {{- if eq .Values.fullService.persistence.enabled false }}
+      volumes:
+      - name: data
+        emptyDir: {}
+      {{- end }}
+  {{- if .Values.fullService.persistence.enabled }}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      {{- toYaml .Values.fullService.persistence.spec | nindent 6 }}
+  {{- end }}
 {{- end }}
