@@ -11,6 +11,8 @@ VENV=$(pipenv --venv)
 source ${VENV}/bin/activate
 pipenv install
 
+docker-compose down
+
 if [[ "${CACHE}" == 'true' ]]
 then
   docker-compose build --build-arg CACHEBUST=0
