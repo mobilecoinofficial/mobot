@@ -250,6 +250,13 @@ class Signal:
 
         return data
 
+    def get_profile_from_phone_number(self, phone_number):
+        recipient = {
+            "number": phone_number
+        }
+
+        return self.get_profile(recipient)
+
 
     def chat_handler(self, regex, order=100):
         """

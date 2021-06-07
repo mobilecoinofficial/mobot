@@ -19,19 +19,24 @@ FEE_PMOB = None
 ACCOUNT_ID = None
 STORE_ADDRESS = None
 
+fs_client = fullservice.Client(FULLSERVICE_URL)
+
 try:
-    fullservice_client = fullservice.Client(FULLSERVICE_URL)
-    accounts_map = fullservice_client.get_all_accounts()
+    accounts_map = fs_client.get_all_accounts()
     account_id = next(iter(accounts_map))
     account_obj = accounts_map[account_id]
-    network_status_response = fullservice_client.get_network_status()
     STORE_ADDRESS = account_obj['main_address']
     ACCOUNT_ID = account_obj['account_id']
-    FEE_PMOB = int(network_status_response['fee_pmob'])
 except Exception as e:
-    print("Failed to get full service account ID")
+    print("Failed to get full service account ID or")
     raise e
 
+try:
+    network_status_response = fs_client.get_network_status()
+    FEE_PMOB = int(network_status_response['fee_pmob'])
+except Exception as e:
+    print("Failed to get network status response")
+    raise e
 
 # Parse database connection url strings like psql://user:pass@127.0.0.1:8458/db
 DATABASES = {
