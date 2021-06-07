@@ -2,6 +2,7 @@ import os
 import time
 import pytz
 
+from django.conf import settings
 from django.utils import timezone
 from django.core.management.base import BaseCommand
 from mobot.apps.signald_client import Signal
@@ -21,10 +22,11 @@ FULLSERVICE_PORT = settings.FULLSERVICE_PORT
 FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
 mcc = mc.Client(url=FULLSERVICE_URL)
 
-PUBLIC_ADDRESS = settings.STORE_ADDRESS
-ACCOUNT_ID = os.environ["ACCOUNT_ID"]
+signal = Signal(settings.STORE_NUMBER, socket_path=(settings.SIGNALD_ADDRESS, int(settings.SIGNALD_PORT)))
 
-store = Store.objects.get(phone_number=STORE_NUMBER)
+mcc = mc.Client(url=settings.FULLSERVICE_URL)
+
+store = Store.objects.get(phone_number=settings.STORE_NUMBER)
 
 SESSION_STATE_COMPLETED = -1
 SESSION_STATE_STARTED = 0
@@ -33,7 +35,7 @@ SESSION_STATE_ALLOW_CONTACT_REQUESTED = 1
 MESSAGE_DIRECTION_RECEIVED = 0
 MESSAGE_DIRECTION_SENT = 1
 
-signal.set_profile("MOBot - Local Greg", PUBLIC_ADDRESS, None, False)
+signal.set_profile("MOBot", settings.STORE_ADDRESS, None, False)
 
 
 def _signald_to_fullservice(r):
@@ -63,7 +65,7 @@ def refund_customer(source, amount_mob, cover_transaction_fee):
     if customer_payments_address is None:
         signal.send_message(source,
                             ("We have a refund for you, but your payments have been deactivated\n\n"
-                             "Please contact customer service at {}").format(STORE_NUMBER))
+                             "Please contact customer service at {}").format(settings.STORE_NUMBER))
         return
 
     if not cover_transaction_fee:
@@ -74,7 +76,7 @@ def refund_customer(source, amount_mob, cover_transaction_fee):
                             "Sorry. Can't issue a refund because the refund amount is less than the transaction fee 🙁")
         return
 
-    send_mob_to_user(source, ACCOUNT_ID, amount_mob, customer_payments_address)
+    send_mob_to_user(source, settings.ACCOUNT_ID, amount_mob, customer_payments_address)
 
 
 def send_mob_to_user(source, account_id, amount_in_mob, customer_payments_address):
@@ -124,7 +126,7 @@ def create_receiver_receipt(tx_proposal):
 
 @signal.chat_handler("balance")
 def account_balance(message, match):
-    account_balance_response = mcc.get_balance_for_account(ACCOUNT_ID)
+    account_balance_response = mcc.get_balance_for_account(settings.ACCOUNT_ID)
     unspent_pmob = account_balance_response['unspent_pmob']
     unspent_mob = mc.pmob2mob(unspent_pmob)
     return f'You have {unspent_mob} unspent MOB'
@@ -136,7 +138,7 @@ def handle_payment(source, receipt):
     transaction_status = "TransactionPending"
 
     while transaction_status == "TransactionPending":
-        receipt_status = mcc.check_receiver_receipt_status(PUBLIC_ADDRESS, _signald_to_fullservice(receipt))
+        receipt_status = mcc.check_receiver_receipt_status(settings.STORE_ADDRESS, _signald_to_fullservice(receipt))
         transaction_status = receipt_status["receipt_transaction_status"]
 
     if transaction_status != "TransactionSuccess":
