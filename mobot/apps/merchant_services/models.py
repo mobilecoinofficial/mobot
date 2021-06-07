@@ -17,6 +17,19 @@ class UserAccount(models.Model):
 
     def signal_payments_enabled(self, signal: Signal) -> bool:
         signal_profile = signal.get_profile_from_phone_number(self.phone_number)
+        try:
+            _customer_payments_address = signal_profile['data']['paymentsAddress']
+            return True
+        except:
+            return False
+
+    def payments_address(self, signal: Signal):
+        signal_profile = signal.get_profile_from_phone_number(self.phone_number)
+        try:
+            customer_payments_address = signal_profile['data']['paymentsAddress']
+            return customer_payments_address
+        except:
+            return None
 
 
 class Merchant(UserAccount):
