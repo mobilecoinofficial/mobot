@@ -32,7 +32,6 @@ except Exception as e:
     print("Failed to get full service account ID")
     raise e
 
-print(f"FULLSERVICE_ACCOUNT: {ACCOUNT_ID}")
 
 # Parse database connection url strings like psql://user:pass@127.0.0.1:8458/db
 DATABASES = {
@@ -41,7 +40,3 @@ DATABASES = {
     # read os.environ['SQLITE_URL']
     'extra': runtime_env.db('SQLITE_URL', default='sqlite:////tmp/my-tmp-sqlite.db')
 }
-
-
-if __name__ == "__main__":
-    print(SECRET_KEY)
