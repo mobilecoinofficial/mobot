@@ -48,7 +48,7 @@ services:
     restart: always
     build:
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: ./Dockerfile.dev
     entrypoint: /bin/bash /scripts/init.sh admin
     env_file:
     - ./docker/env
@@ -66,7 +66,7 @@ services:
     restart: always
     build: 
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: ./Dockerfile.dev
     entrypoint: /bin/bash /scripts/init.sh client
     env_file:
     - ./docker/env
