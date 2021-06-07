@@ -56,8 +56,6 @@ COPY ./docker/mobot_client_start.sh /scripts/
 
 COPY ./mobot/requirements.txt /app/mobot/requirements.txt
 COPY ./mobot /app/mobot/
-COPY ./.env.local /app/
-COPY ./.env.staging /app/
 COPY ./privacy /privacy/
 COPY . .
 
