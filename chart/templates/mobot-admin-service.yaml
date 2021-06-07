@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "chart.fullname" . }}-mobot_web-admin
+  name: {{ include "chart.fullname" . }}-mobot-admin
   labels:
     {{- include "chart.labels" . | nindent 4 }}
 spec:
@@ -13,4 +13,4 @@ spec:
       name: http
   selector:
     {{- include "chart.selectorLabels" . | nindent 4 }}
-    app: mobot_web-admin
+    app: mobot-admin

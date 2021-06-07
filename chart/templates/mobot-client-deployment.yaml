@@ -2,17 +2,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: "{{ include "chart.fullname" $ }}-mobot_web-client-{{ . }}"
+  name: "{{ include "chart.fullname" $ }}-mobot-client-{{ . }}"
   labels:
     {{- include "chart.labels" $ | nindent 4 }}
-    app: mobot_web-client
+    app: mobot-client
     number: {{ . | quote }}
 spec:
   replicas: {{ $.Values.mobotClient.replicaCount }}
   selector:
     matchLabels:
       {{- include "chart.selectorLabels" $ | nindent 6 }}
-      app: mobot_web-client
+      app: mobot-client
       number: {{ . | quote }}
   strategy:
     type: Recreate
@@ -22,7 +22,7 @@ spec:
         {{- toYaml $.Values.mobotClient.podAnnotations | nindent 8 }}
       labels:
         {{- include "chart.selectorLabels" $ | nindent 8 }}
-        app: mobot_web-client
+        app: mobot-client
         number: {{ . | quote }}
     spec:
       imagePullSecrets:
@@ -31,7 +31,7 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
       containers:
-      - name: mobot_web-client
+      - name: mobot-client
         args:
         - /usr/local/bin/mobot_client_start.sh
         env:
@@ -92,7 +92,7 @@ spec:
         imagePullPolicy: Always
         volumeMounts:
         - mountPath: /signald
-          name: mobot_web
+          name: mobot
         resources:
           {{- toYaml $.Values.mobotClient.resources | nindent 12 }}
       nodeSelector:
@@ -102,7 +102,7 @@ spec:
       tolerations:
         {{- toYaml $.Values.mobotClient.tolerations | nindent 8 }}
       volumes:
-      - name: mobot_web
+      - name: mobot
         persistentVolumeClaim:
-          claimName: mobot_web
+          claimName: mobot
 {{- end }}
