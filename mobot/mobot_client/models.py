@@ -30,14 +30,21 @@ class Drop(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
     number_restriction = models.TextField()
     timezone = models.TextField()
+    initial_coin_amount_pmob = models.PositiveIntegerField(default=0)
+    initial_coin_limit = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'
 
+class BonusCoin(models.Model):
+    drop = models.ForeignKey(Drop, on_delete=models.CASCADE)
+    amount_pmob = models.PositiveIntegerField(default=0)
+    number_available = models.PositiveIntegerField(default=0)
+
 class Customer(models.Model):
     phone_number = models.TextField(primary_key=True)
     received_sticker_pack = models.BooleanField(default=False)
-    
+
     def __str__(self):
         return f'{self.phone_number}'
 
@@ -50,6 +57,7 @@ class DropSession(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     drop = models.ForeignKey(Drop, on_delete=models.CASCADE)
     state = models.IntegerField(default=0)
+    bonus_coin_claimed = models.ForeignKey(BonusCoin, on_delete=models.CASCADE, default=None, blank=True, null=True)
 
 class Message(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
