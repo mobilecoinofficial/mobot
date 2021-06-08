@@ -1,5 +1,5 @@
 from mobot.apps.merchant_services.models import UserAccount, Drop, DropSession
-from mobot.apps.common.models import models.Model
+from mobot.apps.common import models
 from django.conf import settings
 from typing import TypeVar, Set
 import phonenumbers

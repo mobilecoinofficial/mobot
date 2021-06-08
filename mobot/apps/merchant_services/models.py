@@ -28,7 +28,7 @@ class UserAccount(models.Model):
         try:
             customer_payments_address = signal_profile['data']['paymentsAddress']
             return customer_payments_address
-        except:
+        except Exception as e:
             return None
 
 
@@ -38,18 +38,19 @@ class Merchant(UserAccount):
         return settings.ACCOUNT_ID
 
 
-class Store(models.Model):
+class MCStore(models.Model):
     name = models.TextField()
     phone_number = PhoneNumberField()
     description = models.TextField()
     privacy_policy_url = models.TextField()
+    merchant_ref = models.ForeignKey(Merchant, on_delete=models.CASCADE, related_name="store_owner")
 
     def __str__(self):
         return f'{self.name} ({self.phone_number})'
 
 
 class Item(models.Model):
-    store_ref = models.ForeignKey(Store, on_delete=models.CASCADE)
+    store_ref = models.ForeignKey(MCStore, on_delete=models.CASCADE)
     name = models.TextField()
     description = models.TextField(default=None, blank=True, null=True)
     short_description = models.TextField(default=None, blank=True, null=True)
@@ -60,20 +61,14 @@ class Item(models.Model):
         return f'{self.name}'
 
 
-
 class Product(models.Model):
-    store_ref = models.ForeignKey(Store, on_delete=models.CASCADE)
+    store_ref = models.ForeignKey(MCStore, on_delete=models.CASCADE)
     item_ref = models.ForeignKey(Item, on_delete=models.CASCADE)
     number_restriction = ArrayField(models.TextField(blank=False, null=False), unique=True, blank=True)
     allows_refund = models.BooleanField(default=True, blank=False)
 
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'
-
-
-class Validation(models.Model):
-    validation_class = models.TextField()
-
 
 
 class Drop(Product):
@@ -96,7 +91,7 @@ class Customer(UserAccount):
 
 class CustomerStorePreferences(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    store_ref = models.ForeignKey(Store, on_delete=models.CASCADE)
+    store_ref = models.ForeignKey(MCStore, on_delete=models.CASCADE)
     allows_contact = models.BooleanField()
     allows_payment = models.BooleanField()
 
@@ -122,7 +117,7 @@ class DropSession(Session):
 
 class Message(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    store_ref = models.ForeignKey(Store, on_delete=models.CASCADE)
+    store_ref = models.ForeignKey(MCStore, on_delete=models.CASCADE)
     text = models.TextField()
     date = models.DateTimeField(auto_now_add=True)
     direction = models.PositiveIntegerField()

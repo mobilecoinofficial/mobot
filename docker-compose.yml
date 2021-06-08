@@ -58,13 +58,15 @@ services:
     - db
     expose:
     - 8000
+    ports:
+      - "8000:8000"
     networks:
       mobot:
         ipv4_address: 10.200.0.8
 
   mobot-client:
     restart: always
-    build: 
+    build:
       context: .
       dockerfile: ./Dockerfile.dev
     entrypoint: /bin/bash /scripts/init.sh client

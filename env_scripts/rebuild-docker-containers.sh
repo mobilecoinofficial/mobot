@@ -2,18 +2,12 @@
 
 set -e
 CACHE=$1
-if [[ -z ${CACHE} ]]
-then
-  CACHE=true
-fi
 
 VENV=$(pipenv --venv)
 source ${VENV}/bin/activate
 pipenv install
 
-docker-compose down
-
-if [[ "${CACHE}" == 'true' ]]
+if [[ "${CACHE:-true}" == 'true' ]]
 then
   docker-compose build --build-arg CACHEBUST=0
 else
