@@ -206,6 +206,7 @@ class Signal:
             "version": "v1",
             "username": self.username,
             "recipientAddress": recipient_address,
+            "attachments": [],
             "payment": {
                 "txo_public_key": receiver_receipt["public_key"],
                 "txo_confirmation": receiver_receipt["confirmation"],
@@ -216,7 +217,7 @@ class Signal:
         }
         print("---------receipt payload-----------")
         print(payload)
-        self._send_command(payload, block)
+        print(self._send_command(payload, block))
 
     """
         avatar_filename: The filename for the avatar image you wish to set. It
