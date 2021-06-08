@@ -48,7 +48,7 @@ WORKDIR /app
 RUN mkdir -p /app/mobot
 
 ARG CACHEBUST=1
-
+RUN echo "$CACHEBUST"
 ### DO quick stuff like re-copying code without the cache, just to make sure new code is always there
 
 COPY ./docker/init.sh /scripts/
