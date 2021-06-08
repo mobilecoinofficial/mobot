@@ -30,6 +30,13 @@ PUBLIC_ADDRESS = account_obj['main_address']
 get_network_status_response = mcc.get_network_status()
 MINIMUM_FEE_PMOB = get_network_status_response['fee_pmob']
 
+# if we are on mainnet, this will return 0 and we need to set it to 0.01MOB which
+# is the current minimum
+if MINIMUM_FEE_PMOB == "0":
+    MINIMUM_FEE_PMOB = "10000000000"
+
+print(MINIMUM_FEE_PMOB)
+
 SESSION_STATE_COMPLETED = -1
 SESSION_STATE_STARTED = 0
 SESSION_STATE_ALLOW_CONTACT_REQUESTED = 1
