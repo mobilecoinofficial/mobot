@@ -24,10 +24,25 @@ fullService:
     tag: ""
   podAnnotations:
     fluentbit.io/include: 'true'
+  args: []
+  # Example args for testnet
+  # - --peer=mc://node1.test.mobilecoin.com/
+  # - --peer=mc://node2.test.mobilecoin.com/
+  # - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node1.test.mobilecoin.com/
+  # - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node2.test.mobilecoin.com/
   resources: {}
   nodeSelector: {}
   tolerations: []
   affinity: {}
+  persistence:
+    enabled: true
+    spec:
+      storageClassName: fast
+      accessModes:
+        - "ReadWriteOnce"
+      resources:
+        requests:
+          storage: 512Gi
 
 mobotClient:
   replicaCount: 1
