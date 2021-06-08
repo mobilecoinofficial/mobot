@@ -6,7 +6,7 @@ import pytz
 from django.utils import timezone
 from django.core.management.base import BaseCommand
 from mobot.apps.signald_client import Signal
-from mobot.apps.merchant_services.models import MCStore, Customer, DropSession, Drop, CustomerStorePreferences, Message
+from mobot.apps.merchant_services.models import MCStore, Customer, DropSession, Drop, CustomerStorePreferences, Message, Merchant
 import mobilecoin as mc
 from decimal import Decimal
 from django.conf import settings
@@ -30,7 +30,8 @@ stores = MCStore.objects.all()
 logging.info(stores)
 while True:
     try:
-        store = MCStore.objects.get(phone_number=settings.STORE_NUMBER)
+        store = MCStore.objects.get(id=settings.STORE_NUMBER)
+        merchant = Merchant.objects.get(phone_number=store.merchant_ref.phone_number)
         break
     except MCStore.DoesNotExist:
         logger.debug(f"Store does not exist yet with number {settings.STORE_NUMBER}")

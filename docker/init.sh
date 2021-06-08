@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 start_cmd=$1
 
-source /.venv/bin/activate
-export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
-
 case $start_cmd in
 
   admin)
