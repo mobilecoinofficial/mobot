@@ -1,5 +1,5 @@
 from django.contrib import admin
-from mobot.apps.merchant_services.models import Store, Customer, Drop, Item, CustomerStorePreferences, DropSession, Message
+from mobot.apps.merchant_services.models import MCStore, Customer, Drop, Item, CustomerStorePreferences, DropSession, Message
 
 class StoreAdmin(admin.ModelAdmin):
     pass
@@ -22,7 +22,7 @@ class DropSessionAdmin(admin.ModelAdmin):
 class MessageAdmin(admin.ModelAdmin):
     pass
 
-admin.site.register(Store, StoreAdmin)
+admin.site.register(MCStore, StoreAdmin)
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Drop, DropAdmin)
 admin.site.register(Item, ItemAdmin)

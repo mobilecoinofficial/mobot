@@ -1,16 +1,17 @@
+import logging
 import os
 import time
 import pytz
 
-from django.conf import settings
 from django.utils import timezone
 from django.core.management.base import BaseCommand
 from mobot.apps.signald_client import Signal
-from mobot.apps.merchant_services.models import Store, Customer, DropSession, Drop, CustomerStorePreferences, Message
+from mobot.apps.merchant_services.models import MCStore, Customer, DropSession, Drop, CustomerStorePreferences, Message
 import mobilecoin as mc
 from decimal import Decimal
 from django.conf import settings
-
+from logging import getLogger
+import sys
 
 SIGNALD_ADDRESS = settings.SIGNALD_ADDRESS
 SIGNALD_PORT = settings.SIGNALD_PORT
@@ -21,12 +22,21 @@ FULLSERVICE_ADDRESS = settings.FULLSERVICE_ADDRESS
 FULLSERVICE_PORT = settings.FULLSERVICE_PORT
 FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
 mcc = mc.Client(url=FULLSERVICE_URL)
-
+logger = getLogger(__file__)
 signal = Signal(settings.STORE_NUMBER, socket_path=(settings.SIGNALD_ADDRESS, int(settings.SIGNALD_PORT)))
 
 mcc = mc.Client(url=settings.FULLSERVICE_URL)
+stores = MCStore.objects.all()
+logging.info(stores)
+while True:
+    try:
+        store = MCStore.objects.get(phone_number=settings.STORE_NUMBER)
+        break
+    except MCStore.DoesNotExist:
+        logger.debug(f"Store does not exist yet with number {settings.STORE_NUMBER}")
+        time.sleep(10000)
 
-store = Store.objects.get(phone_number=settings.STORE_NUMBER)
+
 
 SESSION_STATE_COMPLETED = -1
 SESSION_STATE_STARTED = 0
