@@ -10,3 +10,5 @@ function install_local_env() {
     -prefix readline
   )/lib -L$(brew --prefix zlib)/lib -L$(brew --prefix bzip2)/lib" pyenv install 3.9.5
 }
+
+install_local_env
