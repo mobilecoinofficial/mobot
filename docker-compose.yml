@@ -85,8 +85,11 @@ services:
 
 volumes:
   db:
+    external: true
   signald:
+    external: true
   full-service:
+    external: true
 
 networks:
   mobot:

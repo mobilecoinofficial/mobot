@@ -40,32 +40,23 @@ class Merchant(UserAccount):
 
 class MCStore(models.Model):
     name = models.TextField()
-    phone_number = PhoneNumberField()
-    description = models.TextField()
-    privacy_policy_url = models.TextField()
+    description = models.TextField(blank=True, default="Mobot Store")
+    privacy_policy_url = models.URLField(blank=True, default="https://mobilecoin.com/privacy")
     merchant_ref = models.ForeignKey(Merchant, on_delete=models.CASCADE, related_name="store_owner")
 
     def __str__(self):
         return f'{self.name} ({self.phone_number})'
 
 
-class Item(models.Model):
+class Product(models.Model):
     store_ref = models.ForeignKey(MCStore, on_delete=models.CASCADE)
     name = models.TextField()
     description = models.TextField(default=None, blank=True, null=True)
     short_description = models.TextField(default=None, blank=True, null=True)
-    image_link = models.TextField(default=None, blank=True, null=True)
-    price_in_picomob = models.IntegerField(default=0)
-
-    def __str__(self):
-        return f'{self.name}'
-
-
-class Product(models.Model):
-    store_ref = models.ForeignKey(MCStore, on_delete=models.CASCADE)
-    item_ref = models.ForeignKey(Item, on_delete=models.CASCADE)
+    image_link = models.URLField(default=None, blank=True, null=True)
     number_restriction = ArrayField(models.TextField(blank=False, null=False), unique=True, blank=True)
     allows_refund = models.BooleanField(default=True, blank=False)
+    price_in_picomob = models.IntegerField(default=0, null=False)
 
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'
@@ -76,6 +67,7 @@ class Drop(Product):
     advertisement_start_time = models.DateTimeField()
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
+    quota = models.IntegerField(default=10)
 
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'
