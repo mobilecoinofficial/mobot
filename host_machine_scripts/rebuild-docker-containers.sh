@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
-CMD=$1
+CACHE=$1
+set -ex
+
+
 function rebuild_docker() {
   set -e
   VENV=$(pipenv --venv)
@@ -15,6 +18,4 @@ function rebuild_docker() {
   fi
 }
 
-if [[ ! -z ${CMD+x} ]]; then
-  rebuild_docker $CMD
-fi
+rebuild_docker $CACHE

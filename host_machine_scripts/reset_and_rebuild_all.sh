@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 
-SCRIPT_DIR=$(pwd)
 
-source ./*.sh
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-reset_docker_networking
-create_volumes
-rebuild_docker
+$SCRIPT_DIR/create_volumes.sh
+$SCRIPT_DIR/reset_docker_networking.sh
+$SCRIPT_DIR/
 
