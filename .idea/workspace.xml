@@ -2,20 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="03bb501d-2d51-4641-a23e-5445c27bbf99" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mobot/mobot_client/management/commands/run_mobot_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/mobot/mobot_client/management/commands/run_mobot_client.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobot/mobot_client/migrations/0001_initial.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobot/mobot_client/migrations/0002_dropsession.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobot/mobot_client/migrations/0003_auto_20210519_1504.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobot/mobot_client/migrations/0004_remove_customer_name.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobot/mobot_client/migrations/0005_drop_pre_drop_description.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobot/mobot_client/migrations/0006_store_privacy_policy_url.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobot/mobot_client/migrations/0007_drop_number_restriction.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobot/mobot_client/migrations/0008_drop_timezone.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobot/mobot_client/migrations/0009_customer_name.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobot/mobot_client/migrations/0010_auto_20210521_1434.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobot/mobot_client/migrations/0011_auto_20210521_1437.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobot/mobot_client/migrations/0012_remove_customer_name.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mobot/signald_client/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/mobot/signald_client/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
