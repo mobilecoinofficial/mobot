@@ -72,7 +72,7 @@ spec:
               key: HOSTNAME
         - name: SIGNALD_ADDRESS
           value: {{ include "chart.fullname" . }}-signald
-        - name: FULL_SERVICE_ADDRESS
+        - name: FULLSERVICE_ADDRESS
           value: {{ include "chart.fullname" . }}-full-service
         securityContext:
           capabilities:
