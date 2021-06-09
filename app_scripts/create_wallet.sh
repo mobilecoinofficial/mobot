@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-function create_wallet() {
+function create_wallet {
   curl -X POST \
     http://10.200.0.7:9090/wallet \
     -H 'cache-control: no-cache' \
@@ -15,3 +15,5 @@ function create_wallet() {
     "id": 1
 }'
 }
+
+export create_wallet

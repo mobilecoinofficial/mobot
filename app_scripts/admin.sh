@@ -1,20 +1,25 @@
 #!/bin/bash
 
-source ./delete_dbs.sh
-source ./reset_admin.sh
-source ./set_up_env.sh
-source ./create_wallet.sh
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-CMD="{$1:-none}"
+source $SCRIPT_DIR/set_up_env.sh
+source $SCRIPT_DIR/create_wallet.sh
+source $SCRIPT_DIR/reset_admin.sh
+source $SCRIPT_DIR/delete_dbs.sh
+
+ENV_FILE=$(output_env)
+export ENV_FILE
+
+CMD=$1
 
 case $CMD in
 
   reset-admin)
-    exec reset_admin $ADMIN_USERNAME
+    exec ENV_FILE=$ENV_FILE reset_admin $ADMIN_USERNAME
     ;;
 
-  flush-dbs)
-    exec flush_dbs
+  delete_dbs)
+    exec delete_dbs
   ;;
 
   create_wallet)
@@ -27,9 +32,9 @@ case $CMD in
 
   reset-all)
     echo "Resetting all and provisioning wallet";
-    flush_dbs && echo "flushed dbs" && \
+    delete_dbs && echo "flushed dbs" && \
     create_wallet && echo "created wallet" && \
-    reset_admin && echo "admin reset" && \
+    reset_admin $ADMIN_USERNAME && echo "admin reset" && \
     python /app/module/manage.py merchant_admin --help && echo "merchants populated" && \
     echo "All done resetting everything"
   ;;

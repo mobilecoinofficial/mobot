@@ -51,22 +51,26 @@ ARG CACHEBUST=1
 RUN echo "$CACHEBUST"
 ### DO quick stuff like re-copying code without the cache, just to make sure new code is always there
 
+
 COPY ./docker/init.sh /scripts/
-COPY ./docker/admin_start.sh /scripts/
-COPY ./docker/mobot_client_start.sh /scripts/
-COPY ./app_scripts/ /app_scripts/
+COPY ./app_scripts/*.sh /scripts/
+COPY ./app_scripts/*. /app_scripts/
 
 COPY ./mobot/requirements.txt /app/mobot/requirements.txt
 COPY ./mobot /app/mobot/
 COPY ./privacy /privacy/
-COPY . .
+COPY . /app/mobot/
 
+RUN touch /tmp/env.sh
 RUN mkdir -p /static/
 RUN chown app:app /static/
 RUN chown app:app /scripts/*
-RUN chown app:app /app_scripts/*
+RUN chown app:app mobot/app_scripts/*
+RUN chown app:app /app/mobot/docker/*
+RUN chmod a+x /app/mobot/docker/*.sh
 RUN chmod a+x /scripts/*
-RUN chmod a+x /app_scripts/
+RUN chmod -R a+x mobot/app_scripts/
+
 RUN chown -R app:app /app
 USER app
 
