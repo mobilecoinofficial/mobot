@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'mobot.apps.payment_service.apps.PaymentServiceAppConfig',
     'mobot.apps.merchant_services.apps.MerchantServicesConfig',
     'mobot.apps.mobot_client.apps.MobotClientAppsConfig',
+    'mobot.apps.mobot_web.apps.MobotWebConfig'
 ]
 
 MIDDLEWARE = [
@@ -82,7 +83,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'wsgi.application'
+WSGI_APPLICATION = 'mobot.apps.mobot_web.wsgi.application'
 
 
 # Database

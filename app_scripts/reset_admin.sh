@@ -2,7 +2,7 @@
 
 set -e
 
-function admin_reset() {
+function reset_admin {
 
   RESET_ADMIN="{$1:-false}"
 
@@ -11,8 +11,8 @@ function admin_reset() {
     python /app/mobot/manage.py migrate
     python /app/mobot/manage.py flush --database auth_user #Truncate the db
     echo "from django.contrib.auth.models import User; User.objects.create_superuser('admin', 'admin@example.com', 'pass')" | python manage.py shell
-
   fi
+
   python /app/mobot/manage.py createcachetable
   uwsgi --ini /app/mobot/uwsgi.ini
   unset -e

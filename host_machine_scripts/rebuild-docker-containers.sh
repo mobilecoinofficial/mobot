@@ -2,7 +2,6 @@
 
 CACHE=$1
 echo "Cache set to $CACHE"
-set -ex
 
 
 set -e
@@ -16,6 +15,3 @@ then
 else
   docker-compose build --no-cache
 fi
-
-
-rebuild_docker $CACHE

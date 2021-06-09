@@ -117,7 +117,6 @@ class Command(BaseCommand):
             default=False,
         )
 
-
     def handle(self, *args, **kwargs):
         try:
             parser = argparse.ArgumentParser()
