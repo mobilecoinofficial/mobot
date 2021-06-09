@@ -102,6 +102,7 @@ class Signal:
                 print("Invalid JSON")
 
             if message.get("type") == "unreadable_message":
+                self.get_profile(message["data"]["source"])
                 self.send_message(message["data"]["source"], "Could you repeat that?")
 
             if message.get("type") != "message" or (
