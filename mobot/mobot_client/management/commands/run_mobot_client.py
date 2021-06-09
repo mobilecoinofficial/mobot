@@ -143,6 +143,10 @@ def handle_payment(source, receipt):
 
     amount_paid_mob = mc.pmob2mob(receipt_status["txo"]["value_pmob"])
     refund_customer(source, amount_paid_mob, False)
+
+@signal.chat_handler("")
+def chat_router(message, match):
+    return "Hello, world!"
 #
 # # catch all chat handler, will perform our own routing from here
 # @signal.chat_handler("")
