@@ -129,6 +129,28 @@ def minimum_coin_available(drop):
     return unspent_pmob >= (drop.initial_coin_amount_pmob + int(MINIMUM_FEE_PMOB))
 
 
+def get_advertising_drop():
+    drops_to_advertise = Drop.objects.filter(advertisment_start_time__lte=timezone.now()).filter(
+        start_time__gt=timezone.now())
+
+    if len(drops_to_advertise) > 0:
+        return drops_to_advertise[0]
+    return None
+
+
+def get_active_drop():
+    active_drops = Drop.objects.filter(start_time__lte=timezone.now()).filter(end_time__gte=timezone.now())
+    if len(active_drops) == 0:
+        return None
+    return active_drops[0]
+
+def get_customer_store_preferences(customer, store_to_check):
+    try:
+        customer_store_preferences = CustomerStorePreferences.objects.get(customer=customer, store=store_to_check)
+        return customer_store_preferences
+    except:
+        return None
+
 def customer_has_store_preferences(customer):
     try:
         _ = CustomerStorePreferences.objects.get(customer=customer, store=store)
@@ -213,10 +235,6 @@ def handle_drop_session_allow_contact_requested(message, drop_session):
         drop_session.state = SESSION_STATE_COMPLETED
         drop_session.save()
         log_and_send_message(drop_session.customer, message.source, "Thanks! MOBot OUT. Buh-bye")
-        return
-
-    if message.text.lower() == "p" or message.text.lower() == "privacy":
-        log_and_send_message(drop_session.customer, message.source, "privacy policy")
         return
 
     if message.text.lower() == "help":
@@ -352,20 +370,41 @@ def chat_router_coins(message, match):
         signal.send_message(message.source, f"{number_claimed} out of {bonus_coin.number_available} {mc.pmob2mob(bonus_coin.amount_pmob).normalize()}MOB Bonus Coins claimed ")
 
 
-def get_advertising_drop():
-    drops_to_advertise = Drop.objects.filter(advertisment_start_time__lte=timezone.now()).filter(
-        start_time__gt=timezone.now())
-
-    if len(drops_to_advertise) > 0:
-        return drops_to_advertise[0]
-    return None
+@signal.chat_handler("privacy")
+def privacy_policy_handler(message, _match):
+    customer, _is_new = Customer.objects.get_or_create(phone_number=message.source['number'])
+    log_and_send_message(customer, message.source, store.privacy_policy_url)
+    return
 
 
-def get_active_drop():
-    active_drops = Drop.objects.filter(start_time__lte=timezone.now()).filter(end_time__gte=timezone.now())
-    if len(active_drops) == 0:
-        return None
-    return active_drops[0]
+@signal.chat_handler("unsubscribe")
+def unsubscribe_handler(message, _match):
+    customer, _is_new = Customer.objects.get_or_create(phone_number=message.source['number'])
+    store_preferences, _is_new = CustomerStorePreferences.objects.get_or_create(customer=customer, store=store)
+
+    if not store_preferences.allows_contact:
+        log_and_send_message(customer, message.source, "You are not currently receiving any notifications")
+        return
+
+    store_preferences.allows_contact = False
+    store_preferences.save()
+
+    log_and_send_message(customer, message.source, "You will no longer receive notifications about future drops.")
+
+
+@signal.chat_handler("subscribe")
+def subscribe_handler(message, _match):
+    customer, _is_new = Customer.objects.get_or_create(phone_number=message.source['number'])
+    store_preferences, _is_new = CustomerStorePreferences.objects.get_or_create(customer=customer, store=store)
+
+    if store_preferences.allows_contact:
+        log_and_send_message(customer, message.source, "You are already subscribed.")
+        return
+
+    store_preferences.allows_contact = True
+    store_preferences.save()
+
+    log_and_send_message(customer, message.source, "We will let you know about future drops!")
 
 
 @signal.chat_handler("")
