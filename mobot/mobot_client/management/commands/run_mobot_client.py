@@ -13,15 +13,14 @@ from decimal import Decimal
 
 SIGNALD_ADDRESS = os.getenv("SIGNALD_ADDRESS", "127.0.0.1")
 SIGNALD_PORT = os.getenv("SIGNALD_PORT", "15432")
-STORE_NUMBER = os.environ["STORE_NUMBER"]
-signal = Signal(STORE_NUMBER, socket_path=(SIGNALD_ADDRESS, int(SIGNALD_PORT)))
+
+store = Store.objects.first()
+signal = Signal(store.phone_number, socket_path=(SIGNALD_ADDRESS, int(SIGNALD_PORT)))
 
 FULLSERVICE_ADDRESS = os.getenv("FULLSERVICE_ADDRESS", "127.0.0.1")
 FULLSERVICE_PORT = os.getenv("FULLSERVICE_PORT", "9090")
 FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
 mcc = mc.Client(url=FULLSERVICE_URL)
-
-store = Store.objects.get(phone_number=STORE_NUMBER)
 
 all_accounts_response = mcc.get_all_accounts()
 ACCOUNT_ID = next(iter(all_accounts_response))
@@ -42,6 +41,7 @@ MESSAGE_DIRECTION_SENT = 1
 
 signal.set_profile("MOBot", PUBLIC_ADDRESS, None, False)
 
+
 def _signald_to_fullservice(r):
     return {
         "object": "receiver_receipt",
@@ -55,29 +55,24 @@ def _signald_to_fullservice(r):
         }
     }
 
-def get_payments_address(source):
-    customer_signal_profile = signal.get_profile(source, True)
-    customer_payments_address = customer_signal_profile['data']['paymentsAddress']
-    if customer_payments_address is None:
-        return None
-    return customer_payments_address
 
 def send_mob_to_customer(source, amount_mob, cover_transaction_fee):
     customer_payments_address = get_payments_address(source)
     if customer_payments_address is None:
         signal.send_message(source,
                        ("We have a refund for you, but your payments have been deactivated\n\n"
-                       "Please contact customer service at {}").format(STORE_NUMBER))
+                       "Please contact customer service at {}").format(store.phone_number))
         return
 
     if not cover_transaction_fee:
         amount_mob = amount_mob - Decimal(mc.pmob2mob(MINIMUM_FEE_PMOB))
 
     if amount_mob <= 0:
-        signal.send_message(source, "Sorry. Can't issue a refund because the refund amount is less than the transaction fee 🙁")
+        signal.send_message(source, "MOBot here! You sent us an unsolicited payment that we can't return. We suggest only sending us payments when we request them and for the amount requested.")
         return
 
     send_mob_to_address(source, ACCOUNT_ID, amount_mob, customer_payments_address)
+
 
 def send_mob_to_address(source, account_id, amount_in_mob, customer_payments_address):
     tx_proposal = mcc.build_transaction(account_id, amount_in_mob, customer_payments_address)
@@ -95,7 +90,7 @@ def send_mob_to_address(source, account_id, amount_in_mob, customer_payments_add
         return
 
     send_payment_receipt(source, tx_proposal)
-    signal.send_message(source, "{} MOB sent".format(float(amount_in_mob)))
+
 
 def submit_transaction(tx_proposal, account_id):
     # retry up to 10 times in case there's some failure with a 1 sec timeout in between each
@@ -107,9 +102,11 @@ def submit_transaction(tx_proposal, account_id):
 
     return list_of_txos[0]["txo_id_hex"]
 
+
 def send_payment_receipt(source, tx_proposal):
     receiver_receipt = create_receiver_receipt(tx_proposal)
     signal.send_payment_receipt(source, receiver_receipt, "Refund")
+
 
 def create_receiver_receipt(tx_proposal):
     receiver_receipts = mcc.create_receiver_receipts(tx_proposal)
@@ -118,14 +115,25 @@ def create_receiver_receipt(tx_proposal):
         raise ValueError("Found more than one txout for this chat bot-initiated transaction.")
     return receiver_receipts[0]
 
+
 def under_drop_quota(drop):
-    return True
+    number_initial_drops_finished = DropSession.objects.filter(drop=drop, state__gt=SESSION_STATE_READY_TO_RECEIVE_INITIAL).count()
+    return number_initial_drops_finished < drop.initial_coin_limit
+
 
 def minimum_coin_available(drop):
-    return True
+    account_amount_response = mcc.get_balance_for_account(ACCOUNT_ID)
+    unspent_pmob = int(account_amount_response['unspent_pmob'])
+    return unspent_pmob >= (drop.initial_coin_amount_pmob + int(MINIMUM_FEE_PMOB))
 
-def get_bonus_coin_amount(drop):
-    return
+
+def customer_has_store_preferences(customer):
+    try:
+        _ = CustomerStorePreferences.objects.get(customer=customer, store=store)
+        return True
+    except:
+        return False
+
 
 @signal.payment_handler
 def handle_payment(source, receipt):
@@ -149,7 +157,7 @@ def handle_payment(source, receipt):
         drop_session = DropSession.objects.get(customer=customer, state=SESSION_STATE_WAITING_FOR_BONUS_TRANSACTION)
     except Exception as e:
         print(e)
-        log_and_send_message(customer, source, "not expecting a payment, sending it back")
+        log_and_send_message(customer, source, "MOBot here! You sent us an unsolicited payment. We're returning it minus a network fee to cover our costs. We can't promise to always be paying attention and return unsolicited payments, so we suggest only sending us payments when we request them")
         send_mob_to_customer(source, amount_paid_mob, False)
         return
 
@@ -166,15 +174,27 @@ def handle_payment(source, receipt):
         send_mob_to_customer(source, amount_paid_mob, True)
         return
 
+    initial_coin_amount_mob = mc.pmob2mob(drop_session.drop.initial_coin_amount_pmob)
     random_index = random.randint(0, len(bonus_coins) - 1)
     amount_in_mob = mc.pmob2mob(bonus_coins[random_index].amount_pmob)
-    amount_to_send_mob = amount_in_mob + amount_paid_mob
+    amount_to_send_mob = amount_in_mob + amount_paid_mob + mc.pmob2mob(MINIMUM_FEE_PMOB)
     send_mob_to_customer(source, amount_to_send_mob, True)
     drop_session.bonus_coin_claimed = bonus_coins[random_index]
-    drop_session.state = SESSION_STATE_ALLOW_CONTACT_REQUESTED
     drop_session.save()
-    log_and_send_message(customer, source, "sending you some bonus mob!")
-    return
+    total_prize = Decimal(initial_coin_amount_mob + amount_in_mob)
+    log_and_send_message(customer, source, f"We've sent you back {amount_to_send_mob.normalize()} MOB! That brings your total prize to {total_prize.normalize()} MOB")
+    log_and_send_message(customer, source, f"Enjoy your {total_prize.normalize()} MOB!")
+    log_and_send_message(customer, source, "You've completed the MOB Coin Drop! To give others a chance, we're only allowing one MOB airdrop per person")
+
+    if customer_has_store_preferences(customer):
+        log_and_send_message(customer, source, "Thanks! MOBot OUT. Buh-bye")
+        drop_session.state = SESSION_STATE_COMPLETED
+        drop_session.save()
+    else:
+        log_and_send_message(customer, source, "Would you like to receive alerts for future drops?")
+        drop_session.state = SESSION_STATE_ALLOW_CONTACT_REQUESTED
+        drop_session.save()
+
 
 def handle_drop_session_allow_contact_requested(message, drop_session):
     if message.text.lower() == "y" or message.text.lower() == "yes":
@@ -203,6 +223,7 @@ def handle_drop_session_allow_contact_requested(message, drop_session):
 
     log_and_send_message(drop_session.customer, message.source, "allow contact commands")
 
+
 def handle_drop_session_ready_to_receive(message, drop_session):
     if message.text.lower() == "n" or message.text.lower() == "no" or message.text.lower() == "cancel":
         drop_session.state = SESSION_STATE_CANCELLED
@@ -223,9 +244,10 @@ def handle_drop_session_ready_to_receive(message, drop_session):
             drop_session.save()
             return
 
-        send_mob_to_customer(message.source, mc.pmob2mob(drop_session.drop.initial_coin_amount_pmob), True)
-        log_and_send_message(drop_session.customer, message.source, "sent initial coin")
-        log_and_send_message(drop_session.customer, message.source, "bonus coin payment message request")
+        amount_in_mob = mc.pmob2mob(drop_session.drop.initial_coin_amount_pmob)
+        send_mob_to_customer(message.source, amount_in_mob, True)
+        log_and_send_message(drop_session.customer, message.source, f"Great! We've just sent you {amount_in_mob.normalize()} MOB (~£3). Send us 0.01 MOB, and we'll send it back, plus more! You could end up with as much as £50 of MOB")
+        log_and_send_message(drop_session.customer, message.source, "To see your balance and send a payment:\n\n1. Select the attachment icon and select Pay\n2. Enter the amount you want to send (e.g. 0.01 MOB)\n3. Tap Pay\n4. Tap Confirm Payment")
 
         drop_session.state = SESSION_STATE_WAITING_FOR_BONUS_TRANSACTION
         drop_session.save()
@@ -236,6 +258,7 @@ def handle_drop_session_ready_to_receive(message, drop_session):
         return
 
     log_and_send_message(drop_session.customer, message.source, "initial coins commands")
+
 
 def handle_drop_session_waiting_for_bonus_transaction(message, drop_session):
     if message.text.lower() == "help":
@@ -249,8 +272,10 @@ def handle_drop_session_waiting_for_bonus_transaction(message, drop_session):
 
     log_and_send_message(drop_session.customer, message.source, "payment request message")
 
+
 def handle_drop_session_complete(message, drop_session):
-    log_and_send_message(drop_session.customer, message.source, "You have already participated in this air drop, thanks!")
+    log_and_send_message(drop_session.customer, message.source, "You've received your initial MOB, tried making a payment, and received a bonus! Well done. You've completed the MOB Coin Drop. Stay tuned for future drops.")
+
 
 def handle_drop_sessions(message, drop_session):
     if drop_session.state == SESSION_STATE_COMPLETED:
@@ -269,29 +294,8 @@ def handle_drop_sessions(message, drop_session):
         handle_drop_session_allow_contact_requested(message, drop_session)
         return
 
-@signal.chat_handler("coins")
-def chat_router_coins(message, match):
-    bonus_coins = BonusCoin.objects.all()
-    for bonus_coin in bonus_coins:
-        number_claimed = DropSession.objects.filter(bonus_coin_claimed=bonus_coin).count()
-        signal.send_message(message.source, "{} out of {} {}MOB Bonus Coins claimed ".format(number_claimed, bonus_coin.number_available, mc.pmob2mob(bonus_coin.amount_pmob)))
 
-@signal.chat_handler("")
-def chat_router(message, match):
-    customer, _ = Customer.objects.get_or_create(phone_number=message.source['number'])
-    drop_session = None
-
-    try:
-        drop_session = DropSession.objects.get(customer=customer, state__gte=SESSION_STATE_READY_TO_RECEIVE_INITIAL)
-    except Exception as e:
-        print("NO SESSION FOUND")
-        print(e)
-        pass
-
-    if drop_session is not None:
-        handle_drop_sessions(message, drop_session)
-        return
-
+def handle_no_drop_session(customer, message):
     drops_to_advertise = Drop.objects.filter(advertisment_start_time__lte=timezone.now()).filter(
         start_time__gt=timezone.now())
 
@@ -315,23 +319,67 @@ def chat_router(message, match):
 
     active_drop = active_drops[0]
     if not customer.phone_number.startswith(active_drop.number_restriction):
-        log_and_send_message(customer, message.source, "Hi! MOBot here.\n\nSorry, we are not yet available in your country")
+        log_and_send_message(customer, message.source,
+                             "Hi! MOBot here.\n\nSorry, we are not yet available in your country")
         return
 
     customer_payments_address = get_payments_address(message.source)
     if customer_payments_address is None:
-        log_and_send_message(customer, message.source, "Hi! MOBot here.\n\nI'm a bot from MobileCoin that assists in making purchases using Signal Messenger and MobileCoin\n\nUh oh! In-app payments are not enabled \n\nEnable payments to receive {0}\n\nMore info on enabling payments here: https://support.signal.org/hc/en-us/articles/360057625692-In-app-Payments".format(active_drop.item.description))
+        log_and_send_message(customer, message.source,
+                             "Hi! MOBot here.\n\nI'm a bot from MobileCoin that assists in making purchases using Signal Messenger and MobileCoin\n\nUh oh! In-app payments are not enabled \n\nEnable payments to receive {0}\n\nMore info on enabling payments here: https://support.signal.org/hc/en-us/articles/360057625692-In-app-Payments".format(
+                                 active_drop.item.description))
+        return
+
+    if not under_drop_quota(active_drop):
+        log_and_send_message(customer, message.source, "over quota for drop!")
+        return
+
+    if not minimum_coin_available(active_drop):
+        log_and_send_message(customer, message.source, "no coin left!")
         return
 
     new_drop_session = DropSession(customer=customer, drop=active_drop, state=SESSION_STATE_READY_TO_RECEIVE_INITIAL)
     new_drop_session.save()
 
-    log_and_send_message(customer, message.source, "Are you ready to receive some initial MOB?")
+    log_and_send_message(customer, message.source,
+                         "Hi! MOBot here.\n\nWe're giving away free MOB today so that you can try Signal's new payment feature!!!")
+    log_and_send_message(customer, message.source,
+                         "Here's how our MOB airdrop works:\n\n1. We send you some MOB to fund your wallet. It will be approx £3 worth\n2. Give sending MOB a try by giving us back a tiny bit, say 0.01 MOB\n3. We'll send you a random BONUS airdrop. You could receive as much as £50 in MOB\n\nWhether you get £5 or £50, it’s yours to keep and spend however you like")
+    log_and_send_message(customer, message.source, "Ready?")
+
+
+@signal.chat_handler("coins")
+def chat_router_coins(message, match):
+    bonus_coins = BonusCoin.objects.all()
+    for bonus_coin in bonus_coins:
+        number_claimed = DropSession.objects.filter(bonus_coin_claimed=bonus_coin).count()
+        signal.send_message(message.source, f"{number_claimed} out of {bonus_coin.number_available} {mc.pmob2mob(bonus_coin.amount_pmob).normalize()}MOB Bonus Coins claimed ")
+
+
+@signal.chat_handler("")
+def chat_router(message, match):
+    customer, _ = Customer.objects.get_or_create(phone_number=message.source['number'])
+    drop_session = None
+
+    try:
+        drop_session = DropSession.objects.get(customer=customer, state__gte=SESSION_STATE_READY_TO_RECEIVE_INITIAL)
+    except Exception as e:
+        print("NO SESSION FOUND")
+        print(e)
+        pass
+
+    if drop_session is not None:
+        handle_drop_sessions(message, drop_session)
+        return
+
+    handle_no_drop_session(customer, message)
+
 
 def log_and_send_message(customer, source, text):
     sent_message = Message(customer=customer, store=store, text=text, direction=MESSAGE_DIRECTION_SENT)
     sent_message.save()
     signal.send_message(source, text)
+
 
 def get_signal_profile_name(source):
     customer_signal_profile = signal.get_profile(source, True)
@@ -341,6 +389,7 @@ def get_signal_profile_name(source):
     except:
         return None
 
+
 def get_payments_address(source):
     customer_signal_profile = signal.get_profile(source, True)
     print(customer_signal_profile)
@@ -349,6 +398,7 @@ def get_payments_address(source):
         return customer_payments_address
     except:
         return None
+
 
 class Command(BaseCommand):
     help = 'Run MOBot Client'
