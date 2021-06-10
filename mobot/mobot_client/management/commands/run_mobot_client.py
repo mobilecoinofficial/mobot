@@ -7,14 +7,14 @@ import random
 from django.utils import timezone
 from django.core.management.base import BaseCommand
 from signald_client import Signal
-from mobot_client.models import Store, Customer, DropSession, Drop, CustomerStorePreferences, Message, BonusCoin
+from mobot_client.models import Store, Customer, DropSession, Drop, CustomerStorePreferences, Message, BonusCoin, ChatbotSettings
 import mobilecoin as mc
 from decimal import Decimal
 
 SIGNALD_ADDRESS = os.getenv("SIGNALD_ADDRESS", "127.0.0.1")
 SIGNALD_PORT = os.getenv("SIGNALD_PORT", "15432")
 
-store = Store.objects.first()
+store = ChatbotSettings.load().store
 signal = Signal(store.phone_number, socket_path=(SIGNALD_ADDRESS, int(SIGNALD_PORT)))
 
 FULLSERVICE_ADDRESS = os.getenv("FULLSERVICE_ADDRESS", "127.0.0.1")
@@ -39,7 +39,9 @@ SESSION_STATE_COMPLETED = 3
 MESSAGE_DIRECTION_RECEIVED = 0
 MESSAGE_DIRECTION_SENT = 1
 
-signal.set_profile("MOBot", PUBLIC_ADDRESS, None, False)
+bot_name = ChatbotSettings.load().name
+bot_avatar_filename = ChatbotSettings.load().avatar_filename
+signal.set_profile(bot_name, PUBLIC_ADDRESS, bot_avatar_filename, False)
 
 
 def _signald_to_fullservice(r):
@@ -273,15 +275,7 @@ def handle_drop_session_waiting_for_bonus_transaction(message, drop_session):
     log_and_send_message(drop_session.customer, message.source, "payment request message")
 
 
-def handle_drop_session_complete(message, drop_session):
-    log_and_send_message(drop_session.customer, message.source, "You've received your initial MOB, tried making a payment, and received a bonus! Well done. You've completed the MOB Coin Drop. Stay tuned for future drops.")
-
-
-def handle_drop_sessions(message, drop_session):
-    if drop_session.state == SESSION_STATE_COMPLETED:
-        handle_drop_session_complete(message, drop_session)
-        return
-
+def handle_active_drop_session(message, drop_session):
     if drop_session.state == SESSION_STATE_READY_TO_RECEIVE_INITIAL:
         handle_drop_session_ready_to_receive(message, drop_session)
         return
@@ -295,30 +289,23 @@ def handle_drop_sessions(message, drop_session):
         return
 
 
-def handle_no_drop_session(customer, message):
-    drops_to_advertise = Drop.objects.filter(advertisment_start_time__lte=timezone.now()).filter(
-        start_time__gt=timezone.now())
+def customer_has_completed_drop(customer, drop):
+    try:
+        _completed_drop_session = DropSession.objects.get(customer=customer, drop=drop, state=SESSION_STATE_COMPLETED)
+        return True
+    except:
+        return False
 
-    if len(drops_to_advertise) > 0:
-        drop_to_advertise = drops_to_advertise[0]
 
-        if not customer.phone_number.startswith(drop_to_advertise.number_restriction):
-            log_and_send_message(customer, message.source,
-                                 "Hi! MOBot here.\n\nSorry, we are not yet available in your country")
-            return
-        bst_time = drop_to_advertise.start_time.astimezone(pytz.timezone(drop_to_advertise.timezone))
-        response_message = "Hi! MOBot here.\n\nWe're currently closed.\n\nCome back on {0} at {1} for {2}".format(
-            bst_time.strftime("%A, %b %d"), bst_time.strftime("%-I:%M %p %Z"), drop_to_advertise.item.description)
-        log_and_send_message(customer, message.source, response_message)
+def handle_no_active_drop_session(customer, message, drop):
+    if customer_has_completed_drop(customer, drop):
+        log_and_send_message(customer, message.source,
+                             ("You've received your initial MOB, tried making a payment, "
+                              "and received a bonus! Well done. You've completed the MOB Coin Drop. "
+                              "Stay tuned for future drops."))
         return
 
-    active_drops = Drop.objects.filter(start_time__lte=timezone.now()).filter(end_time__gte=timezone.now())
-    if len(active_drops) == 0:
-        log_and_send_message(customer, message.source, "Hi! MOBot here.\n\nWe're currently closed. Buh-Bye!")
-        return
-
-    active_drop = active_drops[0]
-    if not customer.phone_number.startswith(active_drop.number_restriction):
+    if not customer.phone_number.startswith(drop.number_restriction):
         log_and_send_message(customer, message.source,
                              "Hi! MOBot here.\n\nSorry, we are not yet available in your country")
         return
@@ -326,25 +313,34 @@ def handle_no_drop_session(customer, message):
     customer_payments_address = get_payments_address(message.source)
     if customer_payments_address is None:
         log_and_send_message(customer, message.source,
-                             "Hi! MOBot here.\n\nI'm a bot from MobileCoin that assists in making purchases using Signal Messenger and MobileCoin\n\nUh oh! In-app payments are not enabled \n\nEnable payments to receive {0}\n\nMore info on enabling payments here: https://support.signal.org/hc/en-us/articles/360057625692-In-app-Payments".format(
-                                 active_drop.item.description))
+                             ("Hi! MOBot here.\n\nI'm a bot from MobileCoin that assists "
+                              "in making purchases using Signal Messenger and MobileCoin\n\n"
+                              "Uh oh! In-app payments are not enabled \n\n"
+                              f"Enable payments to receive {drop.item.description}\n\n"
+                              "More info on enabling payments here: "
+                              "https://support.signal.org/hc/en-us/articles/360057625692-In-app-Payments"))
         return
 
-    if not under_drop_quota(active_drop):
+    if not under_drop_quota(drop):
         log_and_send_message(customer, message.source, "over quota for drop!")
         return
 
-    if not minimum_coin_available(active_drop):
+    if not minimum_coin_available(drop):
         log_and_send_message(customer, message.source, "no coin left!")
         return
 
-    new_drop_session = DropSession(customer=customer, drop=active_drop, state=SESSION_STATE_READY_TO_RECEIVE_INITIAL)
+    new_drop_session = DropSession(customer=customer, drop=drop, state=SESSION_STATE_READY_TO_RECEIVE_INITIAL)
     new_drop_session.save()
 
     log_and_send_message(customer, message.source,
-                         "Hi! MOBot here.\n\nWe're giving away free MOB today so that you can try Signal's new payment feature!!!")
+                         ("Hi! MOBot here.\n\nWe're giving away free "
+                          "MOB today so that you can try Signal's new payment feature!!!"))
     log_and_send_message(customer, message.source,
-                         "Here's how our MOB airdrop works:\n\n1. We send you some MOB to fund your wallet. It will be approx £3 worth\n2. Give sending MOB a try by giving us back a tiny bit, say 0.01 MOB\n3. We'll send you a random BONUS airdrop. You could receive as much as £50 in MOB\n\nWhether you get £5 or £50, it’s yours to keep and spend however you like")
+                         ("Here's how our MOB airdrop works:\n\n"
+                          "1. We send you some MOB to fund your wallet. It will be approx £3 worth\n"
+                          "2. Give sending MOB a try by giving us back a tiny bit, say 0.01 MOB\n"
+                          "3. We'll send you a random BONUS airdrop. You could receive as much as £50 in MOB"
+                          "\n\nWhether you get £5 or £50, it’s yours to keep and spend however you like"))
     log_and_send_message(customer, message.source, "Ready?")
 
 
@@ -356,23 +352,50 @@ def chat_router_coins(message, match):
         signal.send_message(message.source, f"{number_claimed} out of {bonus_coin.number_available} {mc.pmob2mob(bonus_coin.amount_pmob).normalize()}MOB Bonus Coins claimed ")
 
 
+def get_advertising_drop():
+    drops_to_advertise = Drop.objects.filter(advertisment_start_time__lte=timezone.now()).filter(
+        start_time__gt=timezone.now())
+
+    if len(drops_to_advertise) > 0:
+        return drops_to_advertise[0]
+    return None
+
+
+def get_active_drop():
+    active_drops = Drop.objects.filter(start_time__lte=timezone.now()).filter(end_time__gte=timezone.now())
+    if len(active_drops) == 0:
+        return None
+    return active_drops[0]
+
+
 @signal.chat_handler("")
 def chat_router(message, match):
     customer, _ = Customer.objects.get_or_create(phone_number=message.source['number'])
-    drop_session = None
-
     try:
-        drop_session = DropSession.objects.get(customer=customer, state__gte=SESSION_STATE_READY_TO_RECEIVE_INITIAL)
-    except Exception as e:
-        print("NO SESSION FOUND")
-        print(e)
+        active_drop_session = DropSession.objects.get(customer=customer, state__gte=SESSION_STATE_READY_TO_RECEIVE_INITIAL, state__lt=SESSION_STATE_COMPLETED)
+        handle_active_drop_session(message, active_drop_session)
+        return
+    except:
         pass
 
-    if drop_session is not None:
-        handle_drop_sessions(message, drop_session)
+    drop_to_advertise = get_advertising_drop()
+    if drop_to_advertise is not None:
+        if not customer.phone_number.startswith(drop_to_advertise.number_restriction):
+            log_and_send_message(customer, message.source,
+                                 "Hi! MOBot here.\n\nSorry, we are not yet available in your country")
+            return
+        bst_time = drop_to_advertise.start_time.astimezone(pytz.timezone(drop_to_advertise.timezone))
+        response_message = "Hi! MOBot here.\n\nWe're currently closed.\n\nCome back on {0} at {1} for {2}".format(
+            bst_time.strftime("%A, %b %d"), bst_time.strftime("%-I:%M %p %Z"), drop_to_advertise.item.description)
+        log_and_send_message(customer, message.source, response_message)
         return
 
-    handle_no_drop_session(customer, message)
+    active_drop = get_active_drop()
+    if active_drop is None:
+        log_and_send_message(customer, message.source, "Hi! MOBot here.\n\nWe're currently closed. Buh-Bye!")
+        return
+
+    handle_no_active_drop_session(customer, message, active_drop)
 
 
 def log_and_send_message(customer, source, text):

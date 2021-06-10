@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Store, Customer, Drop, Item, CustomerStorePreferences, DropSession, Message, BonusCoin
+from .models import Store, Customer, Drop, Item, CustomerStorePreferences, DropSession, Message, BonusCoin, ChatbotSettings
 
 class StoreAdmin(admin.ModelAdmin):
     pass
@@ -25,6 +25,11 @@ class MessageAdmin(admin.ModelAdmin):
 class BonusCoinAdmin(admin.ModelAdmin):
     pass
 
+class ChatbotSettingsAdmin(admin.ModelAdmin):
+    # only show "Add" button if we don't yet have a settings object
+    def has_add_permission(self, request, obj=None):
+        return ChatbotSettings.objects.all().count() < 1
+
 admin.site.register(Store, StoreAdmin)
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Drop, DropAdmin)
@@ -33,3 +38,4 @@ admin.site.register(CustomerStorePreferences, CustomerStorePreferencesAdmin)
 admin.site.register(DropSession, DropSessionAdmin)
 admin.site.register(Message, MessageAdmin)
 admin.site.register(BonusCoin, BonusCoinAdmin)
+admin.site.register(ChatbotSettings, ChatbotSettingsAdmin)

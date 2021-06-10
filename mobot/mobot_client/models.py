@@ -65,3 +65,29 @@ class Message(models.Model):
     text = models.TextField()
     date = models.DateTimeField(auto_now_add=True)
     direction = models.PositiveIntegerField()
+
+#------------------------------------------------------------------------------------------
+
+class SingletonModel(models.Model):
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super(SingletonModel, self).save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass
+
+    @classmethod
+    def load(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+class  ChatbotSettings(SingletonModel):
+    store = models.ForeignKey(Store, null=True, on_delete=models.SET_NULL)
+    name = models.TextField()
+    avatar_filename = models.TextField()
+
+    def __str__(self):
+        return "Global settings"
