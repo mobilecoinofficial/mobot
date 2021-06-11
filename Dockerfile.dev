@@ -53,6 +53,7 @@ RUN echo "$CACHEBUST"
 
 
 COPY ./docker/init.sh /scripts/
+COPY ./docker/bashrc /home/app/.bashrc
 COPY ./app_scripts/*.sh /scripts/
 COPY ./app_scripts/*. /app_scripts/
 
@@ -62,6 +63,8 @@ COPY ./privacy /privacy/
 COPY . /app/mobot/
 
 RUN touch /tmp/env.sh
+RUN chown app:app /tmp/env.sh
+RUN chmod 666 /tmp/env.sh
 RUN mkdir -p /static/
 RUN chown app:app /static/
 RUN chown app:app /scripts/*

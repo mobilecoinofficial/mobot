@@ -13,5 +13,5 @@ if [[ "${CACHE:-true}" == true ]]
 then
   docker-compose build --build-arg CACHEBUST=$(date +%s)
 else
-  docker-compose build --no-cache
+  docker-compose build --no-cache --build-arg CACHEBUST=$(date +%s)
 fi

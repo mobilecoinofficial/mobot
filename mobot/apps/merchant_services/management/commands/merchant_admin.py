@@ -1,7 +1,13 @@
 import argparse
 
+import pytz
 from django.core.management.base import BaseCommand
 from mobot.apps.merchant_services.models import Product, Merchant, MCStore, Drop
+from django.conf import settings
+from typing import List
+from typedate import TypeDate
+import datetime
+
 
 def parse_extra(parser, namespace):
     namespaces = []
@@ -19,41 +25,40 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser: argparse.ArgumentParser):
         # Named (optional) arguments
-        merchant_subparser = parser.add_subparsers(title="merchant", help="merchant help")
-        m_parser = merchant_subparser.add_parser("merchant")
-        merchant_group = m_parser.add_argument_group(help="Merchant Help")
+
+        merchant_group = parser.add_argument_group("Merchant Help")
 
         merchant_group.add_argument(
             '--phone-number',
             type=str,
             help='add merchant by name and by phone number',
-            required=True
+            required=False
         )
         merchant_group.add_argument(
             '--name',
             type=str,
             dest="merchant_name",
             help="Merchant name",
-            required=True
+            required=False,
+            default="MobileCoin"
         )
 
-        store_subparser = parser.add_subparsers(title="store")
-        s_parser = store_subparser.add_parser("store")
-        store_group = s_parser.add_argument_group(help="Help with merchant commands")
+        store_group = parser.add_argument_group("Help with store commands")
 
         store_group.add_argument(
-            '--number',
+            '--store-number',
             type=str,
             dest="store_merchant_phone_number",
             help='add merchant by phone number',
-            required=True
+            required=False,
         )
+
         store_group.add_argument(
-            '--name',
+            '--store-name',
             type=str,
             dest="store_name",
             help="Merchant name",
-            required=True
+            required=False
         )
 
         store_group.add_argument(
@@ -72,18 +77,18 @@ class Command(BaseCommand):
             required=False,
         )
 
-        product_subparser = parser.add_subparsers(title="product")
-        p_parser = product_subparser.add_parser("product")
-        product_group = p_parser.add_argument_group(help="Help with product commands")
+        product_group = parser.add_argument_group("Help with product commands")
+        drop_group = parser.add_argument_group("Help with drop commands")
+
 
         product_group.add_argument(
-            '--name',
+            '--product-name',
             dest="product_name",
             type=str,
-            required=True,
+            required=False,
         )
         product_group.add_argument(
-            '--description',
+            '--product-description',
             dest="product_description",
             type=str,
             required=False
@@ -117,14 +122,56 @@ class Command(BaseCommand):
             default=False,
         )
 
-    def handle(self, *args, **kwargs):
-        try:
-            parser = argparse.ArgumentParser()
-            self.add_arguments(parser)
+        drop_group.add_argument(
+            '--advertisement-start-time',
+            help="advertising start datetime UTC",
+            type=TypeDate('%Y-%m-%d %H:%M:%S', timezone='UTC'),
+            required=False,
+        )
 
-            args = parser.parse_args()
-            args_data = vars(args)
-            print(args_data)
+        drop_group.add_argument(
+            '--start-time',
+            help="start datetime UTC",
+            type=TypeDate('%Y-%m-%d %H:%M:%S', timezone='UTC'),
+            required=False,
+        )
+
+        drop_group.add_argument(
+            '--end-time',
+            help="end datetime UTC",
+            type=TypeDate('%Y-%m-%d %H:%M:%S', timezone='UTC'),
+            required=False,
+        )
+
+
+    def add_default_store(self, merchant: Merchant, **options) -> MCStore:
+        print(options)
+        s = MCStore(merchant_ref=merchant, name="MobileCoin Coin Drop Store")
+        s.save()
+        return s
+
+    def add_default_merchant(self, **options) -> Merchant:
+        m = Merchant(name="MobileCoin Official Merchant", phone_number=settings.STORE_NUMBER)
+        m.save()
+        return m
+
+    def add_default_drops(self, store: MCStore, **options) -> List[Drop]:
+        original_drop = Drop(name="Aidrop 1",
+                            pre_drop_description="Get free MOB from MobileCoin!",
+                            store_ref=store,
+                            description="My Store",
+                            advertisement_start_time=datetime.datetime.utcnow(),
+                            start_time=datetime.timedelta(days=3),
+                            price_in_picomob=250000000000
+
+                             )
+
+    def make_mobot_default_store(self):
+        pass
+
+    def handle(self, *args, **options):
+        try:
+            print(options)
         except KeyboardInterrupt as e:
             print()
             pass
