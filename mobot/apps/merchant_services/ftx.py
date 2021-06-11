@@ -46,7 +46,7 @@ class PriceAPI:
             PriceAPI.logger.error("Unable to get free USD-GBP rate")
             price_response = PriceAPI._get_usd_gbp_rate(False)
         if price_response:
-            PriceAPI.logger.debug(price_response)
+            PriceAPI.logger.debug(f"Got a currency API response: {price_response}")
             return float(price_response['USD_GBP'])
 
     def __init__(self, rate_ttl: int = 300):
