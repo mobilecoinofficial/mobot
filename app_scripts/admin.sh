@@ -15,15 +15,15 @@ CMD=$1
 case $CMD in
 
   reset-admin)
-    exec ENV_FILE=$ENV_FILE reset_admin $ADMIN_USERNAME
+    reset_admin
     ;;
 
   delete_dbs)
-    exec delete_dbs
+    delete_dbs
   ;;
 
   create_wallet)
-    exec create_wallet
+    create_wallet
   ;;
 
   populate_merchant_and_products)

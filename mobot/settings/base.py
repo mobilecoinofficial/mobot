@@ -1,9 +1,13 @@
+import logging
+
 from .common import *
 import mobilecoin as fullservice
 
 
 # False if not in os.environ
 DEBUG = runtime_env('DEBUG')
+LOG_LEVEL = logging.DEBUG if DEBUG else logging.INFO
+logging.basicConfig(LOG_LEVEL)
 
 # Raises django's ImproperlyConfigured exception if SECRET_KEY not in os.environ
 SECRET_KEY = runtime_env('SECRET_KEY')
@@ -14,6 +18,8 @@ FULLSERVICE_ADDRESS = runtime_env('FULLSERVICE_ADDRESS')
 FULLSERVICE_PORT = runtime_env('FULLSERVICE_PORT')
 FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
 PHONENUMBER_DB_FORMAT = "E164"
+CURR_FREE_KEY = runtime_env('CURR_FREE_KEY')
+CURR_PAID_KEY = runtime_env('CURR_PAID_KEY')
 
 FEE_PMOB = None
 ACCOUNT_ID = None

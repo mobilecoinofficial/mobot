@@ -3,7 +3,6 @@ from django.conf import settings
 from phonenumber_field.modelfields import PhoneNumberField
 from django.contrib.postgres.fields import ArrayField
 
-
 from mobot.apps.signald_client import Signal
 from mobot.apps.payment_service.models import Payment
 
@@ -61,20 +60,19 @@ class Product(models.Model):
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'
 
+    def price_in_gbp(self):
+
+
 
 class Drop(Product):
     pre_drop_description = models.TextField()
     advertisement_start_time = models.DateTimeField()
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
-    quota = models.IntegerField(default=10)
+    quota = models.PositiveIntegerField(default=10) # Number left
 
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'
-
-
-class Airdrop(Drop):
-    amount = models.FloatField()
 
 
 class Customer(UserAccount):

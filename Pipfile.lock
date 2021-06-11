@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "ee0fb37accae6975c7b42ac4548ec72fc963857acc0a9d4427161608264e123c"
+            "sha256": "0f4ee8f69b99536fc91d69acbe05dc16926a38c19550f32aed773eff75ffdd16"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -166,6 +166,13 @@
             ],
             "index": "pypi",
             "version": "==5.2.0"
+        },
+        "expiringdict": {
+            "hashes": [
+                "sha256:fe2ba427220425c3c8a3d29f6d2e2985bcee323f8bcd4021e68ebefbd90d8250"
+            ],
+            "index": "pypi",
+            "version": "==1.2.1"
         },
         "idna": {
             "hashes": [
@@ -354,6 +361,13 @@
             ],
             "markers": "python_version >= '3.7'",
             "version": "==5.0.5"
+        },
+        "typedate": {
+            "hashes": [
+                "sha256:21d55dd01065203c7011a8caccd9414b4ee2059e084fb618e4535ba3547d8ad7"
+            ],
+            "index": "pypi",
+            "version": "==1.1.1"
         },
         "urllib3": {
             "hashes": [

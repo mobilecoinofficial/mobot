@@ -11,16 +11,18 @@ echo "Setting up env"
 . /app/mobot/app_scripts/reset_admin.sh
 . /app/mobot/app_scripts/admin_start.sh
 
-output_env
+ENV_FILE=$(output_env)
+
+source ENV_FILE
 
 case $start_cmd in
 
   admin)
-    exec /scripts/admin_start.sh
+    /scripts/admin_start.sh
     ;;
 
   client)
-    exec /scripts/mobot_client_start.sh
+    /scripts/mobot_client_start.sh
     ;;
 
   *)
