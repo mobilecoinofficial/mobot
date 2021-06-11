@@ -4,6 +4,7 @@ import requests
 from typing import Optional
 from logging import getLogger
 from django.conf import settings
+
 FREE_KEY = settings.CURR_FREE_KEY
 PAID_KEY = settings.CURR_PAID_KEY
 
@@ -38,10 +39,12 @@ class PriceAPI:
 
     @staticmethod
     def _get_usd_gbp_rate(free=True) -> float:
-        price_response = PriceAPI._get_url(PriceAPI._converter_url())
+        if not free:
+            PriceAPI.logger.warning("!!! Using paid API for USD-GBP rate !!!")
+        price_response = PriceAPI._get_url(PriceAPI._converter_url(free))
         if not price_response:
             PriceAPI.logger.error("Unable to get free USD-GBP rate")
-            price_response = PriceAPI._get_url(PriceAPI._converter_url(False))
+            price_response = PriceAPI._get_usd_gbp_rate(False)
         if price_response:
             PriceAPI.logger.debug(price_response)
             return float(price_response['USD_GBP'])
