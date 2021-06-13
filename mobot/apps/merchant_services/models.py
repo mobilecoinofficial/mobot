@@ -2,9 +2,9 @@ from django.db import models
 from django.conf import settings
 from phonenumber_field.modelfields import PhoneNumberField
 from django.contrib.postgres.fields import ArrayField
-
 from mobot.apps.signald_client import Signal
 from mobot.apps.payment_service.models import Payment
+from ftx import PriceAPI
 
 
 class UserAccount(models.Model):
@@ -37,6 +37,10 @@ class Merchant(UserAccount):
         return settings.ACCOUNT_ID
 
 
+class Customer(UserAccount):
+    received_sticker_pack = models.BooleanField(default=False)
+
+
 class MCStore(models.Model):
     name = models.TextField()
     description = models.TextField(blank=True, default="Mobot Store")
@@ -55,13 +59,15 @@ class Product(models.Model):
     image_link = models.URLField(default=None, blank=True, null=True)
     number_restriction = ArrayField(models.TextField(blank=False, null=False), unique=True, blank=True)
     allows_refund = models.BooleanField(default=True, blank=False)
-    price_in_picomob = models.IntegerField(default=0, null=False)
+    price_in_picomob = models.IntegerField(default=0, null=False, blank=False)
+    target_price_bgp = models.DecimalField(null=True, blank=True, help_text="If there's a target price")
 
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'
 
-    def price_in_gbp(self):
-
+    @property
+    def price_in_gbp(self, price_api: PriceAPI):
+        price_api.picomob_to_gbp(self.price_in_picomob)
 
 
 class Drop(Product):
@@ -69,14 +75,11 @@ class Drop(Product):
     advertisement_start_time = models.DateTimeField()
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
-    quota = models.PositiveIntegerField(default=10) # Number left
+    quota = models.PositiveIntegerField(default=10)  # Number left
 
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'
 
-
-class Customer(UserAccount):
-    received_sticker_pack = models.BooleanField(default=False)
 
 
 class CustomerStorePreferences(models.Model):
@@ -94,6 +97,7 @@ class Session(models.Model):
         ALLOW_CONTACT_REQUESTED = 1
         EXPIRED = 2
 
+    adjusted_price_pmob = models.PositiveIntegerField(blank=True, null=True, help_text="If we want to adjust the price to a target GBP, this is where it goes")
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     product_ref = models.ForeignKey(Product, on_delete=models.CASCADE)
     state = models.IntegerField(default=0, choices=SessionState.choices)

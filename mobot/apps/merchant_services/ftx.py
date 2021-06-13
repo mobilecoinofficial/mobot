@@ -1,76 +1,72 @@
 import datetime
 import logging
-import requests
-from typing import Optional
-from logging import getLogger
-from django.conf import settings
 
-FREE_KEY = settings.CURR_FREE_KEY
-PAID_KEY = settings.CURR_PAID_KEY
+import forex_python.converter
+import requests
+from logging import getLogger
+from mobot.lib.requests import retry_request
+from forex_python.converter import CurrencyRates
 
 
 class PriceAPI:
     BASE_FTX_API = "https://ftx.com/api"
-    BASE_FREE_CONVERTER_API = "https://free.currconv.com"
-    BASE_PAID_CONVERTER_API = "https://prepaid.currconv.com"
     logger = getLogger("PriceAPI")
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     @staticmethod
-    def _converter_url(free: bool = True) -> str:
-        key = FREE_KEY if free else PAID_KEY
-        base = PriceAPI.BASE_FREE_CONVERTER_API if free else PriceAPI.BASE_PAID_CONVERTER_API
-        return f"{base}/api/v7/convert?q=USD_GBP&compact=ultra&apiKey={key}"
+    @retry_request
+    def _get(url: str) -> requests.Response:
+        request = requests.Request('get', url)
+        return request
 
-    @staticmethod
-    def _get_url(url: str) -> Optional[dict]:
-        resp: Optional[requests.Response] = None
-        try:
-            logging.debug(url)
-            resp = requests.get(url)
-        except requests.exceptions.RequestException:
-            PriceAPI.logger.exception(f"Request Exception getting {url}")
-        if resp:
-            try:
-                return resp.json()
-            except ValueError:
-                PriceAPI.logger.exception(f"Unable to decode json from {url}")
-        return None
-
-    @staticmethod
-    def _get_usd_gbp_rate(free=True) -> float:
-        if not free:
-            PriceAPI.logger.warning("!!! Using paid API for USD-GBP rate !!!")
-        price_response = PriceAPI._get_url(PriceAPI._converter_url(free))
-        if not price_response:
-            PriceAPI.logger.error("Unable to get free USD-GBP rate")
-            price_response = PriceAPI._get_usd_gbp_rate(False)
-        if price_response:
-            PriceAPI.logger.debug(f"Got a currency API response: {price_response}")
-            return float(price_response['USD_GBP'])
-
-    def __init__(self, rate_ttl: int = 300):
+    def __init__(self, rate_ttl: int = 300, debug=False, rates_api: CurrencyRates = CurrencyRates()):
         self._mob_usd_rate = 0.0
         self._rate_ttl = rate_ttl
-        self._last_checked =  datetime.datetime.utcnow().timestamp()
-        self.usd_gbp_rate = PriceAPI._get_usd_gbp_rate()
+        self._forex_api = rates_api
+        self._last_checked_mob_rate = datetime.datetime.utcnow().timestamp()
+        self._last_checked_gbp_rate = datetime.datetime.utcnow().timestamp()
+        self._usd_gbp_rate = None
+        if debug:
+            self.logger.setLevel(logging.DEBUG)
+
+    def get_usd_gbp_rate(self) -> float:
+        try:
+            return self._forex_api.get_rate("USD", "GBP")
+        except forex_python.converter.RatesNotAvailableError:
+            self.logger.exception("Unable to get GBP rate")
+
 
     @property
-    def mob_usd_rate(self):
-        if not self._mob_usd_rate or (self._last_checked + self._rate_ttl) < datetime.datetime.utcnow().timestamp():
-            PriceAPI.logger.info("Getting new rate for MOB/USD...")
+    def mob_usd_rate(self) -> float:
+        if not self._mob_usd_rate or (self._last_checked_mob_rate + self._rate_ttl) < datetime.datetime.utcnow().timestamp():
+            self.logger.info("Getting new rate for MOB/USD...")
             self._mob_usd_rate = self.last_mob_to_usd_rate()
-            PriceAPI.logger.info(f"MOB/USD rate: {self._mob_usd_rate}")
+            self.logger.info(f"MOB/USD rate: {self._mob_usd_rate}")
         return self._mob_usd_rate
 
+    @property
+    def usd_gbp_rate(self) -> float:
+        if not self._usd_gbp_rate or (self._last_checked_gbp_rate + datetime.timedelta(days=1)) < datetime.datetime.utcnow().timestamp():
+            self.logger.info("Getting new rate for GBP/USD...")
+            self._usd_gbp_rate = self.get_usd_gbp_rate()
+            self.logger.info(f"GBP/USD rate: {self._usd_gbp_rate}")
+        return self._usd_gbp_rate
+
     def last_mob_to_usd_rate(self) -> float:
-        result = PriceAPI._get_url(f"{self.BASE_FTX_API}/markets/MOB/USD")
-        if result['success']:
-            return float(result['result']['last'])
+        result: requests.Response = self._get(f"{self.BASE_FTX_API}/markets/MOB/USD")
+        if result.ok:
+            if result.json()['success']:
+                return float(result.json()['result']['last'])
+            else:
+                return 0.0
         else:
-            return 0.0
+            self.logger.warning("Unable to update mob/usd rate")
 
     def picomob_to_gbp(self, amt_picomob: int) -> float:
         amt_mob = amt_picomob/(10**12)
         return self.mob_usd_rate * amt_mob * self.usd_gbp_rate
 
+    def gbp_to_picomob(self, amt_gbp: float) -> int:
+        amt_usd = amt_gbp / self.usd_gbp_rate
+        amt_mob = amt_usd / self.mob_usd_rate
+        return int(amt_mob * 10 ** 12)
