@@ -6,7 +6,9 @@ from mobot.apps.merchant_services.models import Product, Merchant, MCStore, Drop
 from django.conf import settings
 from typing import List
 from typedate import TypeDate
+from moneyed import Money, Currency, GBP
 import datetime
+from decimal import Decimal
 
 
 def parse_extra(parser, namespace):
@@ -143,35 +145,59 @@ class Command(BaseCommand):
             required=False,
         )
 
+        drop_group.add_argument("--reset-all-drops", required=False, action="store_true", default=False, help="Reset all accounts")
+
 
     def add_default_store(self, merchant: Merchant, **options) -> MCStore:
-        print(options)
-        s = MCStore(merchant_ref=merchant, name="MobileCoin Coin Drop Store")
+        s, created = MCStore.objects.get_or_create(merchant_ref=merchant, name="MobileCoin Coin Drop Store")
         s.save()
         return s
 
     def add_default_merchant(self, **options) -> Merchant:
-        m = Merchant(name="MobileCoin Official Merchant", phone_number=settings.STORE_NUMBER)
+        m, created = Merchant.objects.get_or_create(name="MobileCoin Official Merchant", phone_number=settings.STORE_NUMBER)
         m.save()
         return m
 
     def add_default_drops(self, store: MCStore, **options) -> List[Drop]:
-        original_drop = Drop(name="Aidrop 1",
+        Drop.objects.filter(name__startswith="Initial Airdrop").delete()
+        original_drop, _ = Drop.objects.update_or_create(name="Initial AirDrop",
                             pre_drop_description="Get free MOB from MobileCoin!",
                             store_ref=store,
                             description="My Store",
+                            number_restriction=["+44"],
                             advertisement_start_time=datetime.datetime.utcnow(),
-                            start_time=datetime.timedelta(days=3),
-                            price_in_picomob=250000000000
+                            start_time=datetime.datetime.utcnow(),
+                            end_time=datetime.datetime.utcnow() + datetime.timedelta(days=3.0),
+                            price=Money(Decimal(3.0), GBP),
+                            quota=100)
 
-                             )
+        dropped = Drop.objects.filter(name__startswith="Bonus AirDrop").delete()
+
+        bonus_drops = [Drop.objects.update_or_create(name=f"Bonus AirDrop {price}",
+                            pre_drop_description="Get free MOB from MobileCoin!",
+                            store_ref=store,
+                            description="My Store",
+                            number_restriction=["+44"],
+                            advertisement_start_time=datetime.datetime.utcnow(),
+                            start_time=datetime.datetime.utcnow(),
+                            end_time=datetime.datetime.utcnow() + datetime.timedelta(days=3.0),
+                            quota=quota,
+                            price=Money(Decimal(price), GBP)) for quota, price in [(80, 2.0), (10, 7.0), (7, 22.0), (3, 47)]]
+        print(original_drop)
+        for bonus in bonus_drops:
+            print(bonus)
+        return original_drop, bonus_drops
 
     def make_mobot_default_store(self):
         pass
 
     def handle(self, *args, **options):
         try:
-            print(options)
+            merchant = self.add_default_merchant()
+            store = self.add_default_store(merchant)
+            if options.get("reset_all_drops"):
+                Drop.objects.all().delete()
+            airdrop, bonus_drops = self.add_default_drops(store)
         except KeyboardInterrupt as e:
             print()
             pass

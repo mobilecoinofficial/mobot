@@ -35,9 +35,7 @@ class TransactionAdmin(admin.ModelAdmin):
 
 admin.site.register(Transaction, TransactionAdmin)
 admin.site.register(Payment, PaymentAdmin)
-admin.site.register(Product, MerchantAccountAdmin)
 admin.site.register(Merchant, MerchantAccountAdmin)
-admin.site.register(UserAccount, UserAccountAdmin)
 admin.site.register(MCStore, StoreAdmin)
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Drop, DropAdmin)
