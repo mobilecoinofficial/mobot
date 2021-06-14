@@ -1,10 +1,10 @@
 from django.db import models
 from django.conf import settings
 from phonenumber_field.modelfields import PhoneNumberField
+from djmoney.models.fields import MoneyField
 from django.contrib.postgres.fields import ArrayField
 from mobot.apps.signald_client import Signal
 from mobot.apps.payment_service.models import Payment
-from ftx import PriceAPI
 
 
 class UserAccount(models.Model):
@@ -59,15 +59,12 @@ class Product(models.Model):
     image_link = models.URLField(default=None, blank=True, null=True)
     number_restriction = ArrayField(models.TextField(blank=False, null=False), unique=True, blank=True)
     allows_refund = models.BooleanField(default=True, blank=False)
-    price_in_picomob = models.IntegerField(default=0, null=False, blank=False)
-    target_price_bgp = models.DecimalField(null=True, blank=True, help_text="If there's a target price")
+    price_pmob = MoneyField(max_digits=14, decimal_places=5, default_currency='PMOB', help_text='Actual price of product', blank=False, null=False)
+    target_price = MoneyField(max_digits=14, decimal_places=5, default_currency='GBP', help_text='Actual price of product', blank=True, null=True)
 
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'
 
-    @property
-    def price_in_gbp(self, price_api: PriceAPI):
-        price_api.picomob_to_gbp(self.price_in_picomob)
 
 
 class Drop(Product):
@@ -79,7 +76,6 @@ class Drop(Product):
 
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'
-
 
 
 class CustomerStorePreferences(models.Model):

@@ -39,7 +39,8 @@ RUN  addgroup --system --gid 1000 app \
   && mkdir -p /scripts \
   && chown app:app /signald \
   && chown app:app /app \
-  && chown app:app /scripts
+  && chown app:app /scripts \
+  && chown -R app:app /.venv
 
 
 

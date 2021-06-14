@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'djmoney',
+    'djmoney.contrib.exchange',
     'mobot.apps.common.apps.CommonAppConfig',
     'mobot.apps.payment_service.apps.PaymentServiceAppConfig',
     'mobot.apps.merchant_services.apps.MerchantServicesConfig',
