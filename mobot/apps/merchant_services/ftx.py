@@ -1,72 +1,71 @@
 import datetime
 import logging
 
-import forex_python.converter
 import requests
 from logging import getLogger
 from mobot.lib.requests import retry_request
-from forex_python.converter import CurrencyRates
+from djmoney.money import Money, Currency
+from djmoney.contrib.exchange import backends
+from djmoney.contrib.exchange.models import convert_money, Rate, ExchangeBackend
+from mobot.settings import MOB, PMOB
 
 
-class PriceAPI:
+class OpenExchangeRatesWithFtxBackend(backends.OpenExchangeRatesBackend):
+    name = "openexchangewithcrypto"
     BASE_FTX_API = "https://ftx.com/api"
-    logger = getLogger("PriceAPI")
-    logger.setLevel(logging.INFO)
 
-    @staticmethod
+    def __init__(self, ftx_ttl: int = 300, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.update_rates()
+        self.last_updated = datetime.datetime.utcnow().timestamp()
+        self.ftx_ttl = ftx_ttl
+        self.logger = getLogger("ExchangeRatesBackend")
+
     @retry_request
-    def _get(url: str) -> requests.Response:
-        request = requests.Request('get', url)
-        return request
+    def _get_ftx_usd_mob(self) -> requests.Response:
+        """ Get the conversion rate of USD -> Mob from last traded price"""
+        return requests.Request('GET', f"{self.BASE_FTX_API}/markets/MOB/USD")
 
-    def __init__(self, rate_ttl: int = 300, debug=False, rates_api: CurrencyRates = CurrencyRates()):
-        self._mob_usd_rate = 0.0
-        self._rate_ttl = rate_ttl
-        self._forex_api = rates_api
-        self._last_checked_mob_rate = datetime.datetime.utcnow().timestamp()
-        self._last_checked_gbp_rate = datetime.datetime.utcnow().timestamp()
-        self._usd_gbp_rate = None
-        if debug:
-            self.logger.setLevel(logging.DEBUG)
-
-    def get_usd_gbp_rate(self) -> float:
-        try:
-            return self._forex_api.get_rate("USD", "GBP")
-        except forex_python.converter.RatesNotAvailableError:
-            self.logger.exception("Unable to get GBP rate")
-
-
-    @property
-    def mob_usd_rate(self) -> float:
-        if not self._mob_usd_rate or (self._last_checked_mob_rate + self._rate_ttl) < datetime.datetime.utcnow().timestamp():
-            self.logger.info("Getting new rate for MOB/USD...")
-            self._mob_usd_rate = self.last_mob_to_usd_rate()
-            self.logger.info(f"MOB/USD rate: {self._mob_usd_rate}")
-        return self._mob_usd_rate
-
-    @property
-    def usd_gbp_rate(self) -> float:
-        if not self._usd_gbp_rate or (self._last_checked_gbp_rate + datetime.timedelta(days=1)) < datetime.datetime.utcnow().timestamp():
-            self.logger.info("Getting new rate for GBP/USD...")
-            self._usd_gbp_rate = self.get_usd_gbp_rate()
-            self.logger.info(f"GBP/USD rate: {self._usd_gbp_rate}")
-        return self._usd_gbp_rate
-
-    def last_mob_to_usd_rate(self) -> float:
-        result: requests.Response = self._get(f"{self.BASE_FTX_API}/markets/MOB/USD")
-        if result.ok:
-            if result.json()['success']:
-                return float(result.json()['result']['last'])
+    def _parse_ftx_rate(self, resp: requests.Response) -> float:
+        """ Parse the FTX response """
+        if resp.ok:
+            if resp.json()['success']:
+                return 1 / float(resp.json()['result']['last'])
             else:
                 return 0.0
         else:
-            self.logger.warning("Unable to update mob/usd rate")
+            self.logger.warning("Unable to update mob/usd rate!")
 
-    def picomob_to_gbp(self, amt_picomob: int) -> float:
-        amt_mob = amt_picomob/(10**12)
-        return self.mob_usd_rate * amt_mob * self.usd_gbp_rate
+    def update_mob_price(self):
+        """ We'd like these updated more frequently, so we've gotta be selective """
+        if self.last_updated + self.ftx_ttl < datetime.datetime.utcnow().timestamp():
+            mob_rate: float = self._parse_ftx_rate(self._get_ftx_usd_mob())
+            backend, _ = ExchangeBackend.objects.update_or_create(name=self.name, defaults={"base_currency": "USD"})
+            Rate.objects.update_or_create(Rate(currency=MOB.code, value=mob_rate, backend=backend))
+            Rate.objects.update_or_create(Rate(currency=PMOB.code, value=mob_rate * 10 ** 12, backend=backend))
 
-    def gbp_to_picomob(self, amt_gbp: float) -> int:
-        amt_usd = amt_gbp / self.usd_gbp_rate
-        amt_mob = amt_usd / self.mob_usd_rate
-        return int(amt_mob * 10 ** 12)
+    def get_rates(self, **params):
+        response = self.get_response(**params)
+        base_usd_rates = self.parse_json(response)["rates"]
+        mob_rate = self._parse_ftx_rate(self._get_ftx_usd_mob())
+        base_usd_rates[MOB.code] = mob_rate
+        base_usd_rates[PMOB.code] = mob_rate * 10 ** -12
+        return base_usd_rates
+
+
+class PriceAPI:
+    logger = getLogger("PriceAPI")
+    logger.setLevel(logging.INFO)
+
+    def __init__(self, backend: OpenExchangeRatesWithFtxBackend = OpenExchangeRatesWithFtxBackend(), debug=False):
+        self._rates_backend = backend
+        if debug:
+            self.logger.setLevel(logging.DEBUG)
+
+    @property
+    def last_updated(self) -> datetime:
+        return datetime.datetime.utcfromtimestamp(self._rates_backend.last_updated)
+
+    def convert(self, money: Money, target_currency: Currency) -> Money:
+        self._rates_backend.update_mob_price()
+        return convert_money(money, target_currency)

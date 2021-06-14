@@ -5,7 +5,6 @@ from mobot.apps.payment_service.service import PaymentService
 from mobot.apps.payment_service.models import Payment
 from mobot.apps.signald_client import Signal
 from validations import TwoModelValidation
-from phonenumbers import PhoneNumber
 
 
 ## Todo: Make this Async
@@ -28,9 +27,9 @@ class DropService:
             return drop
         return None
 
-    def find_drops_for_user(self, customer: Customer) -> List[Drop]:
+    def find_available_drops_for_user(self, customer: Customer) -> List[Drop]:
         drops = Drop.objects.get()
-        
+
         pass
 
     def propose_drop_to_customer(self, customer: Customer, drop: Drop) -> List[Drop]: ...
