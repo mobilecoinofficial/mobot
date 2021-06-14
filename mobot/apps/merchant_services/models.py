@@ -5,11 +5,17 @@ from djmoney.models.fields import MoneyField
 from django.contrib.postgres.fields import ArrayField
 from mobot.apps.signald_client import Signal
 from mobot.apps.payment_service.models import Payment
+from djmoney.contrib.exchange.models import convert_money
 
 
 class UserAccount(models.Model):
     phone_number = PhoneNumberField(primary_key=True)
     name = models.TextField()
+
+    class Meta:
+        abstract = True
+        app_label = 'merchant_services'
+        ordering = ['name']
 
     def __str__(self):
         return f'{self.phone_number}'
@@ -32,12 +38,14 @@ class UserAccount(models.Model):
 
 
 class Merchant(UserAccount):
-    @property
-    def account_id(self):
-        return settings.ACCOUNT_ID
+    class Meta(UserAccount.Meta):
+        db_table = 'merchant_service_users'
+    merchant_description = models.TextField(blank=True, default="A Mobot Merchant")
 
 
 class Customer(UserAccount):
+    class Meta(UserAccount.Meta):
+        db_table = 'merchant_service_customers'
     received_sticker_pack = models.BooleanField(default=False)
 
 
@@ -53,18 +61,21 @@ class MCStore(models.Model):
 
 class Product(models.Model):
     store_ref = models.ForeignKey(MCStore, on_delete=models.CASCADE)
-    name = models.TextField()
+    name = models.TextField(blank=False)
     description = models.TextField(default=None, blank=True, null=True)
     short_description = models.TextField(default=None, blank=True, null=True)
     image_link = models.URLField(default=None, blank=True, null=True)
-    number_restriction = ArrayField(models.TextField(blank=False, null=False), unique=True, blank=True)
+    number_restriction = ArrayField(models.TextField(blank=False, null=False), unique=False, blank=True, null=True)
     allows_refund = models.BooleanField(default=True, blank=False)
-    price_pmob = MoneyField(max_digits=14, decimal_places=5, default_currency='PMOB', help_text='Actual price of product', blank=False, null=False)
-    target_price = MoneyField(max_digits=14, decimal_places=5, default_currency='GBP', help_text='Actual price of product', blank=True, null=True)
+    price = MoneyField(max_digits=14, decimal_places=5, default_currency='GBP', help_text='Price of the product', blank=False, default=1.0)
+
+    class Meta:
+        app_label = 'merchant_services'
+        unique_together = ('store_ref', 'name')
+        abstract = True
 
     def __str__(self):
-        return f'{self.store.name} - {self.item.name}'
-
+        return f'{self.store.name} - {self.name} - {self.price}'
 
 
 class Drop(Product):
@@ -75,7 +86,7 @@ class Drop(Product):
     quota = models.PositiveIntegerField(default=10)  # Number left
 
     def __str__(self):
-        return f'{self.store.name} - {self.item.name}'
+        return f'Store: {self.store_ref.name} - Name: {self.name} - Price: {self.price} - Start: {self.start_time} - Remaining: {self.quota}'
 
 
 class CustomerStorePreferences(models.Model):
@@ -85,7 +96,7 @@ class CustomerStorePreferences(models.Model):
     allows_payment = models.BooleanField()
 
 
-class Session(models.Model):
+class DropSession(models.Model):
 
     class SessionState(models.IntegerChoices):
         COMPLETED = -1
@@ -95,14 +106,11 @@ class Session(models.Model):
 
     adjusted_price_pmob = models.PositiveIntegerField(blank=True, null=True, help_text="If we want to adjust the price to a target GBP, this is where it goes")
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    product_ref = models.ForeignKey(Product, on_delete=models.CASCADE)
+    drop_ref = models.ForeignKey(Drop, on_delete=models.CASCADE)
     state = models.IntegerField(default=0, choices=SessionState.choices)
     payment_ref = models.ForeignKey(Payment, blank=True, on_delete=models.CASCADE)
     refund = models.ForeignKey(Payment, blank=True, on_delete=models.CASCADE, related_name='refund')
 
-
-class DropSession(Session):
-    pass
 
 
 class Message(models.Model):
