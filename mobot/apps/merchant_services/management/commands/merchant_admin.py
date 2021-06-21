@@ -9,6 +9,7 @@ from typedate import TypeDate
 from moneyed import Money, Currency, GBP
 import datetime
 from decimal import Decimal
+from djmoney.contrib.exchange.models import convert_money
 
 
 def parse_extra(parser, namespace):
@@ -159,7 +160,7 @@ class Command(BaseCommand):
         return m
 
     def add_default_drops(self, store: MCStore, **options) -> List[Drop]:
-        Drop.objects.filter(name__startswith="Initial Airdrop").delete()
+        Drop.objects.filter(name__startswith="Initial Airdrop", store_ref=store).delete()
         original_drop, _ = Drop.objects.update_or_create(name="Initial AirDrop",
                             pre_drop_description="Get free MOB from MobileCoin!",
                             store_ref=store,
@@ -193,11 +194,17 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            merchant = self.add_default_merchant()
-            store = self.add_default_store(merchant)
             if options.get("reset_all_drops"):
+                Merchant.objects.all().delete()
+                MCStore.objects.all().delete()
                 Drop.objects.all().delete()
-            airdrop, bonus_drops = self.add_default_drops(store)
+                merchant = self.add_default_merchant()
+                store = self.add_default_store(merchant)
+                airdrop, bonus_drops = self.add_default_drops(store)
+            drops = Drop.objects.all()
+            for drop in drops:
+                print(drop)
+                print(convert_money(drop.price, 'PMB'))
         except KeyboardInterrupt as e:
             print()
             pass

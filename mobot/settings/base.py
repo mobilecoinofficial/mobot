@@ -34,23 +34,19 @@ try:
     STORE_ADDRESS = account_obj['main_address']
     ACCOUNT_ID = account_obj['account_id']
 except Exception as e:
-    print("Failed to get full service account ID or")
-    raise e
+    print("Failed to get full service account ID")
+    if not DEBUG:
+        raise e
+
 
 try:
     network_status_response = fs_client.get_network_status()
     FEE_PMOB = int(network_status_response['fee_pmob'])
 except Exception as e:
     print("Failed to get network status response")
-    raise e
+    if not DEBUG:
+        raise e
 
-# Parse database connection url strings like psql://user:pass@127.0.0.1:8458/db
-DATABASES = {
-    # read os.environ['DATABASE_URL'] and raises ImproperlyConfigured exception if not found
-    'default': runtime_env.db(),
-    # read os.environ['SQLITE_URL']
-    'extra': runtime_env.db('SQLITE_URL', default='sqlite:////tmp/my-tmp-sqlite.db')
-}
 
 EXCHANGE_BACKEND = 'mobot.apps.merchant_services.ftx.OpenExchangeRatesWithFtxBackend'
 
@@ -65,4 +61,3 @@ PMOB = add_currency(
     numeric=None,
     name='Picomob'
 )
-

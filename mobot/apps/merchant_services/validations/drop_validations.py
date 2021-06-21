@@ -7,7 +7,7 @@ import datetime
 import pytz
 import mobilecoin as fullservice
 
-from mobot.apps.merchant_services.validations import OneModelValidation, TwoModelValidation
+from mobot.apps.merchant_services.validations import TwoModelValidation
 
 
 class MockUser(models.Model):
@@ -84,17 +84,3 @@ def _funds_available(amt_in_picomob: int) -> bool:
     account_balance_response = fullservice_client.get_balance_for_account(settings.ACCOUNT_ID)
     unspent_pmob = int(account_balance_response['result']['balance']['unspent_pmob'])
     return (amt_in_picomob + settings.FEE_PMOB) < unspent_pmob
-
- # @christian: Can you confirm whether the explicit [MockUser] is necessary? Scala would infer it from the validator signature.
-HAS_PHONE_NUMBER_VALIDATION = OneModelValidation[UserAccount](validator=check_has_number)
-HAS_PHONE_NUMBER_VALIDATION.validate(user1)
-
-COUNTRY_CODE_VALIDATION = TwoModelValidation[UserAccount, Drop](validator=check_number_country_code_matches_drop)
-COUNTRY_CODE_VALIDATION.validate(user1, drop1)
-HAS_ALREADY_GOTTEN_DROP = TwoModelValidation[UserAccount, Drop](validator=check_user_has_gotten_coin)
-
-HAS_NOT_ALREADY_GOTTEN_DROP = TwoModelValidation[UserAccount, Drop](validator=check_user_has_not_gotten_coin)
-
-FUNDS_ARE_AVAILABLE = OneModelValidation[Drop]
-
-# bonus_validations = [HAS_ALREADY_GOTTEN_DROP(customer, original_drop), HAS_NOT_ALREADY_GOTTEN_DROP(customer, bonus_drop)]

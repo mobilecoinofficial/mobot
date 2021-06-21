@@ -18,3 +18,7 @@ function run_bash_in_container () {
 function run_admin_script () {
   run_command_in_container mobot_admin "bash -c /app/mobot/app_scripts/admin.sh ${1}"
 }
+
+function update_requirements () {
+  pipenv lock -r > ./mobot/requirements.txt
+}
