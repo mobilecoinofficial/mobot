@@ -1,11 +1,14 @@
+import datetime
+import importlib
+
 from django.db import models
-from django.conf import settings
+from django.db.models import Q
 from phonenumber_field.modelfields import PhoneNumberField
 from djmoney.models.fields import MoneyField
 from django.contrib.postgres.fields import ArrayField
 from mobot.apps.signald_client import Signal
 from mobot.apps.payment_service.models import Payment
-from djmoney.contrib.exchange.models import convert_money
+
 
 
 class UserAccount(models.Model):
@@ -43,6 +46,7 @@ class Merchant(UserAccount):
     merchant_description = models.TextField(blank=True, default="A Mobot Merchant")
 
 
+
 class Customer(UserAccount):
     class Meta(UserAccount.Meta):
         db_table = 'merchant_service_customers'
@@ -50,7 +54,7 @@ class Customer(UserAccount):
 
 
 class MCStore(models.Model):
-    name = models.TextField()
+    name = models.TextField(blank=True, default="Coin Shop")
     description = models.TextField(blank=True, default="Mobot Store")
     privacy_policy_url = models.URLField(blank=True, default="https://mobilecoin.com/privacy")
     merchant_ref = models.ForeignKey(Merchant, on_delete=models.CASCADE, related_name="store_owner")
@@ -59,19 +63,19 @@ class MCStore(models.Model):
         return f'{self.name} ({self.phone_number})'
 
 
+
 class Product(models.Model):
     store_ref = models.ForeignKey(MCStore, on_delete=models.CASCADE)
-    name = models.TextField(blank=False)
+    name = models.TextField(blank=False, null=False)
     description = models.TextField(default=None, blank=True, null=True)
     short_description = models.TextField(default=None, blank=True, null=True)
     image_link = models.URLField(default=None, blank=True, null=True)
-    number_restriction = ArrayField(models.TextField(blank=False, null=False), unique=False, blank=True, null=True)
     allows_refund = models.BooleanField(default=True, blank=False)
-    price = MoneyField(max_digits=14, decimal_places=5, default_currency='GBP', help_text='Price of the product', blank=False, default=1.0)
+    price = MoneyField(max_digits=14, decimal_places=5, default_currency='GBP', help_text='Price of the product',
+                       blank=False, default=1.0)
 
     class Meta:
         app_label = 'merchant_services'
-        unique_together = ('store_ref', 'name')
         abstract = True
 
     def __str__(self):
@@ -79,14 +83,48 @@ class Product(models.Model):
 
 
 class Drop(Product):
-    pre_drop_description = models.TextField()
-    advertisement_start_time = models.DateTimeField()
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
-    quota = models.PositiveIntegerField(default=10)  # Number left
+    pre_drop_description = models.TextField(default="MobileCoin Product Drop")
+    advertisement_start_time = models.DateTimeField(default=datetime.datetime.utcnow())
+    start_time = models.DateTimeField(default=datetime.datetime.utcnow())
+    end_time = models.DateTimeField(default=datetime.datetime.utcnow() + datetime.timedelta(days=1))
+    quota = models.PositiveIntegerField(default=10)
 
     def __str__(self):
         return f'Store: {self.store_ref.name} - Name: {self.name} - Price: {self.price} - Start: {self.start_time} - Remaining: {self.quota}'
+
+
+class Sale(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, blank=False, null=False)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, blank=False, null=False)
+    price = MoneyField(blank=False, null=False)
+
+    @property
+    def merchant(self) -> Merchant:
+        return self.product.store_ref.merchant_ref
+
+
+class CampaignTargetManager(models.Manager):
+    def get_queryset(self):
+        base_condition = Q()
+        for validation in self.model.validation_set.target_validations:
+            base_condition.add(validation.q, Q.AND)
+        return Customer.objects.filter(base_condition)
+
+
+
+class Campaign(models.Model):
+    product_ref = models.ForeignKey(Product, on_delete=models.CASCADE)
+    targets = CampaignTargetManager()
+
+
+class Validation(models.Model):
+    fieldname = models.TextField(blank=False, null=False)
+    comparator_func = models.TextField(blank=False, null=False)
+    target_value = models.TextField(blank=False, null=False)
+    campaign_ref = models.ForeignKey(Campaign, on_delete=models.CASCADE)
+
+    def q(self) -> Q:
+        return Q(**{f"{self.fieldname}{self.comparator_func}": self.target_value})
 
 
 class CustomerStorePreferences(models.Model):
@@ -110,7 +148,6 @@ class DropSession(models.Model):
     state = models.IntegerField(default=0, choices=SessionState.choices)
     payment_ref = models.ForeignKey(Payment, blank=True, on_delete=models.CASCADE)
     refund = models.ForeignKey(Payment, blank=True, on_delete=models.CASCADE, related_name='refund')
-
 
 
 class Message(models.Model):

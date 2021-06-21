@@ -36,8 +36,6 @@ services:
      - --peer=mc://node2.test.mobilecoin.com/
      - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node1.test.mobilecoin.com/
      - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node2.test.mobilecoin.com/
-     ports:
-     - "9090:9090"
      expose:
      - 9090
      networks:
@@ -58,8 +56,6 @@ services:
     - db
     expose:
     - 8000
-    ports:
-      - "8000:8000"
     networks:
       mobot:
         ipv4_address: 10.200.0.8
