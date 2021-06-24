@@ -1,9 +1,14 @@
-version: "3.8"
+version: "3.9"
 
 services:
   db:
     image: postgres
-    restart: always
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
     volumes:
     - db:/var/lib/postgresql/data
     env_file:
@@ -20,30 +25,17 @@ services:
     - signald:/signald
     expose:
     - 15432
-    ports:
-    - "15432:15432"
     networks:
       mobot:
         ipv4_address: 10.200.0.6
 
-  full-service:
-     image: mobilecoin/full-service:v1.0.0-pre.6.testnet
-     volumes:
-     - full-service:/data
-     tty: true
-     command:
-     - --peer=mc://node1.test.mobilecoin.com/
-     - --peer=mc://node2.test.mobilecoin.com/
-     - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node1.test.mobilecoin.com/
-     - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node2.test.mobilecoin.com/
-     expose:
-     - 9090
-     networks:
-       mobot:
-         ipv4_address: 10.200.0.7
-
   admin:
-    restart: always
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
     build:
       context: .
       dockerfile: ./Dockerfile.dev
@@ -60,24 +52,6 @@ services:
       mobot:
         ipv4_address: 10.200.0.8
 
-  mobot-client:
-    restart: always
-    build:
-      context: .
-      dockerfile: ./Dockerfile.dev
-    entrypoint: /bin/bash /scripts/init.sh client
-    env_file:
-    - ./docker/env
-    volumes:
-    - signald:/signald
-    depends_on:
-    - db
-    - signald
-    - full-service
-    - admin
-    networks:
-      mobot:
-        ipv4_address: 10.200.0.9
 
 volumes:
   db:

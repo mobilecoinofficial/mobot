@@ -5,7 +5,6 @@
         <option name="buildKitEnabledForCompose" value="true" />
         <option name="envFilePath" value="$PROJECT_DIR$/docker/env" />
         <option name="sourceFilePath" value="docker-compose.yml" />
-        <option name="upAlwaysRecreate" value="true" />
         <option name="upDetach" value="false" />
         <option name="upExitCodeFromService" value="" />
         <option name="upRemoveOrphans" value="true" />
