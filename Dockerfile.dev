@@ -78,5 +78,4 @@ RUN chmod -R a+x mobot/app_scripts/
 RUN chown -R app:app /app
 USER app
 
-EXPOSE 8000
 VOLUME /signald

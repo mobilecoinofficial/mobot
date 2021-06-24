@@ -1,5 +1,5 @@
 from django.contrib import admin
-from mobot.apps.merchant_services.models import MCStore, Customer, Drop, CustomerStorePreferences, DropSession, Message, UserAccount, Merchant, Product
+from mobot.apps.merchant_services.models import MCStore, Customer, CustomerStorePreferences, Message, UserAccount, Merchant, Product
 from mobot.apps.payment_service.models import Payment, Transaction
 
 class StoreAdmin(admin.ModelAdmin):
@@ -38,7 +38,5 @@ admin.site.register(Payment, PaymentAdmin)
 admin.site.register(Merchant, MerchantAccountAdmin)
 admin.site.register(MCStore, StoreAdmin)
 admin.site.register(Customer, CustomerAdmin)
-admin.site.register(Drop, DropAdmin)
 admin.site.register(CustomerStorePreferences, CustomerStorePreferencesAdmin)
-admin.site.register(DropSession, DropSessionAdmin)
 admin.site.register(Message, MessageAdmin)

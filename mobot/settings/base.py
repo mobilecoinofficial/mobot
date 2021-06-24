@@ -20,32 +20,35 @@ FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
 PHONENUMBER_DB_FORMAT = "E164"
 EXCHANGE_BACKEND = 'mobot.apps.merchant_services.ftx.OpenExchangeRatesWithFtxBackend'
 OPEN_EXCHANGE_RATES_APP_ID = runtime_env('OPEN_EXCHANGE_RATES_APP_ID')
+USE_TZ = True
+TEST = True
 
 FEE_PMOB = None
 ACCOUNT_ID = None
 STORE_ADDRESS = None
 
 fs_client = fullservice.Client(FULLSERVICE_URL)
+if not TEST:
+    try:
+        print("Getting Fullservice client connection")
+        accounts_map = fs_client.get_all_accounts()
+        account_id = next(iter(accounts_map))
+        account_obj = accounts_map[account_id]
+        STORE_ADDRESS = account_obj['main_address']
+        ACCOUNT_ID = account_obj['account_id']
+    except Exception as e:
+        print("Failed to get full service account ID")
+        if not DEBUG:
+            raise e
 
-try:
-    accounts_map = fs_client.get_all_accounts()
-    account_id = next(iter(accounts_map))
-    account_obj = accounts_map[account_id]
-    STORE_ADDRESS = account_obj['main_address']
-    ACCOUNT_ID = account_obj['account_id']
-except Exception as e:
-    print("Failed to get full service account ID")
-    if not DEBUG:
-        raise e
 
-
-try:
-    network_status_response = fs_client.get_network_status()
-    FEE_PMOB = int(network_status_response['fee_pmob'])
-except Exception as e:
-    print("Failed to get network status response")
-    if not DEBUG:
-        raise e
+    try:
+        network_status_response = fs_client.get_network_status()
+        FEE_PMOB = int(network_status_response['fee_pmob'])
+    except Exception as e:
+        print("Failed to get network status response")
+        if not DEBUG:
+            raise e
 
 
 EXCHANGE_BACKEND = 'mobot.apps.merchant_services.ftx.OpenExchangeRatesWithFtxBackend'
