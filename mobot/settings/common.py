@@ -21,6 +21,7 @@ runtime_env = environ.Env(
 )
 # reading .env file
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -48,8 +49,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_celery_results',
     'djmoney',
+    'address',
     'djmoney.contrib.exchange',
+    'django_fsm',
     'mobot.apps.common.apps.CommonAppConfig',
     'mobot.apps.payment_service.apps.PaymentServiceAppConfig',
     'mobot.apps.merchant_services.apps.MerchantServicesConfig',

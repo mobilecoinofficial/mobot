@@ -1,2 +1,5 @@
+import sys
 import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+
+sys.path.append("/app/")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mobot.settings")

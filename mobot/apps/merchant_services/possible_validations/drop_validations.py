@@ -7,7 +7,7 @@ import datetime
 import pytz
 import mobilecoin as fullservice
 
-from mobot.apps.merchant_services.validations import TwoModelValidation
+from mobot.apps.merchant_services.possible_validations import TwoModelValidation
 
 
 class MockUser(models.Model):
