@@ -1,0 +1,18 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="docker-compose.yml: Compose Deployment - no flush" type="docker-deploy" factoryName="docker-compose.yml" server-name="Docker">
+    <deployment type="docker-compose.yml">
+      <settings>
+        <option name="buildKitEnabledForCompose" value="true" />
+        <option name="envFilePath" value="$PROJECT_DIR$/docker/env" />
+        <option name="sourceFilePath" value="docker-compose.yml" />
+        <option name="upDetach" value="false" />
+        <option name="upExitCodeFromService" value="" />
+        <option name="upRemoveOrphans" value="true" />
+        <option name="upTimeout" value="" />
+      </settings>
+    </deployment>
+    <method v="2">
+      <option name="RunConfigurationTask" enabled="true" run_configuration_name="Rebuild docker images" run_configuration_type="ShConfigurationType" />
+    </method>
+  </configuration>
+</component>
