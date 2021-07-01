@@ -5,9 +5,13 @@
       <entry url="file://$PROJECT_DIR$">
         <entryData>
           <resourceRoots>
+            <path value="file://$PROJECT_DIR$/app_scripts" />
+            <path value="file://$PROJECT_DIR$/host_machine_scripts" />
+            <path value="file://$PROJECT_DIR$/docker" />
             <path value="file://$PROJECT_DIR$/chart" />
             <path value="file://$PROJECT_DIR$/privacy" />
-            <path value="file://$PROJECT_DIR$/testnet-full-service-macos-penryn-1.0.0-pre.5" />
+            <path value="file://$PROJECT_DIR$/.direnv" />
+            <path value="file://$PROJECT_DIR$/.idea" />
           </resourceRoots>
         </entryData>
       </entry>

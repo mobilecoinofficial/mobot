@@ -1,13 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module version="4">
-  <component name="PyDocumentationSettings">
-    <option name="format" value="PLAIN" />
-    <option name="myDocStringFormat" value="Plain" />
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/.github/workflows" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/mobot" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/mobot/apps" isTestSource="false" />
+    </content>
+    <orderEntry type="sourceFolder" forTests="false" />
   </component>
-  <component name="TemplatesService">
-    <option name="TEMPLATE_FOLDERS">
+  <component name="PyNamespacePackagesService">
+    <option name="namespacePackageFolders">
       <list>
-        <option value="$MODULE_DIR$/chart/templates" />
+        <option value="$MODULE_DIR$/mobot" />
+        <option value="$MODULE_DIR$/mobot/apps/merchant_services" />
+        <option value="$MODULE_DIR$/mobot/apps/mobot_client" />
+        <option value="$MODULE_DIR$/mobot/apps/mobot_web" />
+        <option value="$MODULE_DIR$/mobot/apps/payment_service" />
+        <option value="$MODULE_DIR$/mobot/apps/signald_client" />
+        <option value="$MODULE_DIR$/mobot/apps/common" />
+        <option value="$MODULE_DIR$/mobot/settings" />
+        <option value="$MODULE_DIR$/mobot/apps/merchant_services/campaign" />
+        <option value="$MODULE_DIR$/mobot/apps/merchant_services/events" />
+        <option value="$MODULE_DIR$/mobot/apps/merchant_services/full_service" />
+        <option value="$MODULE_DIR$/mobot/apps/merchant_services/management" />
+        <option value="$MODULE_DIR$/mobot/apps/merchant_services/models" />
+        <option value="$MODULE_DIR$/mobot/apps/merchant_services/possible_validations" />
+        <option value="$MODULE_DIR$/mobot/apps/merchant_services/tests" />
+        <option value="$MODULE_DIR$/mobot/apps" />
+        <option value="$MODULE_DIR$/mobot/mobot" />
+        <option value="$MODULE_DIR$/mobot/mobot_client" />
+        <option value="$MODULE_DIR$/mobot/signald_client" />
       </list>
     </option>
   </component>
