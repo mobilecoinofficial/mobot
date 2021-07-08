@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from argparse import ArgumentParser
-from mobot.apps.merchant_services.ftx import PriceAPI
+from mobot.lib.ftx import PriceAPI
 from moneyed import Money, Currency
 
 

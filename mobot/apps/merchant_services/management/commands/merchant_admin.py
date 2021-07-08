@@ -2,7 +2,7 @@ import argparse
 
 import pytz
 from django.core.management.base import BaseCommand
-from mobot.apps.merchant_services.models import Product, Merchant, MCStore, Drop
+from mobot.apps.merchant_services.models import Product, Merchant, Store, Drop
 from django.conf import settings
 from typing import List
 from typedate import TypeDate
@@ -149,8 +149,8 @@ class Command(BaseCommand):
         drop_group.add_argument("--reset-all-drops", required=False, action="store_true", default=False, help="Reset all accounts")
 
 
-    def add_default_store(self, merchant: Merchant, **options) -> MCStore:
-        s, created = MCStore.objects.get_or_create(merchant_ref=merchant, name="MobileCoin Coin Drop Store")
+    def add_default_store(self, merchant: Merchant, **options) -> Store:
+        s, created = Store.objects.get_or_create(merchant_ref=merchant, name="MobileCoin Coin Drop Store")
         s.save()
         return s
 
@@ -159,7 +159,7 @@ class Command(BaseCommand):
         m.save()
         return m
 
-    def add_default_drops(self, store: MCStore, **options) -> List[Drop]:
+    def add_default_drops(self, store: Store, **options) -> List[Drop]:
         Drop.objects.filter(name__startswith="Initial Airdrop", store_ref=store).delete()
         original_drop, _ = Drop.objects.update_or_create(name="Initial AirDrop",
                             pre_drop_description="Get free MOB from MobileCoin!",
@@ -196,7 +196,7 @@ class Command(BaseCommand):
         try:
             if options.get("reset_all_drops"):
                 Merchant.objects.all().delete()
-                MCStore.objects.all().delete()
+                Store.objects.all().delete()
                 Drop.objects.all().delete()
                 merchant = self.add_default_merchant()
                 store = self.add_default_store(merchant)
