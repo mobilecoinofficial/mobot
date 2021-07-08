@@ -10,7 +10,8 @@ from django.utils import timezone as tz
 from dataclasses import dataclass
 import django
 django.setup()
-from mobot.apps.merchant_services.models import Customer, MCStore, Merchant, Product, InventoryItem, Campaign, Validation, ProductGroup
+from mobot.campaigns.hoodies import Size
+from mobot.apps.merchant_services.models import Customer, Store, Merchant, Product, InventoryItem, Campaign, Validation, ProductGroup, Order
 
 
 @dataclass
@@ -26,9 +27,9 @@ class CustomerTestCase(TestCase):
         super(CustomerTestCase, self).__init__(*args, **kwargs)
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def teardDown(self) -> None:
+    def tearDown(self) -> None:
         Customer.objects.all().delete()
-        Merchant.objects.all().delete()
+        Order.objects.all().delete()
         Product.objects.all().delete()
         InventoryItem.objects.all().delete()
 
@@ -41,8 +42,8 @@ class CustomerTestCase(TestCase):
         except TypeError as e:
             self.logger.exception(f"{name}:{phone_number}")
 
-    def add_default_store(self, merchant: Merchant) -> MCStore:
-        s, created = MCStore.objects.get_or_create(merchant_ref=merchant, name="Test MobileCoin Coin Drop Store")
+    def add_default_store(self, merchant: Merchant) -> Store:
+        s, created = Store.objects.get_or_create(merchant_ref=merchant, name="Test MobileCoin Coin Drop Store")
         s.save()
         return s
 
@@ -53,23 +54,12 @@ class CustomerTestCase(TestCase):
 
     def _add_airdrop_product(self, airdrop: Airdrop, group: ProductGroup = ProductGroup("Bonus Aidrop")):
         product = Product(name=f"MobileCoin Airdrop - {airdrop.price}", product_group=group, price=Money(airdrop.price, airdrop.currency), description=f"A MOB giveaway: {airdrop.price} {airdrop.currency}", store_ref=self.store)
-        items = [InventoryItem(product_ref=product) for _ in range(airdrop.quota)]
+        items = [InventoryItem(product=product) for _ in range(airdrop.quota)]
         product.save()
         return airdrop.quota, product
 
-    def _add_campaign_for_drop_drop(self, drop: Airdrop):
-        Campaign.objects.create(
-            name=f"Test Bonus AirDrop {drop.price}",
-            pre_drop_description=f"Test Bonus Drop {drop.price}",
-            product_ref=drop,
-            advertisement_start_time=tz.make_aware(datetime.datetime.now(), tz.get_current_timezone()),
-            start_time=tz.make_aware(datetime.datetime.now(), tz.get_current_timezone()),
-            end_time=tz.make_aware(datetime.datetime.now() + datetime.timedelta(days=3.0), tz.get_current_timezone()),
-            quota=drop.quota,
-            adjusted_price=None
-        )
 
-    def add_default_campaign(self, store: MCStore) -> List[Campaign]:
+    def add_default_campaign(self, store: Store) -> List[Campaign]:
         product_group = ProductGroup(name="Aidrop Original")
         quota, airdrop_product = self._add_airdrop_product(Airdrop(price=-3.0, currency=GBP, quota=100), group=product_group)
 
@@ -102,13 +92,14 @@ class CustomerTestCase(TestCase):
         product_group.save()
         return product_group
 
-    def _add_hoodie(self, size: str, price: Money = Money(Decimal(15.0), currency=GBP)):
+    def _add_hoodie(self, size: str, price: Money = Money(Decimal(15.0), currency=GBP)) -> Product:
         hoodie_product, created = Product.objects.get_or_create(
             name=f"MobileCoin Hoodie - {size}",
             price=price,
             description=f"MobileCoin Hoodie {size}",
             product_group=self.hoodie_product_group,
             store_ref=self.store,
+            metadata=dict(size=size)
         )
         return hoodie_product
 
@@ -120,7 +111,7 @@ class CustomerTestCase(TestCase):
         self.merchant = self.add_default_merchant()
         self.store = self.add_default_store(self.merchant)
         self.cust_us = self.add_default_customer("Greg", phone_number="+18054412653")
-        self.cust_us_2 = self.add_default_customer("Bpb", phone_number="+4474413397")
+        self.cust_us_2 = self.add_default_customer("Bob", phone_number="+447441433907")
         self.cust_uk = self.add_default_customer("Adam", phone_number="+447441433906")
         self.original_drop = self.add_default_campaign(self.store)
         self.hoodie_product_group = self._test_add_hoodie_product_group()
@@ -142,15 +133,23 @@ class CustomerTestCase(TestCase):
         self.assertEqual(2, len(targets))
 
     def test_can_create_hoodie_and_inventory(self):
-        small_hoodie = self._add_hoodie(size="small")
+        small_hoodie = self._add_hoodie(size=Size.S)
         small_hoodie.add_inventory(10)
-        medium_hoodie = self._add_hoodie(size="medium")
+        medium_hoodie = self._add_hoodie(size=Size.M)
         medium_hoodie.add_inventory(10)
-        large_hoodie = self._add_hoodie(size="large")
+        large_hoodie = self._add_hoodie(size=Size.L)
         large_hoodie.add_inventory(10)
-        print(large_hoodie.inventory.count())
+        large = list(Product.objects.filter(metadata=dict(size=Size.L)))
+        self.assertEqual(len(large), 1)
+        inv = large_hoodie.inventory.all()
+        self.assertEqual(len(inv), 10)
+
+    def test_can_add_product_to_customer_order(self):
+        small_hoodie = self._add_hoodie(size=Size.S)
+        small_hoodie.add_inventory(1)
+        customer = self.cust_us
 
 
-    # def test_can_add_has_inventory(self):
-    #     original_drop: Campaign = self.original_drop
-    #     validation = self._test_add_product_validation(campaign=original_drop)
+
+
+

@@ -2,7 +2,6 @@ import logging
 
 from .common import *
 import mobilecoin as fullservice
-from moneyed import add_currency
 
 # False if not in os.environ
 DEBUG = runtime_env('DEBUG')
@@ -51,16 +50,5 @@ if not TEST:
             raise e
 
 
-EXCHANGE_BACKEND = 'mobot.apps.merchant_services.ftx.OpenExchangeRatesWithFtxBackend'
+EXCHANGE_BACKEND = 'mobot.lib.ftx.OpenExchangeRatesWithFtxBackend'
 
-MOB = add_currency(
-    code='MOB',
-    numeric=None,
-    name='Mobilecoin'
-)
-
-PMOB = add_currency(
-    code='PMB',
-    numeric=None,
-    name='Picomob'
-)

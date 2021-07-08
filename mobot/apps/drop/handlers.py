@@ -1,4 +1,10 @@
+import signal
+from django.conf import settings
+import mobilecoin as mc
+from .models import Message
+from mobot.apps.merchant_services.models import *
 
+mcc = mc.client(settings.FULLSERVICE_URL)
 
 @signal.chat_handler("balance")
 def account_balance(message, match):

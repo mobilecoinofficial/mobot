@@ -57,7 +57,7 @@ INSTALLED_APPS = [
     'mobot.apps.common.apps.CommonAppConfig',
     'mobot.apps.payment_service.apps.PaymentServiceAppConfig',
     'mobot.apps.merchant_services.apps.MerchantServicesConfig',
-    'mobot.apps.mobot_client.apps.MobotClientAppsConfig',
+    'mobot.apps.drop.apps.MobotClientAppsConfig',
     'mobot.apps.mobot_web.apps.MobotWebConfig'
 ]
 
