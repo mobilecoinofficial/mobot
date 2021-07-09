@@ -118,7 +118,7 @@ class Command(BaseCommand):
             nargs="+",
         )
         product_group.add_argument(
-            '-r',
+            '-receipt',
             '--allows-refund',
             help="Product allows refund",
             action="store_true",
