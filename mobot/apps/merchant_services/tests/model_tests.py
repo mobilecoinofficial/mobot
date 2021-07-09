@@ -10,8 +10,11 @@ from django.utils import timezone as tz
 from dataclasses import dataclass
 import django
 django.setup()
+
+
 from mobot.campaigns.hoodies import Size
 from mobot.apps.merchant_services.models import Customer, Store, Merchant, Product, InventoryItem, Campaign, Validation, ProductGroup, Order
+
 
 
 @dataclass
