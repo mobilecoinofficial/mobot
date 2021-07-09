@@ -1,7 +1,8 @@
 from django.contrib import admin
 from mobot.apps.merchant_services.models import Store, Customer, CustomerStorePreferences, Merchant, Product, Shipment, Order, Campaign, UserAccount
 from mobot.apps.payment_service.models import Payment, Transaction
-from mobot.apps.drop.models import Message
+from mobot.apps.chat import Message
+
 
 @admin.register(Store)
 class StoreAdmin(admin.ModelAdmin):

@@ -36,26 +36,14 @@ SESSION_STATE_WAITING_FOR_BONUS_TRANSACTION = 1
 SESSION_STATE_ALLOW_CONTACT_REQUESTED = 2
 SESSION_STATE_COMPLETED = 3
 
-MESSAGE_DIRECTION_RECEIVED = 0
-MESSAGE_DIRECTION_SENT = 1
+
 
 bot_name = ChatbotSettings.load().name
 bot_avatar_filename = ChatbotSettings.load().avatar_filename
 signal.set_profile(bot_name, PUBLIC_ADDRESS, bot_avatar_filename, False)
 
 
-def _signald_to_fullservice(r):
-    return {
-        "object": "receiver_receipt",
-        "public_key": r['txo_public_key'],
-        "confirmation": r['txo_confirmation'],
-        "tombstone_block": str(r['tombstone']),
-        "amount": {
-            "object": "amount",
-            "commitment": r['amount_commitment'],
-            "masked_value": str(r['amount_masked'])
-        }
-    }
+
 
 
 def send_mob_to_customer(source, amount_mob, cover_transaction_fee):
