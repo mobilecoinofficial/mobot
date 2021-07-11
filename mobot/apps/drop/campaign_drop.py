@@ -1,12 +1,7 @@
 import logging
-import sys
-import os
 from typing import Optional
 
 from mobot.apps.merchant_services.models import Campaign, Customer, DropSession
-
-sys.path.append("/app/")
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 
 
 class Drop:

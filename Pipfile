@@ -29,6 +29,9 @@ celery = "5.2.1"
 django-celery-results = "2.1.0"
 django-address = "0.2.5"
 google-i18n-address = "*"
+multipledispatch = "0.6.0"
+pytest = "==6.2.4"
+pytest-mock = "==3.6.1"
 
 [dev-packages]
 ipython = "*"
