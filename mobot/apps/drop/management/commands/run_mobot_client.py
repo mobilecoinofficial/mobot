@@ -350,12 +350,6 @@ def handle_no_active_drop_session(customer, message, drop):
     log_and_send_message(customer, message.source, "Ready?")
 
 
-@signal.chat_handler("coins")
-def chat_router_coins(message, match):
-    bonus_coins = BonusCoin.objects.all()
-    for bonus_coin in bonus_coins:
-        number_claimed = DropSession.objects.filter(bonus_coin_claimed=bonus_coin).count()
-        signal.send_message(message.source, f"{number_claimed} out of {bonus_coin.number_available} {mc.pmob2mob(bonus_coin.amount_pmob).normalize()}MOB Bonus Coins claimed ")
 
 
 @signal.chat_handler("privacy")
@@ -365,19 +359,6 @@ def privacy_policy_handler(message, _match):
     return
 
 
-@signal.chat_handler("unsubscribe")
-def unsubscribe_handler(message, _match):
-    customer, _is_new = Customer.objects.get_or_create(phone_number=message.source['number'])
-    store_preferences, _is_new = CustomerStorePreferences.objects.get_or_create(customer=customer, store=store)
-
-    if not store_preferences.allows_contact:
-        log_and_send_message(customer, message.source, "You are not currently receiving any notifications")
-        return
-
-    store_preferences.allows_contact = False
-    store_preferences.save()
-
-    log_and_send_message(customer, message.source, "You will no longer receive notifications about future drops.")
 
 
 @signal.chat_handler("subscribe")
@@ -440,14 +421,7 @@ def get_signal_profile_name(source):
         return None
 
 
-def get_payments_address(source):
-    customer_signal_profile = signal.get_profile(source, True)
-    print(customer_signal_profile)
-    try:
-        customer_payments_address = customer_signal_profile['data']['paymentsAddress']
-        return customer_payments_address
-    except:
-        return None
+
 
 
 class Command(BaseCommand):

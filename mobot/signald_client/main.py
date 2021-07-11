@@ -3,12 +3,23 @@ import json
 import random
 import re
 import socket
-from typing import Iterator, List  # noqa
+from typing import Iterator, List, Protocol, Dict, Callable, Generic, TypeVar, Any, NewType
+
+from queue import Queue
+from dataclasses import dataclass
+from collections import defaultdict
+from uuid import uuid4
+import logging
+from multipledispatch import dispatch
+from concurrent.futures import ThreadPoolExecutor
 
 from .types import Attachment, Message
 
+logging.basicConfig()
+
 # We'll need to know the compiled RE object later.
 RE_TYPE = type(re.compile(""))
+
 
 def readlines(s: socket.socket) -> Iterator[bytes]:
     "Read a socket, line by line."
@@ -25,12 +36,52 @@ def readlines(s: socket.socket) -> Iterator[bytes]:
             buf.append(char)
 
 
+class MessageSubscriber():
+    def __init__(self, name: str, *args, **kwargs):
+        self.name = name
+        self.logger = logging.getLogger("Signal Subscriber")
+
+    def update(self, message: Message) -> None:
+        self.logger.debug(f"Received message from {message.source} with payload {message.text} containing payment: {message.payment}")
+
+    def subscribe(self) -> Iterator[Message]: ...
+
+
+class QueueSubscriber(MessageSubscriber):
+    def __init__(self, name, *args, **kwargs):
+        super().__init__(name, *args, **kwargs)
+        self._queue = Queue()
+
+    def update(self, message: Message) -> None:
+        self._queue.put(message)
+        super().update(message)
+
+    def get(self) -> Message:
+        return self._queue.get(block=True)
+
+    def size(self) -> int:
+        return self._queue.qsize()
+
+T = TypeVar('T', bound=Any)
+
+class MessageCallback(Generic[T]):
+    def __init__(self, name: str, callable: Callable[[Message], T]):
+        self.name = name if name else f"callback-{uuid4()}"
+        self.func = callable
+
+    def __call__(self, message) -> T:
+        return self.func(message)
+
+
 class Signal:
     def __init__(self, username, socket_path="/var/run/signald/signald.sock"):
         self.username = username
         self.socket_path = socket_path
         self._chat_handlers = []
         self._payment_handlers = []
+        self._message_subscribers: Dict[str, MessageSubscriber] = {}
+        self._message_callbacks: Dict[str, MessageCallback] = {}
+        self._callback_futures = []
         print("Connecting to signald at {}".format(socket_path))
 
     def _get_id(self):
@@ -82,6 +133,7 @@ class Signal:
         payload = {"type": "register", "username": self.username, "voice": voice}
         self._send_command(payload)
 
+
     def verify(self, code: str):
         """
         Verify the given number by entering the code you received.
@@ -90,6 +142,12 @@ class Signal:
         """
         payload = {"type": "verify", "username": self.username, "code": code}
         self._send_command(payload)
+
+    def register_subscriber(self, subscriber: MessageSubscriber):
+        self._message_subscribers[subscriber.name] = subscriber
+
+    def register_callback(self, name: str, callback: Callable):
+        self._message_callbacks[name] = callback
 
     def receive_messages(self) -> Iterator[Message]:
         "Keep returning received messages."
@@ -258,7 +316,7 @@ class Signal:
         return self.get_profile(recipient)
 
 
-    def chat_handler(self, regex, order=100):
+    def _handler(self, regex, order=100):
         """
         A decorator that registers a chat handler function with a regex.
         """
@@ -273,57 +331,77 @@ class Signal:
 
         return decorator
 
+    def register_message_subscriber(self, subscriber: MessageSubscriber):
+        self._message_subscribers
+
+    def register_chat_handler(self, regex, func, order=100):
+        if not isinstance(regex, RE_TYPE):
+            regex = re.compile(regex, re.I)
+        self._chat_handlers.append((order, regex, func))
+        # Use only the first value to sort so that declaration order doesn't change.
+        self._chat_handlers.sort(key=lambda x: x[0])
+
+
     def payment_handler(self, func):
         self._payment_handlers.append(func)
         return func
+
 
     def run_chat(self, auto_send_receipts=False):
         """
         Start the chat event loop.
         """
-        for message in self.receive_messages():
-            print(message)
+        with ThreadPoolExecutor(4) as executor:
+            for message in self.receive_messages():
 
-            if message.payment:
-                for func in self._payment_handlers:
-                    func(message.source, message.payment)
-                continue
+                for callback in self._message_callbacks.values():
+                    self._callback_futures.append(executor.submit(callback, message))
 
-            if not message.text:
-                continue
+                for subscriber in self._message_subscribers.values():
+                    subscriber.update(message)
 
-            for _, regex, func in self._chat_handlers:
-                match = re.search(regex, message.text)
-                if not match:
+                if message.payment:
+                    for func in self._payment_handlers:
+                        func(message.source, message.payment)
                     continue
 
-                try:
-                    reply = func(message, match)
-                except Exception as e:  # noqa - We don't care why this failed.
-                    print(e)
+                if not message.text:
                     continue
 
-                if isinstance(reply, tuple):
-                    stop, reply = reply
-                else:
-                    stop = True
+                for _, regex, func in self._chat_handlers:
+                    match = re.search(regex, message.text)
+                    if not match:
+                        continue
 
+                    try:
+                        reply = func(message, match)
+                    except Exception as e:  # noqa - We don't care why this failed.
+                        print(e)
+                        continue
 
-                # In case a message came from a group chat
-                group_id = message.group_info.get("groupId")
-
-                # mark read and get that sweet filled checkbox
-                try:
-                    if auto_send_receipts and not group_id:
-                        self.send_receipt(recipient=message.source, timestamps=[message.timestamp])
-
-                    if group_id:
-                        self.send_group_message(recipient_group_id=group_id, text=reply)
+                    if isinstance(reply, tuple):
+                        stop, reply = reply
                     else:
-                        self.send_message(recipient=message.source, text=reply)
-                except Exception as e:
-                    print(e)
+                        stop = True
 
-                if stop:
-                    # We don't want to continue matching things.
-                    break
+
+                    # In case a message came from a group chat
+                    group_id = message.group_info.get("groupId")
+
+                    # mark read and get that sweet filled checkbox
+                    try:
+                        if auto_send_receipts and not group_id:
+                            self.send_receipt(recipient=message.source, timestamps=[message.timestamp])
+
+                        if group_id:
+                            self.send_group_message(recipient_group_id=group_id, text=reply)
+                        else:
+                            self.send_message(recipient=message.source, text=reply)
+                    except Exception as e:
+                        print(e)
+
+                    if stop:
+                        # We don't want to continue matching things.
+                        break
+
+        executor.shutdown(wait=True, cancel_futures=False)

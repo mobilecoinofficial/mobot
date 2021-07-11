@@ -258,6 +258,10 @@ class Campaign(ValidatableMixin):
                                 null=True)
     campaign_groups = models.ManyToManyField(CampaignGroup, related_name="campaigns")
 
+    @property
+    def is_active(self):
+        self.start_time <= tz.now() <= self.end_time
+
     def _get_targets(self, model_class):
         return Campaign.get_campaign_targets(self.id, model_class_name=model_class)
 
@@ -279,28 +283,34 @@ class Campaign(ValidatableMixin):
     def __str__(self):
         return str(f"Campaign({self.id}, {self.name})")
 
-# I legit hate this name.
+
+class DropSessionManager(models.Manager):
+    def create(self, **obj_data):
+        phone_number = obj_data['phone_number']
+        campaign = obj_data.get['campaign']
+        customer, _ = Customer.objects.get_or_create(phone_number=phone_number)
+        return super().create(customer=customer, campaign=campaign)
+
+
 class DropSession(Trackable):
     class State(models.IntegerChoices):
-        CREATED = -3, 'created'
+        CREATED = -3, 'created' # Greeting has begun
         OFFERED = -2, 'offered'
         ACCEPTED = -1, 'accepted'
         CANCELED = 0, 'canceled'
         EXPIRED = 1, 'expired'
         FAILED = 2, 'failed'  # Customer offered product, customer unable to buy product due to shipping
 
+    slug = models.SlugField(help_text="A descriptor for this user's session")
     state = FSMIntegerField(choices=State.choices, default=State.CREATED)
     campaign = models.ForeignKey(Campaign, on_delete=models.DO_NOTHING, blank=False, null=False, db_index=True,
-                                 related_name="offer_sessions")
+                                 related_name="drop_sessions")
     customer = models.ForeignKey(Customer, on_delete=models.DO_NOTHING, blank=False, null=False, db_index=True,
-                                 related_name="offer_sessions")
+                                 related_name="drop_sessions")
     product = models.ForeignKey(Product, on_delete=models.DO_NOTHING, blank=True, null=True,
-                                related_name="offer_sessions", db_index=True)
+                                related_name="drop_sessions", db_index=True)
+    objects = DropSessionManager()
 
-
-    def _has_inventory(self):
+    @property
+    def has_inventory(self):
         self.product.inventory.all() > 0
-
-    @transition(field=state, source=State.CREATED, target=State.OFFERED, conditions=[_has_inventory])
-    def offer_to_customer(self, customer):
-        self.campaign.product_group.inventory
