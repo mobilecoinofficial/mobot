@@ -70,14 +70,12 @@ class Mobot:
         # Use only the first value to sort so that declaration order doesn't change.
         self._chat_handlers.sort(key=lambda x: x[0])
 
-    def unsubscribe_customer(self, message):
-        customer, _is_new = Customer.objects.get_or_create(phone_number=message.source['number'])
+    def unsubscribe_handler(self, message: Message, customer: Customer):
         store_preferences, _is_new = CustomerStorePreferences.objects.get_or_create(customer=customer,
                                                                                     store=self.store)
 
         if not store_preferences.allows_contact:
-            Mobot.log_and_send_message(customer, message.source, NOT_RECEIVING_NOTIFICATIONS)
-            return
+            self.log_and_send_message(customer, message.source, NOT_RECEIVING_NOTIFICATIONS)
 
         store_preferences.allows_contact = False
         store_preferences.save()
@@ -90,9 +88,8 @@ class Mobot:
                                                   allows_contact=allow_contact)
         customer_prefs.save()
 
-
     def find_active_drop_for_customer(self, customer: Customer) -> DropSession:
-        return customer.offer_sessions.get(campaign=Mobot.drop.campaign)
+        return customer.offer_sessions.get(campaign=self.drop.campaign)
 
     def _greet_customer(self, customer: Customer, message: Message):
         greeting = GREETING.format(name=self.name, store=self.store, message_text=message.text)
@@ -114,16 +111,16 @@ class Mobot:
         self._handle_chat(message, customer)
 
     def register_handlers(self):
-        Mobot.signal.register_chat_handler("unsubscribe", Mobot.unsubscribe_handler)
-        Mobot.signal.register_chat_handler("", self._greet_customer)
+        self.register_handler("unsubscribe", Mobot.unsubscribe_handler)
+        self.register_handler("", self._greet_customer)
         Mobot.signal.register_chat_handler("p", Mobot.privacy_policy_handler)
         Mobot.signal.payment_handler(self.handle_payment)
 
     def run(self):
         self.signal.register_subscriber(self._per_cust_subscriber)
-        with ThreadPoolExecutor(2) as executor:
-            self.executor_futures.append(executor.submit(self.signal.run_chat, True))
+        with ThreadPoolExecutor(4) as executor:
+            self._executor_futures.append(executor.submit(self.signal.run_chat, True))
             for message in self._subscriber.receive_messages():
-                self._process_message(message)
+                self._executor_futures.append(executor.submit(self._process_message, message))
         executor.shutdown(wait=True)
 

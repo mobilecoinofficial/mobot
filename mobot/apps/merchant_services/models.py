@@ -251,7 +251,6 @@ class CampaignGroup(ValidatableMixin):
 
 
 class CampaignManager(models.Manager):
-
     def active_campaigns_by_store(self, store: Store) -> QuerySet:
         super().get_queryset().filter(store=store)
 
