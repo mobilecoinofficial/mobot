@@ -140,6 +140,7 @@ class Merchant(UserAccount):
     objects = models.Manager()
 
 
+
 class Store(Trackable):
     name = models.TextField(blank=True, default="Coin Shop")
     description = models.TextField(blank=True, default="Mobot Store")
@@ -148,6 +149,9 @@ class Store(Trackable):
 
     def __str__(self):
         return f'{self.name}:{self.phone_number}:store'
+
+
+Store.objects.filter()
 
 
 class CustomerStorePreferences(Trackable):
@@ -246,6 +250,12 @@ class CampaignGroup(ValidatableMixin):
     name = models.TextField(help_text="Campaign group name", blank=False, null=False)
 
 
+class CampaignManager(models.Manager):
+
+    def active_campaigns_by_store(self, store: Store) -> QuerySet:
+        super().get_queryset().filter(store=store)
+
+
 class Campaign(ValidatableMixin):
     name = models.TextField(help_text="Campaign name", null=False, blank=False)
     product_group = models.ForeignKey(ProductGroup, on_delete=models.CASCADE, related_name="campaigns", db_index=True)
@@ -256,7 +266,9 @@ class Campaign(ValidatableMixin):
     quota = models.PositiveIntegerField(default=10, help_text="Total number we want to sell for this campaign")
     adjusted_price = MoneyField(max_digits=14, default=None, decimal_places=5, default_currency="PMB", blank=True,
                                 null=True)
+    store = models.ForeignKey(Store, on_delete=models.DO_NOTHING, db_index=True)
     campaign_groups = models.ManyToManyField(CampaignGroup, related_name="campaigns")
+    objects = CampaignManager()
 
     @property
     def is_active(self):

@@ -14,9 +14,8 @@ from django.conf import settings
 from django.utils import timezone
 
 
-from mobot.apps.drop.campaign_drop import Drop
 from mobot.apps.chat.models import Message, MessageDirection
-from mobot.apps.merchant_services.models import Customer, CustomerStorePreferences, DropSession, Campaign
+from mobot.apps.merchant_services.models import Customer, CustomerStorePreferences, DropSession, Campaign, Store
 from mobot.signald_client import Signal
 from mobot.lib.signal import SignalCustomerDataClient
 from mobot.signald_client.types import Message
@@ -36,22 +35,22 @@ class MobotMessage(str, Enum):
 
 
 class Mobot:
-    def __init__(self, name: str, signal: Signal, drop: Drop, mobilecoin_client: mobilecoin.Client):
+    def __init__(self, name: str, signal: Signal, store: Store, mobilecoin_client: mobilecoin.Client):
+        self.logger = logging.getLogger("Mobot")
         self.signal = signal
-        self.drop = drop
+        self.store = store
         self.mobilecoin_client = mobilecoin_client
-        self.store = self.drop.store
         self.name = name
         self.customer_data_client = SignalCustomerDataClient(signal=self.signal)
         self._subscriber = QueueSubscriber(name)
         self.signal.register_subscriber(self._subscriber)
         self._executor_futures = []
         self._chat_handlers = []
-        self.logger = logging.getLogger("Mobot")
         self.register_handlers()
 
-    def get_customer_from_message(self, message: Message):
+    def get_customer_from_message(self, message: Message) -> Customer:
         customer, _is_new_customer = Customer.objects.get_or_create(phone_number=message.source)
+        return customer
 
     def log_and_send_message(self, customer: Customer, text: str):
         sent_message = Message(customer=customer, store=Mobot.store, text=text,
