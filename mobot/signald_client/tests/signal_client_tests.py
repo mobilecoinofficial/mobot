@@ -1,9 +1,8 @@
 import unittest
 from unittest import mock
 
-from mobot.signald_client.tests import produce_messages
+from mobot.signald_client.tests.fixtures import produce_messages
 from mobot.signald_client import Signal, QueueSubscriber
-
 
 
 class SignalClientTests(unittest.TestCase):
