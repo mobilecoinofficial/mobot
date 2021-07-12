@@ -3,14 +3,12 @@ import json
 import random
 import re
 import socket
-from typing import Iterator, List, Protocol, Dict, Callable, Generic, TypeVar, Any, NewType
+import time
+from typing import Iterator, List, Dict, Callable, Generic, TypeVar, Any
 
-from queue import Queue
-from dataclasses import dataclass
-from collections import defaultdict
+import queue
 from uuid import uuid4
 import logging
-from multipledispatch import dispatch
 from concurrent.futures import ThreadPoolExecutor
 
 from .types import Attachment, Message
@@ -50,19 +48,45 @@ class MessageSubscriber():
 class QueueSubscriber(MessageSubscriber):
     def __init__(self, name, *args, **kwargs):
         super().__init__(name, *args, **kwargs)
-        self._queue = Queue()
+        self._queue = queue.Queue()
+        self._qsize = 0
+        self._total_received = 0
+
+    @property
+    def qsize(self):
+        """Safer than calling qsize on the queue"""
+        return self._qsize
+
+    @property
+    def total_received(self) -> int:
+        return self._total_received
 
     def update(self, message: Message) -> None:
         self._queue.put(message)
+        self._qsize += 1
         super().update(message)
 
-    def get(self) -> Message:
-        return self._queue.get(block=True)
+    def receive_messages(self, max_messages: int = 0) -> Iterator[Message]:
+        received = 0
+        while True:
+            try:
+                message = self._queue.get(block=False, timeout=1.0)
+                received += 1
+                self._total_received += 1
+                self._qsize -= 1
+                yield message
+                # Break early if we're only to receive a chunk of messages
+                if 0 < max_messages <= received:
+                    return
+            except queue.Empty:
+                pass
 
     def size(self) -> int:
         return self._queue.qsize()
 
+
 T = TypeVar('T', bound=Any)
+
 
 class MessageCallback(Generic[T]):
     def __init__(self, name: str, callable: Callable[[Message], T]):
