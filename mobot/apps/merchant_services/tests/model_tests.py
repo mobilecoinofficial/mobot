@@ -59,7 +59,7 @@ class CustomerTestCase(TestCase):
 
     def test_can_add_44_validation_and_find_customers(self):
         original_drop: Campaign = self.original_drop
-        validation = self._add_customer_44_validation(original_drop)
+        validation = self.basic_fixtures.add_customer_44_validation(original_drop)
         validation.save()
         original_drop.validations.add(validation)
         original_drop.save()
