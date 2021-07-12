@@ -8,7 +8,7 @@ from moneyed import Money, GBP, Currency
 from decimal import Decimal
 from django.utils import timezone as tz
 from dataclasses import dataclass
-from mobot.apps.merchant_services.models import Customer, Merchant, Store, Product, ProductGroup, DropSession, InventoryItem, Campaign, CampaignGroup
+from mobot.apps.merchant_services.models import Customer, Merchant, Store, Product, ProductGroup, DropSession, InventoryItem, Campaign, CampaignGroup, Validation
 
 
 STORE_PHONE_NUMBER = "+447441433907"
@@ -48,6 +48,7 @@ class StoreFixtures:
         inv = product.add_inventory(20)
         return inv
 
+
     @staticmethod
     def add_hoodie_product_group():
         product_group = ProductGroup(name="MC Hoodie")
@@ -73,6 +74,19 @@ class StoreFixtures:
         m.save()
         return m
 
+    def add_customer_44_validation(self, campaign: Campaign):
+        validation = Validation(model_class_name=Customer.__name__, model_attribute_name="phone_number", comparator_func="startswith", target_value="+44")
+        validation.save()
+        campaign.validations.add(validation)
+        return validation
+
+    def add_product_validation(self, campaign: Campaign):
+        validation = Validation(model_class_name=Product.__name__, model_attribute_name="inventory", comparator_func="gt", target_value="0")
+        validation.save()
+        campaign.validations.add(validation)
+        return validation
+
+
     def add_airdrop_product(self, airdrop: Airdrop, group: ProductGroup = ProductGroup("Bonus Aidrop")):
         product = Product(name=f"MobileCoin Airdrop - {airdrop.price}", product_group=group, price=Money(airdrop.price, airdrop.currency), description=f"A MOB giveaway: {airdrop.price} {airdrop.currency}", store_ref=self.store)
         items = [InventoryItem(product=product) for _ in range(airdrop.quota)]
@@ -86,6 +100,7 @@ class StoreFixtures:
         original_drop = Campaign.objects.create(
                             name="Test AirDrop",
                             product_group=product_group,
+                            store=self.store,
                             pre_drop_description="Get free MOB from MobileCoin!",
                             advertisement_start_time=tz.make_aware(datetime.datetime.now(), tz.get_current_timezone()),
                             start_time=tz.make_aware(datetime.datetime.now(), tz.get_current_timezone()),

@@ -8,7 +8,7 @@ from mobot.apps.merchant_services.models import Customer, Store, Trackable, Drop
 
 
 class MobotBot(Trackable):
-    name = models.CharField(blank=False, null=False)
+    name = models.CharField(blank=False, null=False, max_length=255)
     slug = models.SlugField(primary_key=True)
     campaign = models.OneToOneField(Campaign, db_index=True, on_delete=models.CASCADE, related_name="mobot")
 
