@@ -86,7 +86,6 @@ class StoreFixtures:
         campaign.validations.add(validation)
         return validation
 
-
     def add_airdrop_product(self, airdrop: Airdrop, group: ProductGroup = ProductGroup("Bonus Aidrop")):
         product = Product(name=f"MobileCoin Airdrop - {airdrop.price}", product_group=group, price=Money(airdrop.price, airdrop.currency), description=f"A MOB giveaway: {airdrop.price} {airdrop.currency}", store_ref=self.store)
         items = [InventoryItem(product=product) for _ in range(airdrop.quota)]
