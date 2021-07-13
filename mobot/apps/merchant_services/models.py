@@ -54,7 +54,6 @@ class ValidationTargetManager(models.Manager):
         qs = self._get_queryset(validations, target=clz)
         return qs
 
-
 class Validation(models.Model):
     model_class_name = models.TextField(db_index=True, blank=False, null=False)
     model_attribute_name = models.TextField(blank=False, null=False)
@@ -139,8 +138,6 @@ class Merchant(UserAccount):
     merchant_description = models.TextField(blank=True, default="A Mobot Merchant")
     objects = models.Manager()
 
-
-
 class Store(Trackable):
     name = models.TextField(blank=True, default="Coin Shop")
     description = models.TextField(blank=True, default="Mobot Store")
@@ -149,9 +146,6 @@ class Store(Trackable):
 
     def __str__(self):
         return f'{self.name}:{self.phone_number}:store'
-
-
-Store.objects.filter()
 
 
 class CustomerStorePreferences(Trackable):
@@ -257,6 +251,7 @@ class CampaignManager(models.Manager):
 
 class Campaign(ValidatableMixin):
     name = models.TextField(help_text="Campaign name", null=False, blank=False)
+    slug = models.SlugField()
     product_group = models.ForeignKey(ProductGroup, on_delete=models.CASCADE, related_name="campaigns", db_index=True)
     pre_drop_description = models.TextField(default="MobileCoin Product Drop")
     advertisement_start_time = models.DateTimeField(auto_now=True)
