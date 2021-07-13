@@ -20,7 +20,8 @@ from mobot.apps.merchant_services.models import Customer, CustomerStorePreferenc
 from mobot.signald_client import Signal
 from mobot.lib.signal import SignalCustomerDataClient
 from mobot.signald_client.types import Message as SignalMessage
-from mobot.signald_client.main import QueueSubscriber, MessageSubscriber
+from mobot.signald_client.main import QueueSubscriber
+from mobot.apps.chat.context import MessageContextFactory
 
 class TransactionStatus(str, Enum):
     TRANSACTION_SUCCESS = "TransactionSuccess"
@@ -37,13 +38,14 @@ class MobotMessage(str, Enum):
 
 class Mobot:
     def __init__(self, signal: Signal, store: Store, campaigns: Set[Campaign], mobilecoin_client: mobilecoin.Client):
-        self.logger = logging.getLogger("Mobot")
+        self.logger = logging.getLogger(f"Mobot-{self.store.id}")
         self.signal = signal
         self.campaigns = campaigns
         self.store = store
         self.mobilecoin_client = mobilecoin_client
 
         self.mobot: MobotBot = self.get_mobot_bot()
+        self.message_context_factory = MessageContextFactory(self.mobot, self.logger)
         self.customer_data_client = SignalCustomerDataClient(signal=self.signal)
         self._subscriber = QueueSubscriber(self.name)
         self.signal.register_subscriber(self._subscriber)
@@ -58,16 +60,15 @@ class Mobot:
         customer, _ = Customer.objects.get_or_create(phone_number=message.source)
         return customer
 
-    def log_and_send_message(self, customer: Customer, text: str):
-        sent_message = Message(customer=customer, store=Mobot.store, text=text,
-                               direction=MessageDirection.MESSAGE_DIRECTION_SENT)
+    def log_and_send_message(self, customer: Customer, text: str, session: MobotChatSession):
+        sent_message = Message(
+            customer=customer,
+            store=Mobot.store,
+            text=text,
+            chat_session=session,
+            direction=MessageDirection.MESSAGE_DIRECTION_SENT)
         sent_message.save()
         self.signal.send_message(str(customer.phone_number), text)
-
-    def get_customer_store_preferences(self, customer: Customer) -> CustomerStorePreferences:
-        store_preferences, _ = CustomerStorePreferences.objects.get_or_create(customer=customer, store=self.store)
-        return store_preferences
-
 
     def register_handler(self, regex: str, method: Callable[[SignalMessage], Any], order: int = 100):
         if not isinstance(regex, RE_TYPE):
@@ -75,7 +76,6 @@ class Mobot:
         self._chat_handlers.append((order, regex, method))
         # Use only the first value to sort so that declaration order doesn't change.
         self._chat_handlers.sort(key=lambda x: x[0])
-
 
     def unsubscribe_handler(self, message: SignalMessage):
         customer = self.get_customer_from_message(message)
@@ -101,10 +101,11 @@ class Mobot:
         return customer_prefs
 
     def find_active_drop_for_customer(self, customer: Customer) -> Set[DropSession]:
-        return set(DropSession.objects.filter(campaign=self.campaign).all())
+        return set(DropSession.objects.filter(campaign=self.campaign, customer=customer).all())
 
-    def find_chat_session_with_customer(self, customer: Customer) -> MobotChatSession:
-        chat_session, _ = MobotChatSession.objects.get_or_create(name=self.name, mobot=self.mobot)
+    def get_chat_session_with_customer(self, customer: Customer) -> MobotChatSession:
+        chat_session, _ = MobotChatSession.objects.get_or_create(mobot=self.mobot, customer=customer)
+        return chat_session
 
     def handle_greet_customer(self, message: SignalMessage):
         customer = self.get_customer_from_message(message)
@@ -114,7 +115,7 @@ class Mobot:
     def handle_start_conversation(self, message: SignalMessage):
         customer = self.get_customer_from_message(message)
         customer_store_preferences = self.get_customer_store_preferences(customer)
-        chat_session = self.find_chat_session_with_customer()
+        chat_session = self.get_chat_session_with_customer(customer=customer)
 
     def _handle_chat(self, message: SignalMessage):
         for _, regex, func in self._chat_handlers:
@@ -122,7 +123,6 @@ class Mobot:
             if not match:
                 continue
             try:
-
                 return func(message)
             except Exception as e:  # noqa - We don't care why this failed.
                 self.logger.error(e)
@@ -130,7 +130,7 @@ class Mobot:
 
     def _save_message(self, message: SignalMessage):
         customer = self.get_customer_from_message(message)
-        chat_session = self.find_chat_session_with_customer(customer)
+        chat_session = self.get_chat_session_with_customer(customer)
         logged_message = Message(
             direction=MessageDirection.MESSAGE_DIRECTION_RECEIVED,
             customer=customer,
@@ -140,9 +140,10 @@ class Mobot:
 
 
     def _process_message(self, message: SignalMessage):
-        self._save_message
         customer = self.get_customer_from_message(message)
-        self._handle_chat(message, customer)
+        chat_session = self.get_chat_session_with_customer(customer=customer)
+        Message.objects.create(customer=customer, )
+        self._handle_chat(message)
 
     def register_handlers(self):
         self.register_handler("unsubscribe", Mobot.unsubscribe_handler)
@@ -157,4 +158,3 @@ class Mobot:
             for message in self._subscriber.receive_messages():
                 self._executor_futures.append(executor.submit(self._process_message, message))
         executor.shutdown(wait=True)
-
