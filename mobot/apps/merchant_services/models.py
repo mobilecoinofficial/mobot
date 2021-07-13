@@ -253,22 +253,27 @@ class Campaign(ValidatableMixin):
     name = models.TextField(help_text="Campaign name", null=False, blank=False)
     slug = models.SlugField()
     product_group = models.ForeignKey(ProductGroup, on_delete=models.CASCADE, related_name="campaigns", db_index=True)
-    pre_drop_description = models.TextField(default="MobileCoin Product Drop")
+    pre_drop_description = models.TextField(default="MobileCoin Hoodies")
     advertisement_start_time = models.DateTimeField(auto_now=True)
     start_time = models.DateTimeField(auto_now=True)
     end_time = models.DateTimeField(default=tz.now() + datetime.timedelta(days=1))
     quota = models.PositiveIntegerField(default=10, help_text="Total number we want to sell for this campaign")
     adjusted_price = MoneyField(max_digits=14, default=None, decimal_places=5, default_currency="PMB", blank=True,
                                 null=True)
+    number_restriction = models.CharField(max_length=3)
     store = models.ForeignKey(Store, on_delete=models.DO_NOTHING, db_index=True)
     campaign_groups = models.ManyToManyField(CampaignGroup, related_name="campaigns")
     objects = CampaignManager()
 
     @property
-    def is_active(self):
-        self.start_time <= tz.now() <= self.end_time
+    def description(self) -> str:
+        return self.pre_drop_description
 
-    def _get_targets(self, model_class):
+    @property
+    def is_active(self) -> bool:
+        return self.start_time <= tz.now() <= self.end_time
+
+    def _get_targets(self, model_class) -> QuerySet:
         return Campaign.get_campaign_targets(self.id, model_class_name=model_class)
 
     def get_target_validations(self, model_class):
@@ -300,12 +305,13 @@ class DropSessionManager(models.Manager):
 
 class DropSession(Trackable):
     class State(models.IntegerChoices):
-        CREATED = -3, 'created' # Greeting has begun
-        OFFERED = -2, 'offered'
-        ACCEPTED = -1, 'accepted'
-        CANCELED = 0, 'canceled'
-        EXPIRED = 1, 'expired'
-        FAILED = 2, 'failed'  # Customer offered product, customer unable to buy product due to shipping
+        CANCELED = -2, 'canceled'
+        EXPIRED = -1, 'expired'
+        FAILED = -3, 'failed'  # Customer offered product, customer unable to buy product due to shipping
+        CREATED = 0, 'created' # Greeting has begun
+        OFFERED = 1, 'offered'
+        ACCEPTED = 2, 'accepted'
+
 
     slug = models.SlugField(help_text="A descriptor for this user's session")
     state = FSMIntegerField(choices=State.choices, default=State.CREATED)
