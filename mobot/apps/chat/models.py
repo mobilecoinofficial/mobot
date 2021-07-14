@@ -36,7 +36,7 @@ class MobotChatSession(Trackable):
     customer = models.ForeignKey(Customer, on_delete=models.DO_NOTHING, related_name="mobot_chat_sessions", db_index=True, blank=False, null=False)
     customer_initiated = models.BooleanField(help_text="True if the customer initiated the conversation", db_index=True, default=False)
     mobot = models.ForeignKey(MobotBot, on_delete=models.DO_NOTHING, related_name="mobot_chat_sessions")
-    state = FSMIntegerField(choices=State.choices, default=State.NOT_GREETED, protected=True)
+    state = FSMIntegerField(choices=State.choices, default=State.NOT_GREETED)
     drop_session = models.OneToOneField(DropSession, related_name="chat", on_delete=models.CASCADE, blank=True, null=True)
 
     class Meta:
@@ -53,6 +53,9 @@ class Message(Trackable):
     text = models.TextField()
     direction = models.PositiveIntegerField(choices=MessageDirection.choices)
     chat_session = models.ForeignKey(MobotChatSession, on_delete=models.CASCADE, blank=False, null=False, related_name="messages", db_index=True)
+
+    class Meta:
+        ordering = ['created_at']
 
     def __str__(self):
         return f"{self.customer.phone_number}-{self.text}-{self.direction}"

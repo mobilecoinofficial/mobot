@@ -235,7 +235,7 @@ class Order(Trackable):
     product = models.ForeignKey(Product, on_delete=models.DO_NOTHING, blank=False, null=False)
     owner = models.ForeignKey(Customer, on_delete=models.DO_NOTHING, blank=False, null=False, db_index=True)
     price = MoneyField(blank=False, null=False, max_digits=14, decimal_places=5)
-    state = FSMIntegerField(choices=State.choices, default=State.STATUS_NEW, protected=True)
+    state = FSMIntegerField(choices=State.choices, default=State.STATUS_NEW)
     shipment = models.OneToOneField(Shipment, related_name="sale", on_delete=models.CASCADE, default=Shipment())
 
 
@@ -266,6 +266,14 @@ class Campaign(ValidatableMixin):
     @property
     def description(self) -> str:
         return self.pre_drop_description
+
+    @property
+    def not_active_yet(self) -> bool:
+        return tz.now() <= self.start_time
+
+    @property
+    def is_expired(self):
+        return tz.now() >= self.end_time
 
     @property
     def is_active(self) -> bool:
@@ -309,6 +317,7 @@ class DropSession(Trackable):
         CREATED = 0, 'created' # Greeting has begun
         OFFERED = 1, 'offered'
         ACCEPTED = 2, 'accepted'
+        NOT_READY = 3, 'not_ready'
 
     state = FSMIntegerField(choices=State.choices, default=State.CREATED)
     campaign = models.ForeignKey(Campaign, on_delete=models.DO_NOTHING, blank=False, null=False, db_index=True,

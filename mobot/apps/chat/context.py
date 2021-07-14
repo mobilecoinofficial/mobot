@@ -47,6 +47,7 @@ class MessageContextFactory:
                 self.message = message
                 self.mobot = mobot
                 self.store = mobot.store
+                self.campaign = self.mobot.campaign
                 self.chat_session: MobotChatSession = self.get_chat_session_with_customer()
                 self.drop_session, drop_session_created = self.get_active_drop_session()
                 if drop_session_created:
@@ -70,6 +71,12 @@ class MessageContextFactory:
 
             def get_active_drop_session(self) -> DropSession:
                 drop_session, created = DropSession.objects.get_or_create(customer=self.customer, campaign=self.mobot.campaign)
+                if drop_session.campaign.is_expired:
+                    drop_session.state = DropSession.State.EXPIRED
+                    drop_session.save()
+                if drop_session.campaign.not_active_yet:
+                    drop_session.state = DropSession.State.NOT_READY
+                    drop_session.save()
                 return drop_session, created
 
             def __enter__(self):

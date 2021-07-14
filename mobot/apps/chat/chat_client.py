@@ -125,7 +125,6 @@ class Mobot:
         self.logger.debug(f"Attempting to match message: {message.text}")
         context = self.get_context_from_message(message)
         with context:
-            print(context.message)
             matching_handlers = []
             for handler in self._nonempty_regex_chat_handlers:
                 if handler.regex:
@@ -150,6 +149,8 @@ class Mobot:
         self.register_handler("", handle_greet_customer, chat_session_states={MobotChatSession.State.NOT_GREETED}, order=1) # First, say hello to the customer
         self.register_handler("", handle_start_conversation, chat_session_states={MobotChatSession.State.NOT_GREETED}, order=2) # Then, handle setting up drop session
         self.register_handler("", handle_already_greeted, chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN})
+        self.register_handler("", handle_drop_expired, drop_session_states={DropSession.State.EXPIRED})
+        self.register_handler("", handle_drop_not_ready, drop_session_states={DropSession.State.NOT_READY})
         self.register_handler("^p$", privacy_policy_handler)
         self.register_handler("^(i|inventory)$", inventory_handler, drop_session_states={DropSession.State.ACCEPTED, DropSession.State.CREATED, DropSession.State.OFFERED})
 
@@ -172,7 +173,10 @@ class Mobot:
                     self.logger.debug(f"Mobot received message: {message}")
                     self._executor_futures.append(executor.submit(self.find_and_greet_targets, self.campaign))
                     # Handle in foreground while I'm testing
-                    self._handle_chat(message)
+                    if settings.TEST:
+                        self._handle_chat(message)
+                    else:
+                        self._executor_futures.append(executor.submit(self._handle_chat, message))
                     if max_messages:
                         if self._subscriber.total_received == max_messages:
                             executor.shutdown(wait=True)

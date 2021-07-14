@@ -11,7 +11,7 @@ def handle_greet_customer(context: MessageContextBase):
 
 def unsubscribe_handler(context: MessageContextBase):
     if not context.store_preferences.allows_contact:
-        # User already inactive
+        # User already inactive, send a message letting them know they're already not receiving notifications
         context.log_and_send_message(ChatStrings.NOT_RECEIVING_NOTIFICATIONS)
     else:
         context.store_preferences.allows_contact = False
@@ -43,19 +43,30 @@ def handle_already_greeted(context: MessageContextBase):
 
 def handle_validate_customer(context: MessageContextBase):
     if context.customer.phone_number.country_code != context.campaign.number_restriction:
-        context.log_and_send_message(ChatStrings.NOT_VALID_FOR_CAMPAIGN.format(context.campaign.number_restriction))
+        context.log_and_send_message(ChatStrings.NOT_VALID_FOR_CAMPAIGN.format(country_code=context.campaign.number_restriction))
     context.drop_session.state = DropSession.State.FAILED
     context.drop_session.save()
 
 
-def handle_greet_customer(self, context: MessageContextBase):
+def handle_greet_customer(context: MessageContextBase):
     context.log_and_send_message(ChatStrings.GREETING.format(campaign_description=context.campaign.description))
     context.chat_session.state = MobotChatSession.State.INTRODUCTION_GIVEN
 
 
+def handle_drop_expired(context: MessageContextBase):
+    context.log_and_send_message(ChatStrings.CAMPAIGN_INACTIVE)
+
+
+def handle_drop_not_ready(context: MessageContextBase):
+    context.log_and_send_message(ChatStrings.NOT_READY.format(start_time=context.campaign.start_time))
+
+
 def handle_start_conversation(context: MessageContextBase):
-    if not context.campaign.is_active():
+    if context.campaign.is_expired:
         context.log_and_send_message(ChatStrings.CAMPAIGN_INACTIVE)
+        context.drop_session.state = DropSession.State.EXPIRED
     else:
-        if context.customer.phone_number.country_code != context.campaign.number_restriction:
-            context.log_and_send_message(ChatStrings.NOT_VALID_FOR_CAMPAIGN.format(context.campaign.number_restriction))
+        if str(context.customer.phone_number.country_code) != context.campaign.number_restriction:
+            context.log_and_send_message(ChatStrings.NOT_VALID_FOR_CAMPAIGN.format(country_code=context.campaign.number_restriction))
+            context.drop_session.state = DropSession.State.FAILED
+            context.drop_session.state

@@ -95,6 +95,7 @@ class StoreFixtures:
                             start_time=tz.make_aware(datetime.datetime.now(), tz.get_current_timezone()),
                             end_time=tz.make_aware(datetime.datetime.now() + datetime.timedelta(days=3.0), tz.get_current_timezone()),
                             adjusted_price=Money(20.0, "GBP"),
+                            number_restriction="44",
                             quota=100)
 
         return original_drop
