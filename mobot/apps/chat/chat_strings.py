@@ -16,6 +16,7 @@ class ChatStrings:
 
 
     TRANSACTION_FAILED = "The transaction failed!"
+    NOT_READY = "MOBot store is currently closed. The current campaign doesn't begin until {start_time}"
     GOODBYE = "Thanks! MOBot OUT. Buh-bye"
     CAMPAIGN_INACTIVE = "Hi! MOBot here.\n\n We're currently closed. Buh-Bye!"
     NO_INFO_FUTURE_DROPS = "You will no longer receive notifications about future drops."

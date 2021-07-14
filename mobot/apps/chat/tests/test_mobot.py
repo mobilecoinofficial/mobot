@@ -50,6 +50,37 @@ class MobotTests(TestCase):
             mobot_messages = {str(message) for message in Message.objects.all()}
             self.assertEqual(expected_message_strings, mobot_messages)
 
+    def test_can_handle_unknown_match(self):
+        with mock.patch.object(Signal, 'receive_messages', return_value=[produce_message("Blah", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number))]) as mock_method:
+            signal_client = Signal(str(self.fixtures.merchant.phone_number))
+            signal_client.send_message = MagicMock()
+            mobilecoin_client = Client("foo")
+            mobot = Mobot(signal=signal_client, mobilecoin_client=mobilecoin_client,
+                          campaign=self.fixtures.original_drop, store=self.fixtures.store)
+            mobot.register_handler("^hello$", _test_handler)
+            mobot.run(max_messages=1)
+            self.assertEqual(Message.objects.count(), 2)
+            mobot_messages = [str(message) for message in Message.objects.all()]
+            for message in mobot_messages:
+                for line in message.split("\n"):
+                    print(line)
+
+    def test_can_show_privacy_policy(self):
+        with mock.patch.object(Signal, 'receive_messages', return_value=[produce_message("p", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number))]) as mock_method:
+            signal_client = Signal(str(self.fixtures.merchant.phone_number))
+            signal_client.send_message = MagicMock()
+            mobilecoin_client = Client("foo")
+            mobot = Mobot(signal=signal_client, mobilecoin_client=mobilecoin_client,
+                          campaign=self.fixtures.original_drop, store=self.fixtures.store)
+            mobot.register_handler("^hello$", _test_handler)
+            mobot.run(max_messages=1)
+            self.assertEqual(Message.objects.count(), 2)
+            mobot_messages = [message for message in Message.objects.all()]
+            self.assertEqual(mobot_messages[0].direction, 0)
+            self.assertEqual(mobot_messages[1].direction, 1)
+            self.assertEqual(mobot_messages[1].text, "https://mobilecoin.com/privacy")
+
+
     def test_can_handle_inventory(self):
         pass
 
