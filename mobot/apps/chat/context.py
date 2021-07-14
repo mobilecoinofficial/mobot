@@ -1,6 +1,6 @@
 import datetime
 from logging import Logger
-from typing import Dict
+from typing import Optional
 from abc import ABC
 
 from django.utils import timezone
@@ -31,23 +31,14 @@ class MessageContextBase(ABC):
             direction=MessageDirection.MESSAGE_DIRECTION_SENT)
         self.signal.send_message(str(self.customer.phone_number), text)
 
-    def update(self):
-        """Update context to get latest versions of DropSession objects etc."""
-        pass
-
 
 class MessageContextFactory:
     def __init__(self, mobot: MobotBot, root_logger: Logger, signal: Signal):
         self.mobot = mobot
         self.root_logger: Logger = root_logger
         self.signal = signal
-        self.contexts: Dict[str, MessageContextBase] = dict()
 
     def get_message_context(self, message: SignalMessage = None, customer: Customer = None) -> MessageContextBase:
-        current_context = self.contexts.get(message.source)
-        if current_context:
-            return current_context
-
         class MessageContext(MessageContextBase):
             """Context for current customer"""
             def __init__(self, signal=self.signal, root_logger=self.root_logger, mobot=self.mobot):
@@ -83,13 +74,12 @@ class MessageContextFactory:
                 if drop_session.campaign.is_expired:
                     drop_session.state = DropSession.State.EXPIRED
                     drop_session.save()
-                elif drop_session.campaign.not_active_yet:
+                if drop_session.campaign.not_active_yet:
                     drop_session.state = DropSession.State.NOT_READY
                     drop_session.save()
                 return drop_session, created
 
             def __enter__(self):
-                self.logger.debug(f"Entering message context for {message.source}")
                 message_log = Message.objects.create(
                     customer=self.customer,
                     text=self.message.text,
@@ -97,14 +87,11 @@ class MessageContextFactory:
                     created_at=timezone.make_aware(datetime.datetime.utcfromtimestamp(self.message.timestamp)),
                     direction=MessageDirection.MESSAGE_DIRECTION_RECEIVED
                 )
-                self.logger.debug(f"Updating context for {self.customer}")
-                self.drop_session, _ = self.get_active_drop_session()
+                self.logger.info(f"Received message from {self.customer} with {self.message.text}")
                 return message_log
 
             def __exit__(self, exc_type, exc_val, exc_tb):
                 pass
 
-        ctx = MessageContext()
-        self.contexts[message.source] = ctx
-        return ctx
+        return MessageContext()
 
