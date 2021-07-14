@@ -33,12 +33,6 @@ def inventory_handler(context: MessageContextBase):
         context.log_and_send_message(message)
 
 
-
-
-
-
-
-
 def privacy_policy_handler(context: MessageContextBase):
     context.log_and_send_message(context.store.privacy_policy_url)
 
