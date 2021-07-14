@@ -61,12 +61,12 @@ class StoreFixtures:
             self.logger.exception(f"{name}:{phone_number}")
 
     def add_default_store(self, merchant: Merchant) -> Store:
-        s, created = Store.objects.get_or_create(merchant_ref=merchant, name="Test MobileCoin Coin Drop Store")
+        s, created = Store.objects.get_or_create(merchant_ref=merchant, name="Hoodie Store")
         s.save()
         return s
 
     def add_default_merchant(self, phone_number: str = STORE_PHONE_NUMBER) -> Merchant:
-        m, created = Merchant.objects.get_or_create(name="Test MobileCoin Official Merchant", phone_number=phone_number)
+        m, created = Merchant.objects.get_or_create(name="Hoodie Merchant", phone_number=phone_number)
         m.save()
         return m
 
