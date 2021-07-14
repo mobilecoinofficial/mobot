@@ -18,7 +18,6 @@ class MobotBotManager(models.Manager):
 
 
 class MobotBot(Trackable):
-    slug = models.SlugField(primary_key=True)
     name = models.CharField(blank=False, null=False, max_length=255, db_index=True, unique=True)
     store = models.ForeignKey(Store, db_index=True, on_delete=models.CASCADE, related_name="mobots")
     campaign = models.OneToOneField(Campaign, db_index=True, related_name="mobot", on_delete=models.DO_NOTHING)
@@ -45,8 +44,8 @@ class MobotChatSession(Trackable):
 
 
 class MessageDirection(models.IntegerChoices):
-    MESSAGE_DIRECTION_RECEIVED = 0
-    MESSAGE_DIRECTION_SENT = 1
+    MESSAGE_DIRECTION_RECEIVED = 0, 'received'
+    MESSAGE_DIRECTION_SENT = 1, 'sent'
 
 
 class Message(Trackable):
@@ -56,4 +55,4 @@ class Message(Trackable):
     chat_session = models.ForeignKey(MobotChatSession, on_delete=models.CASCADE, blank=False, null=False, related_name="messages", db_index=True)
 
     def __str__(self):
-        return f"{self.customer.phone_number}-{self.text}-{self.direction}-{self.chat_session.slug}"
+        return f"{self.customer.phone_number}-{self.text}-{self.direction}"

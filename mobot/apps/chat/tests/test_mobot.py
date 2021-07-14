@@ -1,40 +1,54 @@
-import unittest
+from django.test import TestCase, override_settings
 from unittest import mock
+from unittest.mock import MagicMock
+import django
+django.setup()
 
+from mobot.apps.merchant_services.models import Merchant, Customer, Campaign, Product, ProductGroup, DropSession, Order, InventoryItem
+from mobot.apps.merchant_services.tests.fixtures import StoreFixtures
 
-from mobot.apps.merchant_services.models import Merchant, Customer, Campaign, Product, ProductGroup, DropSession
-from mobot.apps.drop.campaign_drop import Drop
-from mobot.signald_client.tests.fixtures import produce_messages
+from mobilecoin import Client
+from mobot.signald_client.tests.fixtures import produce_message, produce_messages
 from mobot.signald_client import Signal, QueueSubscriber
+from ..chat_client import Mobot
+from ..context import MessageContextBase, Message
 
 
-class MobotTests(unittest.TestCase):
+
+def _test_handler(context: MessageContextBase):
+    context.log_and_send_message(f"Hello {context.customer.name}!")
+
+
+@override_settings(DEBUG=True, TEST=True)
+class MobotTests(TestCase):
 
     def setUp(self):
-        self.merchant = Merchant
+        self.fixtures = StoreFixtures()
 
-    def test_can_register_callback(self):
-        import queue
-        result_queue = queue.Queue()
 
-        with mock.patch.object(Signal, 'receive_messages', return_value=produce_messages()) as mock_method:
-                signal_client = Signal(self.source)
-                signal_client.register_callback('print_got_message',
-                                                lambda message: result_queue.put(f"Received message from {message.username}"))
-                signal_client.run_chat(True)
-        self.assertEqual(result_queue.qsize(), 10)
-        self.assertEqual(result_queue.get(), "Received message from Greg")
-
-    def test_can_register_subscriber_and_receive_messages(self):
+    def test_can_instantiate_mobot(self):
+        campaign = self.fixtures.original_drop
         subscriber = QueueSubscriber(name="Mobot")
-        with mock.patch.object(Signal, 'receive_messages', return_value=produce_messages(20)) as mock_method:
-            signal_client = Signal(self.source)
+        with mock.patch.object(Signal, 'receive_messages', return_value=produce_messages(1)) as mock_method:
+            signal_client = Signal(str(self.fixtures.merchant.phone_number))
             signal_client.register_subscriber(subscriber)
-            signal_client.run_chat(True)
+            mobilecoin_client = Client("foo")
+            mobot = Mobot(signal=signal_client, mobilecoin_client=mobilecoin_client, campaign=self.fixtures.original_drop, store=self.fixtures.store)
 
-        self.assertEqual(subscriber.size(), 20)
-        received = 0
-        for message in subscriber.receive_messages(max_messages=10):
-            self.assertEqual(message.source, self.source)
-            received += 1
-        self.assertEqual(received, subscriber.total_received)
+    def test_can_register_and_handle_hello_world(self):
+        campaign = self.fixtures.original_drop
+        with mock.patch.object(Signal, 'receive_messages', return_value=[produce_message("hello", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number))]) as mock_method:
+            signal_client = Signal(str(self.fixtures.merchant.phone_number))
+            signal_client.send_message = MagicMock()
+            mobilecoin_client = Client("foo")
+            mobot = Mobot(signal=signal_client, mobilecoin_client=mobilecoin_client,
+                          campaign=self.fixtures.original_drop, store=self.fixtures.store)
+            mobot.register_handler("^hello$", _test_handler)
+            mobot.run(max_messages=1)
+            self.assertEqual(Message.objects.count(), 2)
+            expected_message_strings = {f"{self.fixtures.cust_uk.phone_number}-hello-0", f"{self.fixtures.cust_uk.phone_number}-Hello {self.fixtures.cust_uk.name}!-1"}
+            mobot_messages = {str(message) for message in Message.objects.all()}
+            self.assertEqual(expected_message_strings, mobot_messages)
+
+
+

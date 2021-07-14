@@ -26,7 +26,6 @@ class MessageContextBase(ABC):
     def log_and_send_message(self, text: str):
         sent_message = Message.objects.create(
             customer=self.customer,
-            store=self.store,
             text=text,
             chat_session=self.chat_session,
             direction=MessageDirection.MESSAGE_DIRECTION_SENT)
@@ -48,16 +47,16 @@ class MessageContextFactory:
                 self.message = message
                 self.mobot = mobot
                 self.store = mobot.store
-                self.chat_session: MobotChatSession = self.get_chat_session_with_customer(self.customer)
+                self.chat_session: MobotChatSession = self.get_chat_session_with_customer()
                 self.drop_session, drop_session_created = self.get_active_drop_session()
                 if drop_session_created:
                     self.chat_session.drop_session = self.drop_session
                     self.chat_session.save()
-                self.store_preferences: CustomerStorePreferences = self.get_customer_store_preferences(self.customer)
+                self.store_preferences: CustomerStorePreferences = self.get_customer_store_preferences()
                 self.logger = root_logger.getChild(f"{message.source}-context")
 
             def get_customer_from_message(self, message: SignalMessage) -> Customer:
-                customer, _ = Customer.objects.get_or_create(phone_number=message.source)
+                customer, _ = Customer.objects.get_or_create(phone_number=message.source, name=message.username)
                 return customer
 
             def get_chat_session_with_customer(self) -> MobotChatSession:
@@ -66,7 +65,7 @@ class MessageContextFactory:
 
             def get_customer_store_preferences(self) -> CustomerStorePreferences:
                 store_preferences, _ = CustomerStorePreferences.objects.get_or_create(customer=self.customer,
-                                                                                      store=self.store)
+                                                                                      store_ref=self.store)
                 return store_preferences
 
             def get_active_drop_session(self) -> DropSession:
@@ -84,7 +83,7 @@ class MessageContextFactory:
                 self.logger.info(f"Received message from {self.customer} with {self.message.text}")
                 return message_log
 
-            def __exit__(self):
+            def __exit__(self, exc_type, exc_val, exc_tb):
                 pass
 
         return MessageContext()
