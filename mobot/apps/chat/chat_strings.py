@@ -23,4 +23,14 @@ class ChatStrings:
     NOT_VALID_FOR_CAMPAIGN = "Sorry, the current campaign requires a number with a country code of {country_code}"
     DIDNT_UNDERSTAND = "Sorry, I didn't understand that."
 
-    INVENTORY = "We've got {product} in stock in the following sizes"
+    INVENTORY = """We've got the following items in stock:
+        {stock}
+        
+        To purchase, use the following command:
+        
+        buy <item-id>
+        
+        For example, if a product's Item ID is 123, send MOBot:
+        
+        "buy 123"
+    """

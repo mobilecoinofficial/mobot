@@ -110,7 +110,6 @@ class Mobot:
         else:
             self._empty_regex_chat_handlers.append(handler)
 
-
     def set_customer_preferences(self, customer: Customer, allow_contact: bool) -> CustomerStorePreferences:
         customer_prefs = CustomerStorePreferences.objects.get_or_create(customer=customer, store=self.store)
         customer_prefs.allows_contact = allow_contact

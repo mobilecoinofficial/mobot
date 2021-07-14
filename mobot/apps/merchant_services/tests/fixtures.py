@@ -94,6 +94,7 @@ class StoreFixtures:
 
     def add_default_campaign(self) -> List[Campaign]:
         product_group = ProductGroup(name="Aidrop Original")
+        product_group.save()
         quota, airdrop_product = self.add_airdrop_product(Airdrop(price=-3.0, currency=GBP, quota=100), group=product_group)
 
         original_drop = Campaign.objects.create(
