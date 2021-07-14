@@ -144,12 +144,12 @@ class Mobot:
                     self.logger.exception(f"Failed to run handler for {context.message}")
 
     def register_handlers(self):
-        self.register_handler("unsubscribe", self.unsubscribe_handler)
-        self.register_handler("", handle_greet_customer, chat_session_states=MobotChatSession.State.NOT_GREETED, order=1) # First, say hello to the customer
-        self.register_handler("", handle_start_conversation, chat_session_states=MobotChatSession.State.NOT_GREETED, order=2) # Then, handle setting up drop session
-        self.register_handler("", handle_already_greeted, chat_session_states=MobotChatSession.State.INTRODUCTION_GIVEN)
-        self.register_handler("p", privacy_policy_handler)
-        self.register_handler("^(i|inventory)$", inventory_handler)
+        self.register_handler("^(u|unsubscribe)$", self.unsubscribe_handler)
+        self.register_handler("", handle_greet_customer, chat_session_states={MobotChatSession.State.NOT_GREETED}, order=1) # First, say hello to the customer
+        self.register_handler("", handle_start_conversation, chat_session_states={MobotChatSession.State.NOT_GREETED}, order=2) # Then, handle setting up drop session
+        self.register_handler("", handle_already_greeted, chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN})
+        self.register_handler("^p$", privacy_policy_handler)
+        self.register_handler("^(i|inventory)$", inventory_handler, drop_session_states={DropSession.State.ACCEPTED, DropSession.State.CREATED, DropSession.State.OFFERED})
 
     def find_and_greet_targets(self, campaign):
         for customer in self.campaign.get_target_customers():

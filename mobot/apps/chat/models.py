@@ -1,9 +1,6 @@
-from django.utils import timezone as tz
 from django.db import models
 from django_fsm import FSMIntegerField
-from contextlib import contextmanager
 
-from mobot.signald_client.types import Message as SignalMessage
 from mobot.apps.merchant_services.models import Customer, Store, Trackable, DropSession, Campaign
 
 
