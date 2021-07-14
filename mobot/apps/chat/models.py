@@ -34,7 +34,7 @@ class MobotBot(Trackable):
 
 class MobotChatSession(Trackable):
     class State(models.IntegerChoices):
-        GREETED = 0, 'greeted'
+        NOT_GREETED = 0, 'not_greeted'
         INTRODUCTION_GIVEN = 1, 'introduction_given'
     slug = models.SlugField(primary_key=True)
     customer = models.ForeignKey(Customer, on_delete=models.DO_NOTHING, related_name="mobot_chat_sessions", db_index=True, blank=False, null=False)
