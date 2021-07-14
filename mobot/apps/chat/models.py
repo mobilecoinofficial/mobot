@@ -34,8 +34,8 @@ class MobotBot(Trackable):
 
 class MobotChatSession(Trackable):
     class State(models.IntegerChoices):
-        HELLO = 0, 'greeted'
-        ACCEPTED = 1, 'accepted'
+        GREETED = 0, 'greeted'
+        INTRODUCTION_GIVEN = 1, 'introduction_given'
     slug = models.SlugField(primary_key=True)
     customer = models.ForeignKey(Customer, on_delete=models.DO_NOTHING, related_name="mobot_chat_sessions", db_index=True, blank=False, null=False)
     customer_initiated = models.BooleanField(help_text="True if the customer initiated the conversation", db_index=True, default=False)
