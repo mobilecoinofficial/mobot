@@ -23,4 +23,4 @@ class ChatStrings:
     NOT_VALID_FOR_CAMPAIGN = "Sorry, the current campaign requires a number with a country code of {country_code}"
     DIDNT_UNDERSTAND = "Sorry, I didn't understand that."
 
-    def inventory(self, ):
+    INVENTORY = "We've got {product} in stock in the following sizes"

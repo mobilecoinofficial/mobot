@@ -1,6 +1,6 @@
 from .context import MessageContextBase
 from .chat_strings import ChatStrings
-from mobot.apps.merchant_services.models import DropSession
+from mobot.apps.merchant_services.models import DropSession, Product, ProductGroup, InventoryItem
 from .models import MobotChatSession
 
 
@@ -20,8 +20,19 @@ def unsubscribe_handler(context: MessageContextBase):
 
 
 def inventory_handler(context: MessageContextBase):
+    products = context.campaign.product_group.products
 
-    pass
+    def get_inv_strings():
+        for product in products:
+            if 0 > product.inventory.count() > 5:
+                yield f"{product.name} - In Stock"
+            elif product.inventory.count() > 0:
+                yield f"{product.name} - Running out - only {product.inventory.count()} left!"
+    return "\n   ".join(get_inv_strings())
+
+
+
+
 
 
 def privacy_policy_handler(context: MessageContextBase):

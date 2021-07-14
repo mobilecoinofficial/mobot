@@ -166,12 +166,12 @@ class Product(Trackable):
     product_group = models.ForeignKey(ProductGroup, on_delete=models.CASCADE, null=True, blank=True, default=None,
                                       related_name="products")
     name = models.TextField(blank=False, null=False)
-    description = models.TextField(default="Airdrop: Free mobilecoin!", blank=True, null=True)
-    short_description = models.TextField(default="Airdrop", blank=False, null=False)
+    description = models.TextField(default="Hoodie", blank=True, null=True)
+    short_description = models.TextField(default="Hoodie, Size M", blank=False, null=False)
     image_link = models.URLField(default=None, blank=True, null=True)
     allows_refund = models.BooleanField(default=True, blank=False, null=False)
     price = MoneyField(max_digits=14, decimal_places=5, default_currency='GBP', help_text='Price of the product',
-                       blank=False, default=1.0)
+                       blank=False, default=20.0)
     metadata = models.JSONField(blank=False, null=False, db_index=True, default=dict)
 
     class Meta:
@@ -187,6 +187,7 @@ class Product(Trackable):
             InventoryItem(product=self) for _ in range(number)
         ])
         return created
+
 
 
 class Shipment(Trackable):
