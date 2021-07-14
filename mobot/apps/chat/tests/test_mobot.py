@@ -50,5 +50,6 @@ class MobotTests(TestCase):
             mobot_messages = {str(message) for message in Message.objects.all()}
             self.assertEqual(expected_message_strings, mobot_messages)
 
-
+    def test_can_handle_inventory(self):
+        pass
 

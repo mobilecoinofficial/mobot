@@ -85,7 +85,7 @@ class Mobot:
         self._executor_futures = []
         self._empty_regex_chat_handlers = []
         self._nonempty_regex_chat_handlers = []
-        #self.register_handlers()
+        self.register_handlers()
 
     def get_context_from_message(self, message: SignalMessage) -> MessageContextBase:
         context: MessageContextBase = self.message_context_factory.get_message_context(message)
