@@ -34,26 +34,27 @@ class MessageContextBase(ABC):
 
 
 class MessageContextFactory:
-    def __init__(self, mobot: MobotBot, logger: Logger, signal: Signal):
+    def __init__(self, mobot: MobotBot, root_logger: Logger, signal: Signal):
         self.mobot = mobot
-        self.root_logger: Logger = logger
+        self.root_logger: Logger = root_logger
         self.signal = signal
 
     def get_message_context(self, message: SignalMessage = None, customer: Customer = None) -> MessageContextBase:
         class MessageContext(MessageContextBase):
             """Context for current customer"""
-            def __init__(self, *args, **kwargs):
-                self.signal = self.signal
-                self.customer = self.get_customer_from_number(message) if message else customer
+            def __init__(self, signal=self.signal, root_logger=self.root_logger, mobot=self.mobot):
+                self.signal = signal
+                self.customer = self.get_customer_from_message(message) if message else customer
                 self.message = message
-                self.mobot = self.mobot
-                self.store = self.mobot.store
+                self.mobot = mobot
+                self.store = mobot.store
                 self.chat_session: MobotChatSession = self.get_chat_session_with_customer(self.customer)
                 self.drop_session, drop_session_created = self.get_active_drop_session()
                 if drop_session_created:
                     self.chat_session.drop_session = self.drop_session
+                    self.chat_session.save()
                 self.store_preferences: CustomerStorePreferences = self.get_customer_store_preferences(self.customer)
-                self.logger = self.root_logger.getChild(f"{message.source}-context")
+                self.logger = root_logger.getChild(f"{message.source}-context")
 
             def get_customer_from_message(self, message: SignalMessage) -> Customer:
                 customer, _ = Customer.objects.get_or_create(phone_number=message.source)
