@@ -1,6 +1,8 @@
 from django.test import TestCase, override_settings
 from unittest import mock
 from unittest.mock import MagicMock
+import logging
+
 import django
 django.setup()
 
@@ -18,12 +20,18 @@ from ..context import MessageContextBase, Message
 def _test_handler(context: MessageContextBase):
     context.log_and_send_message(f"Hello {context.customer.name}!")
 
+def print_message(message: Message, logger: logging.Logger):
+    for line in message.text.split("\n"):
+        logger.debug(line)
+
+
 
 @override_settings(DEBUG=True, TEST=True)
 class MobotTests(TestCase):
 
     def setUp(self):
         self.fixtures = StoreFixtures()
+        self.logger = logging.getLogger("MobotTests")
 
 
     def test_can_instantiate_mobot(self):
@@ -60,10 +68,8 @@ class MobotTests(TestCase):
             mobot.register_handler("^hello$", _test_handler)
             mobot.run(max_messages=1)
             self.assertEqual(Message.objects.count(), 2)
-            mobot_messages = [str(message) for message in Message.objects.all()]
-            for message in mobot_messages:
-                for line in message.split("\n"):
-                    print(line)
+            for message in Message.objects.all():
+                print_message(message, self.logger)
 
     def test_can_show_privacy_policy(self):
         with mock.patch.object(Signal, 'receive_messages', return_value=[produce_message("p", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number))]) as mock_method:
@@ -79,6 +85,8 @@ class MobotTests(TestCase):
             self.assertEqual(mobot_messages[0].direction, 0)
             self.assertEqual(mobot_messages[1].direction, 1)
             self.assertEqual(mobot_messages[1].text, "https://mobilecoin.com/privacy")
+            for message in mobot_messages:
+                print_message(message, self.logger)
 
 
     def test_can_handle_inventory(self):

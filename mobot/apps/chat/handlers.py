@@ -19,6 +19,13 @@ def unsubscribe_handler(context: MessageContextBase):
         context.log_and_send_message(ChatStrings.NO_INFO_FUTURE_DROPS)
 
 
+def subscribe_handler(context: MessageContextBase):
+    if context.store_preferences.allows_contact:
+        context.log_and_send_message(ChatStrings.SUBSCRIBED_ALREADY)
+    else:
+        context.log_and_send_message(ChatStrings.SUBSCRIBED_FIRST_TIME)
+
+
 def inventory_handler(context: MessageContextBase):
     products = context.campaign.product_group.products
 
@@ -37,8 +44,13 @@ def privacy_policy_handler(context: MessageContextBase):
     context.log_and_send_message(context.store.privacy_policy_url)
 
 
-def handle_already_greeted(context: MessageContextBase):
+def handle_no_handler_found(context: MessageContextBase):
     context.log_and_send_message(ChatStrings.DIDNT_UNDERSTAND)
+
+
+def handle_already_greeted(context: MessageContextBase):
+    context.logger.debug(f"User {context.customer.phone_number} already greeted, so handling as if this is an unknown command")
+    handle_no_handler_found(context)
 
 
 def handle_validate_customer(context: MessageContextBase):
@@ -65,8 +77,10 @@ def handle_start_conversation(context: MessageContextBase):
     if context.campaign.is_expired:
         context.log_and_send_message(ChatStrings.CAMPAIGN_INACTIVE)
         context.drop_session.state = DropSession.State.EXPIRED
-    else:
-        if str(context.customer.phone_number.country_code) != context.campaign.number_restriction:
+    elif str(context.customer.phone_number.country_code) != context.campaign.number_restriction:
             context.log_and_send_message(ChatStrings.NOT_VALID_FOR_CAMPAIGN.format(country_code=context.campaign.number_restriction))
             context.drop_session.state = DropSession.State.FAILED
-            context.drop_session.state
+            context.drop_session.state.save()
+    elif context.campaign.is_active:
+        context.log_and_send_message()
+        context.drop_session.state = DropSession.State.OFFERED
