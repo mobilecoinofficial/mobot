@@ -25,10 +25,14 @@ def inventory_handler(context: MessageContextBase):
     def get_inv_strings():
         for product in products:
             if 0 > product.inventory.count() > 5:
-                yield f"{product.name} - In Stock"
+                yield f"{product.name}(Item ID {product.id}): - In Stock "
             elif product.inventory.count() > 0:
-                yield f"{product.name} - Running out - only {product.inventory.count()} left!"
-    return "\n   ".join(get_inv_strings())
+                yield f"{product.name}(Item ID {product.id}) - Running out - only {product.inventory.count()} left!"
+        inventory_string = "\n   ".join(get_inv_strings())
+        message = ChatStrings.INVENTORY.format(stock=inventory_string)
+        context.log_and_send_message(message)
+
+
 
 
 

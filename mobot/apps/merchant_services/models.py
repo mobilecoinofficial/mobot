@@ -156,7 +156,6 @@ class CustomerStorePreferences(Trackable):
 
 class ProductGroup(Trackable):
     """Example: A group of hoodies"""
-    slug = models.SlugField(help_text="Short, unique descriptor", primary_key=True)
     name = models.TextField(
         help_text="A group of products offered together as a single product which may come in different descriptions/sizes")
 
@@ -165,8 +164,8 @@ class Product(Trackable):
     store_ref = models.ForeignKey(Store, on_delete=models.CASCADE)
     product_group = models.ForeignKey(ProductGroup, on_delete=models.CASCADE, null=True, blank=True, default=None,
                                       related_name="products")
-    name = models.TextField(blank=False, null=False)
-    description = models.TextField(default="Hoodie", blank=True, null=True)
+    name = models.TextField(blank=False, null=False, default="Hoodie(M)")
+    description = models.TextField(default="Mobilecoin Original Hoodie, Size M", blank=True, null=True)
     short_description = models.TextField(default="Hoodie, Size M", blank=False, null=False)
     image_link = models.URLField(default=None, blank=True, null=True)
     allows_refund = models.BooleanField(default=True, blank=False, null=False)
@@ -252,7 +251,6 @@ class CampaignManager(models.Manager):
 
 class Campaign(ValidatableMixin):
     name = models.TextField(help_text="Campaign name", null=False, blank=False)
-    slug = models.SlugField()
     product_group = models.ForeignKey(ProductGroup, on_delete=models.CASCADE, related_name="campaigns", db_index=True)
     pre_drop_description = models.TextField(default="MobileCoin Hoodies")
     advertisement_start_time = models.DateTimeField(auto_now=True)
@@ -313,8 +311,6 @@ class DropSession(Trackable):
         OFFERED = 1, 'offered'
         ACCEPTED = 2, 'accepted'
 
-
-    slug = models.SlugField(help_text="A descriptor for this user's session")
     state = FSMIntegerField(choices=State.choices, default=State.CREATED)
     campaign = models.ForeignKey(Campaign, on_delete=models.DO_NOTHING, blank=False, null=False, db_index=True,
                                  related_name="drop_sessions")
