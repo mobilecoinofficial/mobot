@@ -171,7 +171,7 @@ class Mobot:
                 for message in self._subscriber.receive_messages():
                     self.logger.debug(f"Mobot received message: {message}")
                     self._executor_futures.append(executor.submit(self.find_and_greet_targets, self.campaign))
-                    context = self.get_context_from_message(message)
+                    # Handle in foreground while I'm testing
                     self._handle_chat(message)
                     if max_messages:
                         if self._subscriber.total_received == max_messages:
