@@ -9,17 +9,13 @@ from decimal import Decimal
 from django.utils import timezone as tz
 from dataclasses import dataclass
 from mobot.apps.merchant_services.models import Customer, Merchant, Store, Product, ProductGroup, DropSession, InventoryItem, Campaign, CampaignGroup, Validation
-
+from mobot.campaigns.hoodies import Size
 
 STORE_PHONE_NUMBER = "+447441433907"
 CUST_UK_NUMBER = "+447441433906"
 CUST_US_NUMBER = "+18054412653"
 
-@dataclass
-class Airdrop:
-    price: Decimal
-    quota: int
-    currency: Currency = GBP
+
 
 
 class StoreFixtures:
@@ -27,16 +23,16 @@ class StoreFixtures:
     def __init__(self):
         self.merchant = self.add_default_merchant(STORE_PHONE_NUMBER)
         self.store = self.add_default_store(self.merchant)
-        self.cust_us = self.add_default_customer("Greg", phone_number="+18054412653")
+        self.cust_us = self.add_default_customer(name="Bob", phone_number="+18054412653")
         self.cust_uk = self.add_default_customer("Adam", phone_number="+447441433906")
-        self.original_drop, self.airdrop_product = self.add_default_campaign()
+        self.original_drop = self.add_default_campaign()
         self.hoodie_product_group = StoreFixtures.add_hoodie_product_group()
 
-    def _add_hoodie(self, size: str, price: Money = Money(Decimal(15.0), currency=GBP)) -> Product:
+    def _add_hoodie(self, size: str, price: Money = Money(Decimal(25.0), currency=GBP)) -> Product:
         hoodie_product, created = Product.objects.get_or_create(
-            name=f"MobileCoin Hoodie - {size}",
+            name=f"MobileCoin Hoodie: {size}",
             price=price,
-            description=f"MobileCoin Hoodie {size}",
+            description=f"MobileCoin Hoodie Size {size}",
             product_group=self.hoodie_product_group,
             store_ref=self.store,
             metadata=dict(size=size)
@@ -51,7 +47,7 @@ class StoreFixtures:
 
     @staticmethod
     def add_hoodie_product_group():
-        product_group = ProductGroup(name="MC Hoodie")
+        product_group = ProductGroup(name="MobileCoin Hoodie")
         product_group.save()
         return product_group
 
@@ -86,27 +82,21 @@ class StoreFixtures:
         campaign.validations.add(validation)
         return validation
 
-    def add_airdrop_product(self, airdrop: Airdrop, group: ProductGroup = ProductGroup("Bonus Aidrop")):
-        product = Product(name=f"MobileCoin Airdrop - {airdrop.price}", product_group=group, price=Money(airdrop.price, airdrop.currency), description=f"A MOB giveaway: {airdrop.price} {airdrop.currency}", store_ref=self.store)
-        items = [InventoryItem(product=product) for _ in range(airdrop.quota)]
-        product.save()
-        return airdrop.quota, product
-
     def add_default_campaign(self) -> List[Campaign]:
-        product_group = ProductGroup(name="Aidrop Original")
+        product_group = ProductGroup(name="Hoodies")
         product_group.save()
-        quota, airdrop_product = self.add_airdrop_product(Airdrop(price=-3.0, currency=GBP, quota=100), group=product_group)
 
         original_drop = Campaign.objects.create(
-                            name="Test AirDrop",
+                            name="MobileCoin Hoodie Sale",
                             product_group=product_group,
                             store=self.store,
-                            pre_drop_description="Get free MOB from MobileCoin!",
+                            pre_drop_description="Sweet MobileCoin Hoodies",
                             advertisement_start_time=tz.make_aware(datetime.datetime.now(), tz.get_current_timezone()),
                             start_time=tz.make_aware(datetime.datetime.now(), tz.get_current_timezone()),
                             end_time=tz.make_aware(datetime.datetime.now() + datetime.timedelta(days=3.0), tz.get_current_timezone()),
-                            adjusted_price=Money(-3.0, "GBP"),
+                            adjusted_price=Money(20.0, "GBP"),
                             quota=100)
 
-        return original_drop, airdrop_product
+        return original_drop
+
 

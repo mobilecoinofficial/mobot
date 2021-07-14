@@ -104,7 +104,6 @@ class UserAccount(ValidatableMixin):
 
     class Meta(ValidatableMixin.Meta):
         app_label = 'merchant_services'
-        ordering = ['name']
 
     def signal_payments_enabled(self, signal: Signal) -> bool:
         signal_profile = signal.get_profile_from_phone_number(self.phone_number)
@@ -151,7 +150,7 @@ class Store(Trackable):
 class CustomerStorePreferences(Trackable):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     store_ref = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="stores")
-    allows_contact = models.BooleanField()
+    allows_contact = models.BooleanField(default=False)
 
 
 class ProductGroup(Trackable):

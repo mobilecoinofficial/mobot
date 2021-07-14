@@ -48,6 +48,7 @@ class MessageSubscriber():
 class QueueSubscriber(MessageSubscriber):
     def __init__(self, name, *args, **kwargs):
         super().__init__(name, *args, **kwargs)
+        self.logger.debug(f"Subscriber instantiated for {name}")
         self._queue = queue.Queue()
         self._qsize = 0
         self._total_received = 0
@@ -62,11 +63,13 @@ class QueueSubscriber(MessageSubscriber):
         return self._total_received
 
     def update(self, message: Message) -> None:
+        self.logger.debug("Putting message on queue...")
         self._queue.put(message)
         self._qsize += 1
         super().update(message)
 
     def receive_messages(self, max_messages: int = 0) -> Iterator[Message]:
+        self.logger.debug("Receive called.")
         received = 0
         while True:
             try:

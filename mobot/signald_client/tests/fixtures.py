@@ -1,6 +1,7 @@
 from decimal import Decimal
 from uuid import uuid4
 from enum import Enum
+import time
 
 import pytest
 from unittest import mock
@@ -17,7 +18,7 @@ def mocked_worker():
         yield Signal(DEFAULT_STORE_PHONE)
 
 
-def produce_message(text_base: str = "Hello ", source=DEFAULT_STORE_PHONE, payment_amt: Decimal = 0) -> Message:
+def produce_message(text_base: str = "Hello ", username: str="Greg", source=DEFAULT_STORE_PHONE, payment_amt: Decimal = 0) -> Message:
     payment = None if not payment_amt else dict(
         txo_public_key="A_public_key!",
         txo_confirmation="SomeConfirmation",
@@ -25,10 +26,11 @@ def produce_message(text_base: str = "Hello ", source=DEFAULT_STORE_PHONE, payme
         amount_masked=str(payment_amt),
     )
     return Message(
-        username="Greg",
+        username=username,
         source=source,
         payment=payment,
-        text=f"{text_base} + {uuid4()}"
+        text=f"{text_base}",
+        timestamp=time.time(),
     )
 
 

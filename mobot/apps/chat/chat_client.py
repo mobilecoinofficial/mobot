@@ -2,7 +2,7 @@ import logging
 from enum import Enum
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Any
-from handlers import *
+from .handlers import *
 import re
 from typing import Set
 
@@ -70,21 +70,22 @@ class MobotHandler:
 
 
 class Mobot:
-    def __init__(self, signal: Signal, store: Store, campaign: Campaign, mobilecoin_client: mobilecoin.Client):
-        self.logger = logging.getLogger(f"Mobot-{self.store.id}")
+    def __init__(self, signal: Signal, mobilecoin_client: mobilecoin.Client, store: Store, campaign: Campaign):
+        self.name = f"Mobot-{store.name}"
+        self.logger = logging.getLogger(f"Mobot-{store.id}")
         self.signal = signal
         self.campaign = campaign
         self.store = store
         self.mobilecoin_client = mobilecoin_client
         self.mobot: MobotBot = self.get_mobot_bot()
-        self.message_context_factory = MessageContextFactory(self.mobot, self.logger)
+        self.message_context_factory = MessageContextFactory(self.mobot, self.logger, self.signal)
         self.customer_data_client = SignalCustomerDataClient(signal=self.signal)
         self._subscriber = QueueSubscriber(self.name)
         self.signal.register_subscriber(self._subscriber)
         self._executor_futures = []
         self._empty_regex_chat_handlers = []
         self._nonempty_regex_chat_handlers = []
-        self.register_handlers()
+        #self.register_handlers()
 
     def get_context_from_message(self, message: SignalMessage) -> MessageContextBase:
         context: MessageContextBase = self.message_context_factory.get_message_context(message)
@@ -95,7 +96,7 @@ class Mobot:
         return context
 
     def get_mobot_bot(self) -> MobotBot:
-        bot, _ = MobotBot.objects.get_or_create(name=self.name, store=self.store)
+        bot, _ = MobotBot.objects.get_or_create(name=f"{self.store.name}-Bot", store=self.store, campaign=self.campaign)
         return bot
 
     def register_handler(self, regex: str, method: Callable[[MessageContextBase], Any], order: int = 100,
@@ -121,29 +122,31 @@ class Mobot:
 
     def _handle_chat(self, message: SignalMessage):
         # TODO: Would be great to cache these after they're hit... One day.
-        with self.get_context_from_message(message) as context:
+        self.logger.debug(f"Attempting to match message: {message.text}")
+        context = self.get_context_from_message(message)
+        with context:
+            print(context.message)
             matching_handlers = []
-            empty_regex_handlers = [handler for handler in self._chat_handlers if handler.regex is None]
-            nonempty_regex_handlers = [handler for handler in self._chat_handlers if handler.regex is not None]
-            for handler in nonempty_regex_handlers:
+            for handler in self._nonempty_regex_chat_handlers:
                 if handler.regex:
                     regex_match = re.search(handler.regex, message.text)
                     if regex_match and handler.matches_context_states(context):
                         matching_handlers.append(handler)
             if not matching_handlers:
-                for handler in empty_regex_handlers:
+                for handler in self._empty_regex_chat_handlers:
                     if handler.matches_context_states(context):
                         matching_handlers.append(handler)
             # Run all handlers in order
-            matching_handlers.sort(lambda handler: handler.order)
+            matching_handlers.sort(key=lambda handler: handler.order)
             for handler in matching_handlers:
                 try:
+                    self.logger.debug(f"Attempting to handle {context.message}")
                     handler.handle(context)
                 except Exception as e:
                     self.logger.exception(f"Failed to run handler for {context.message}")
 
     def register_handlers(self):
-        self.register_handler("^(u|unsubscribe)$", self.unsubscribe_handler)
+        self.register_handler("^(u|unsubscribe)$", unsubscribe_handler)
         self.register_handler("", handle_greet_customer, chat_session_states={MobotChatSession.State.NOT_GREETED}, order=1) # First, say hello to the customer
         self.register_handler("", handle_start_conversation, chat_session_states={MobotChatSession.State.NOT_GREETED}, order=2) # Then, handle setting up drop session
         self.register_handler("", handle_already_greeted, chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN})
@@ -160,11 +163,18 @@ class Mobot:
                                                                      campaign=campaign,
                                                                      campaign_description=campaign.description))
 
-    def run(self):
+    def run(self, max_messages=0):
         self.signal.register_subscriber(self._subscriber)
         with ThreadPoolExecutor(4) as executor:
             self._executor_futures.append(executor.submit(self.signal.run_chat, True))
-            for message in self._subscriber.receive_messages():
-                self._executor_futures.append(executor.submit(self.find_and_greet_targets, self.campaign))
-                self._executor_futures.append(executor.submit(self._handle_chat, message))
-        executor.shutdown(wait=True)
+            while True:
+                for message in self._subscriber.receive_messages():
+                    self.logger.debug(f"Mobot received message: {message}")
+                    self._executor_futures.append(executor.submit(self.find_and_greet_targets, self.campaign))
+                    context = self.get_context_from_message(message)
+                    self._handle_chat(message)
+                    if max_messages:
+                        if self._subscriber.total_received == max_messages:
+                            executor.shutdown(wait=True)
+                            return
+            executor.shutdown(wait=True)
