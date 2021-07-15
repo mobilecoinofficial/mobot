@@ -20,6 +20,7 @@
       <option name="IS_ENABLE_EXPERIMENTAL_INTEGRATIONS" value="false" />
       <ENTRIES>
         <ENTRY IS_ENABLED="true" PARSER="runconfig" />
+        <ENTRY IS_ENABLED="true" PARSER="env" PATH="test.env" />
       </ENTRIES>
     </EXTENSION>
     <option name="TARGET" value="" />
