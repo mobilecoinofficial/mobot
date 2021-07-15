@@ -2,7 +2,7 @@ import logging
 
 from django.test import TestCase, override_settings
 from unittest.mock import Mock
-from typing import List
+from typing import List, Dict
 import datetime
 from moneyed import Money, GBP, Currency
 from decimal import Decimal
@@ -27,6 +27,7 @@ class StoreFixtures:
         self.cust_uk = self.add_default_customer("Adam", phone_number="+447441433906")
         self.original_drop = self.add_default_campaign()
         self.hoodie_product_group = StoreFixtures.add_hoodie_product_group()
+        self.hoodie_inventory = self.add_default_inventory()
 
     def _add_hoodie(self, size: str, price: Money = Money(Decimal(25.0), currency=GBP)) -> Product:
         hoodie_product, created = Product.objects.get_or_create(
@@ -100,4 +101,10 @@ class StoreFixtures:
 
         return original_drop
 
-
+    def add_default_inventory(self, amt: int = 10) -> Dict[str, Product]:
+        hoodies = {}
+        for hoodie_size in Size:
+            hoodie = self._add_hoodie(hoodie_size)
+            hoodies[hoodie_size] = hoodie
+            hoodie.add_inventory(amt)
+        return hoodies
