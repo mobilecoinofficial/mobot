@@ -22,6 +22,7 @@ class ChatStrings:
     CAMPAIGN_INACTIVE = "Hi! MOBot here.\n\n We're currently closed. Buh-Bye!"
     NO_INFO_FUTURE_DROPS = "You will no longer receive notifications about future drops."
     NOT_RECEIVING_NOTIFICATIONS = "You are not currently receiving any notifications"
+    OFFER = "We'd love to offer you a chance to participate in our latest drop."
     SUBSCRIBED_ALREADY = "You are already subscribed to receive notifications from this store! Thanks!"
     SUBSCRIBED_FIRST_TIME = "Thanks, we'll let you know about future drops from this store!"
     NOT_VALID_FOR_CAMPAIGN = "Sorry, the current campaign requires a number with a country code of {country_code}"
