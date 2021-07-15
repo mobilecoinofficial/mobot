@@ -48,13 +48,15 @@ class CustomerTestCase(TestCase):
         self.store = self.basic_fixtures.store
         self.cust_us = self.basic_fixtures.cust_us
         self.cust_uk = self.basic_fixtures.cust_uk
+
         self.original_drop = self.basic_fixtures.original_drop
         self.hoodie_product_group = self.basic_fixtures.hoodie_product_group
 
     def test_can_create_drop_session(self):
         greg = Customer.objects.get(name="Greg")
-        adam = Customer.objects.get(name="Adam")
+        adam = Customer.objects.get(name="Adam") # just to assert exists
         self.assertEqual(greg.phone_number, "+18054412653")
+        self.assertEqual(greg.phone_number.country_code, 1)
 
     def test_can_add_44_validation_and_find_customers(self):
         original_drop: Campaign = self.original_drop
@@ -65,7 +67,7 @@ class CustomerTestCase(TestCase):
         targets = original_drop.get_target_customers()
         for target in targets:
             print(target)
-        self.assertEqual(1, len(targets))
+        self.assertEqual(2, targets.count())
 
     def test_can_create_hoodie_and_inventory(self):
         small_hoodie = self._add_hoodie(size=Size.S)
