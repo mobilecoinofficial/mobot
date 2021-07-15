@@ -32,6 +32,11 @@ class Drop(models.Model):
     timezone = models.TextField()
     initial_coin_amount_pmob = models.PositiveIntegerField(default=0)
     initial_coin_limit = models.PositiveIntegerField(default=0)
+    conversion_rate_mob_to_currency = models.FloatField(default=1.0)
+    currency_symbol = models.TextField(default="$")
+
+    def value_in_currency(self, amount):
+        return amount * self.conversion_rate_mob_to_currency
 
     def __str__(self):
         return f'{self.store.name} - {self.item.name}'

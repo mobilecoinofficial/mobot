@@ -185,6 +185,11 @@ def handle_payment(source, receipt):
         send_mob_to_customer(source, amount_paid_mob, False)
         return
 
+    if not minimum_coin_available(drop_session.drop):
+        log_and_send_message(customer, source, f"Thank you for sending {amount_paid_mob.normalize()} MOB! Unfortunately, we ran out of MOB to distribute 😭. We're returning your MOB and the network fee.")
+        send_mob_to_customer(source, amount_paid_mob, True)
+        return
+
     bonus_coin_objects_for_drop = BonusCoin.objects.filter(drop=drop_session.drop)
     bonus_coins = []
 
@@ -193,8 +198,8 @@ def handle_payment(source, receipt):
         number_remaining = bonus_coin.number_available - number_claimed
         bonus_coins.extend([bonus_coin] * number_remaining)
 
-    if len(bonus_coins) == 0:
-        log_and_send_message(customer, source, "out of bonus coins, sending you back your MOB")
+    if len(bonus_coins) <= 0:
+        log_and_send_message(customer, source, f"Thank you for sending {amount_paid_mob.normalize()} MOB! Unfortunately, we ran out of bonuses 😭. We're returning your MOB and the network fee.")
         send_mob_to_customer(source, amount_paid_mob, True)
         return
 
@@ -237,11 +242,15 @@ def handle_drop_session_allow_contact_requested(message, drop_session):
         log_and_send_message(drop_session.customer, message.source, "Thanks! MOBot OUT. Buh-bye")
         return
 
-    if message.text.lower() == "help":
-        log_and_send_message(drop_session.customer, message.source, "allow contact commands verbose")
+    if message.text.lower() == "p" or message.text.lower() == "privacy":
+        log_and_send_message(drop_session.customer, message.source, f"Our privacy policy is available here: {store.privacy_policy_url}\n\nWould you like to receive alerts for future drops?")
         return
 
-    log_and_send_message(drop_session.customer, message.source, "allow contact commands")
+    if message.text.lower() == "help":
+        log_and_send_message(drop_session.customer, message.source, "You can type (y)es, (n)o, or (p)rivacy policy\n\nWould you like to receive alerts for future drops?")
+        return
+
+    log_and_send_message(drop_session.customer, message.source, "You can type (y)es, (n)o, or (p)rivacy policy\n\nWould you like to receive alerts for future drops?")
 
 
 def handle_drop_session_ready_to_receive(message, drop_session):
@@ -253,13 +262,13 @@ def handle_drop_session_ready_to_receive(message, drop_session):
 
     if message.text.lower() == "y" or message.text.lower() == "yes":
         if not under_drop_quota(drop_session.drop):
-            log_and_send_message(drop_session.customer, message.source, "over quota for drop!")
+            log_and_send_message(drop_session.customer, message.source, "Too late! We've distributed all of the MOB allocated to this airdrop.\n\nSorry 😭")
             drop_session.state = SESSION_STATE_COMPLETED
             drop_session.save()
             return
 
         if not minimum_coin_available(drop_session.drop):
-            log_and_send_message(drop_session.customer, message.source, "no coin left!")
+            log_and_send_message(drop_session.customer, message.source, "Too late! We've distributed all of the MOB allocated to this airdrop.\n\nSorry 😭")
             drop_session.state = SESSION_STATE_COMPLETED
             drop_session.save()
             return
@@ -274,23 +283,26 @@ def handle_drop_session_ready_to_receive(message, drop_session):
         return
 
     if message.text.lower() == "help":
-        log_and_send_message(drop_session.customer, message.source, "initial coins commands verbose")
+        log_and_send_message(drop_session.customer, message.source, "You can type (y)es, or (n)o\n\nReady?")
         return
 
-    log_and_send_message(drop_session.customer, message.source, "initial coins commands")
+    log_and_send_message(drop_session.customer, message.source, "You can type (y)es, or (n)o\n\nReady?")
 
 
 def handle_drop_session_waiting_for_bonus_transaction(message, drop_session):
+    print("----------------WAITING FOR BONUS TRANSACTION------------------")
     if message.text.lower() == "help":
-        log_and_send_message(drop_session.customer, message.source, "waiting for payment commands verbose")
+        log_and_send_message(drop_session.customer, message.source, "Commands available are:\n\n?\tQuick list of commands\nhelp\tList of command and what they do\ndescribe\tDescription of drop\npay\tHow to pay")
     elif message.text.lower() == "pay":
-        log_and_send_message(drop_session.customer, message.source, "paying tutorial")
-    elif message.text.lower() == "terms":
-        log_and_send_message(drop_session.customer, message.source, "terms of service / purchase")
+        log_and_send_message(drop_session.customer, message.source, "To see your balance and send a payment:\n\n1. Select the attachment icon and select Pay\n\n2. Enter the amount you want to send (e.g. 0.01 MOB)\n\n3. Tap Pay\n\n4. Tap Confirm Payment")
     else:
-        log_and_send_message(drop_session.customer, message.source, "waiting for payment commands")
+        log_and_send_message(drop_session.customer, message.source, "Commands are ?, help, describe, and pay\n\n")
 
-    log_and_send_message(drop_session.customer, message.source, "payment request message")
+    amount_in_mob = mc.pmob2mob(drop_session.drop.initial_coin_amount_pmob)
+
+    value_in_currency = amount_in_mob * Decimal(drop_session.drop.conversion_rate_mob_to_currency)
+
+    log_and_send_message(drop_session.customer, message.source, f"We've sent you {amount_in_mob.normalize()} MOB (~{drop_session.drop.currency_symbol}{value_in_currency:.2f}). Send us 0.01 MOB, and we'll send it back, plus more! You could end up with as much as £50 of MOB")
 
 
 def handle_active_drop_session(message, drop_session):
@@ -368,13 +380,6 @@ def chat_router_coins(message, match):
     for bonus_coin in bonus_coins:
         number_claimed = DropSession.objects.filter(bonus_coin_claimed=bonus_coin).count()
         signal.send_message(message.source, f"{number_claimed} out of {bonus_coin.number_available} {mc.pmob2mob(bonus_coin.amount_pmob).normalize()}MOB Bonus Coins claimed ")
-
-
-@signal.chat_handler("privacy")
-def privacy_policy_handler(message, _match):
-    customer, _is_new = Customer.objects.get_or_create(phone_number=message.source['number'])
-    log_and_send_message(customer, message.source, store.privacy_policy_url)
-    return
 
 
 @signal.chat_handler("unsubscribe")
