@@ -77,7 +77,6 @@ class Mobot:
         self.handlers = []
         self._executor = ThreadPoolExecutor(4)
 
-
     def get_context_from_message(self, message: SignalMessage) -> MobotContext:
         context: MobotContext = self.message_context_manager.get_message_context(message)
         return context
@@ -122,14 +121,14 @@ class Mobot:
 
         self.handlers.append(dispatch_handler)
 
-    def set_customer_preferences(self, customer: Customer, allow_contact: bool) -> CustomerStorePreferences:
-        customer_prefs = CustomerStorePreferences.objects.get_or_create(customer=customer, store=self.store)
-        customer_prefs.allows_contact = allow_contact
-        customer_prefs.save()
-        return customer_prefs
-
-    def find_active_campaigns(self):
-        Campaign.objects.filter(start_time__gte=timezone.now(), end_time__lte=timezone.now())
+    # TODO: Not currently in use; will be used later to serve multiple campaigns
+    def find_active_campaigns(self) -> Iterable[Campaign]:
+        """
+        Not currently in use. Will be used in the future to get all campaigns for a store and serve all of them.
+        Returns:
+            Iterable[Campaign]
+        """
+        return Campaign.objects.filter(store=self.store, start_time__gte=timezone.now(), end_time__lte=timezone.now())
 
     def _handle_chat(self, message: SignalMessage):
         # TODO: Would be great to cache these after they're hit... One day.
@@ -159,12 +158,15 @@ class Mobot:
         self.register_handler(name="subscribe", regex="^(s|subscribe)$", method=subscribe_handler)
         self.register_handler(name="greet", method=handle_greet_customer, chat_session_states={MobotChatSession.State.NOT_GREETED}, order=1)  # First, say hello to the customer
         self.register_handler(name="start", method=handle_start_conversation, chat_session_states={MobotChatSession.State.NOT_GREETED}, order=2)  # Then, handle setting up drop session
+        self.register_handler(name="offer_accepted", regex="^(y|yes)$", method=handle_drop_offer_accepted, drop_session_states={DropSession.State.OFFERED})
+        self.register_handler(name="offer_rejected", regex="^(n|no)$", method=handle_drop_offer_rejected, drop_session_states={DropSession.State.OFFERED})
         self.register_handler(name="already greeted", method=handle_already_greeted, chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN})
         self.register_handler(name="expired",  method=handle_drop_expired, drop_session_states={DropSession.State.EXPIRED})
         self.register_handler(name="not ready", method=handle_drop_not_ready, drop_session_states={DropSession.State.NOT_READY})
         self.register_handler(name="no other handler found", method=handle_no_handler_found, chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN})
-        self.register_handler(name="privacy",  regex="^p$", method=privacy_policy_handler)
+        self.register_handler(name="privacy",  regex="^(p|privacy)$", method=privacy_policy_handler)
         self.register_handler(name="inventory", regex="^(i|inventory)$", method=inventory_handler, drop_session_states={DropSession.State.ACCEPTED, DropSession.State.OFFERED})
+
 
     def find_and_greet_targets(self, campaign):
         for customer in self.campaign.get_target_customers():

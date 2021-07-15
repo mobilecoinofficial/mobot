@@ -80,8 +80,16 @@ def handle_start_conversation(context: MobotContext):
     elif str(context.customer.phone_number.country_code) != context.campaign.number_restriction:
             context.log_and_send_message(ChatStrings.NOT_VALID_FOR_CAMPAIGN.format(country_code=context.campaign.number_restriction))
             context.drop_session.state = DropSession.State.FAILED
-            context.drop_session.save()
     elif context.campaign.is_active:
-        context.log_and_send_message(ChatStrings.OFFER)
+        context.log_and_send_message(ChatStrings.OFFER.format(drop_description=context.campaign.description))
         context.drop_session.state = DropSession.State.OFFERED
-        context.drop_session.save()
+
+def handle_drop_offer_rejected(context: MobotContext):
+    context.campaign.quota -= 1
+    context.drop_session.state = DropSession.State.CREATED
+    context.chat_session.state = MobotChatSession.State.NOT_GREETED
+    context.log_and_send_message(ChatStrings.OFFER_REJECTED)
+
+def handle_drop_offer_accepted(context: MobotContext):
+    context.drop_session.state = DropSession.State.ACCEPTED
+    context.log_and_send_message(ChatStrings.OFFER_ACCEPTED)

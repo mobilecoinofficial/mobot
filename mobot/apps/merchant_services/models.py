@@ -138,8 +138,8 @@ class Merchant(UserAccount):
     objects = models.Manager()
 
 class Store(Trackable):
-    name = models.TextField(blank=True, default="Coin Shop")
-    description = models.TextField(blank=True, default="Mobot Store")
+    name = models.TextField(blank=True, null=True, default="Mobot Shop")
+    description = models.TextField(blank=True, null=True, default="Mobot Shop sells all kinds of goodies")
     privacy_policy_url = models.URLField(blank=True, default="https://mobilecoin.com/privacy")
     merchant_ref = models.ForeignKey(Merchant, on_delete=models.CASCADE, related_name="store_owner")
 
@@ -259,7 +259,7 @@ class Campaign(ValidatableMixin):
     advertisement_start_time = models.DateTimeField(auto_now=True)
     start_time = models.DateTimeField(auto_now=True)
     end_time = models.DateTimeField(default=tz.now() + datetime.timedelta(days=1))
-    quota = models.PositiveIntegerField(default=10, help_text="Total number we want to sell for this campaign")
+    quota = models.PositiveIntegerField(default=100, help_text="Total number we want to sell for this campaign")
     adjusted_price = MoneyField(max_digits=14, default=None, decimal_places=5, default_currency="PMB", blank=True,
                                 null=True)
     number_restriction = models.CharField(max_length=3)
