@@ -1,23 +1,21 @@
-import re
 import logging
 from enum import Enum
 from concurrent.futures import ThreadPoolExecutor
-from typing import Callable, Any, Iterable
-from copy import deepcopy
-from typing import Set
+from typing import Any, Iterable
+
 
 import mobilecoin
 
 from django.conf import settings
 from django.utils import timezone
 
-from .models import MobotBot, MobotChatSession
-from mobot.apps.merchant_services.models import Customer, CustomerStorePreferences, DropSession, Campaign, Store
+from .models import MobotBot
+from mobot.apps.merchant_services.models import Customer, CustomerStorePreferences, Campaign, Store
 from mobot.signald_client import Signal
 from mobot.lib.signal import SignalCustomerDataClient
 from mobot.signald_client.types import Message as SignalMessage
 from mobot.signald_client.main import QueueSubscriber
-from mobot.apps.chat.context import MessageContextManager, MobotContext
+from mobot.apps.chat.context import MessageContextManager
 from .handlers import *
 from .utils import *
 
@@ -52,10 +50,6 @@ class MobotDispatcher:
         self.order = order
         self.text_filtered = text_filtered
 
-    @property
-    def catch_all(self) -> bool:
-        return len(self.ctx_conditions) == 0
-
     def context_matches(self, context: MobotContext):
         match = all([cond(context) for cond in self.ctx_conditions]) if self.ctx_conditions else True
         return match
@@ -68,7 +62,7 @@ class MobotDispatcher:
 
 
 class Mobot:
-    def __init__(self, signal: Signal, mobilecoin_client: mobilecoin.Client, store: Store, campaign: Campaign, subscriber: QueueSubscriber = None):
+    def __init__(self, signal: Signal, mobilecoin_client: mobilecoin.Client, store: Store, campaign: Campaign, subscriber: QueueSubscriber = None, **kwargs):
         self.name = f"Mobot-{store.name}"
         self.logger = logging.getLogger(f"Mobot-{store.id}")
         self.signal = signal
@@ -81,6 +75,8 @@ class Mobot:
         self._subscriber = subscriber if subscriber else QueueSubscriber(self.name)
         self._executor_futures = []
         self.handlers = []
+        self._executor = ThreadPoolExecutor(4)
+
 
     def get_context_from_message(self, message: SignalMessage) -> MobotContext:
         context: MobotContext = self.message_context_manager.get_message_context(message)
@@ -98,23 +94,33 @@ class Mobot:
                          chat_session_states: Set[MobotChatSession.State] = set(),
                          drop_session_states: Set[DropSession.State] = set(),
                          ctx_conditions: List[MobotContextFilter] = []):
+        """
+
+        Args:
+            name: Name of the handler, for debugging
+            method: A method to take that accepts a MobotContext
+            regex: Some regex to match
+            order: An order to execute compared to other matching handlers
+            chat_session_states: A set of drop session states for the handler to run
+            drop_session_states: A set of chat session states for the handler to run
+            ctx_conditions: Any lambdas that take a MobotContext and produce a boolean, for filtering
+        """
         conditions = ctx_conditions.copy()
         if regex:
-            conditions.add(regex_filter(regex))
+            conditions.append(regex_filter(regex))
         if drop_session_states:
-            conditions.add(drop_session_state_filter(drop_session_states))
+            conditions.append(drop_session_state_filter(drop_session_states))
         if chat_session_states:
-            conditions.add(chat_session_state_filter(chat_session_states))
+            conditions.append(chat_session_state_filter(chat_session_states))
 
         dispatch_handler = MobotDispatcher(
                                   name,
                                   method,
                                   text_filtered=True if regex else False,
                                   order=order,
-                                  conditions=tuple(conditions))
+                                  conditions=conditions)
 
         self.handlers.append(dispatch_handler)
-
 
     def set_customer_preferences(self, customer: Customer, allow_contact: bool) -> CustomerStorePreferences:
         customer_prefs = CustomerStorePreferences.objects.get_or_create(customer=customer, store=self.store)
@@ -152,16 +158,13 @@ class Mobot:
         self.register_handler(name="unsubscribe", regex="^(u|unsubscribe)$", method=unsubscribe_handler)
         self.register_handler(name="subscribe", regex="^(s|subscribe)$", method=subscribe_handler)
         self.register_handler(name="greet", method=handle_greet_customer, chat_session_states={MobotChatSession.State.NOT_GREETED}, order=1)  # First, say hello to the customer
-        self.register_handler(name="start", method=handle_start_conversation, chat_session_states={MobotChatSession.State.NOT_GREETED},
-                              order=2)  # Then, handle setting up drop session
-        self.register_handler(name="already", method=handle_already_greeted,
-                              chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN})
+        self.register_handler(name="start", method=handle_start_conversation, chat_session_states={MobotChatSession.State.NOT_GREETED}, order=2)  # Then, handle setting up drop session
+        self.register_handler(name="already greeted", method=handle_already_greeted, chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN})
         self.register_handler(name="expired",  method=handle_drop_expired, drop_session_states={DropSession.State.EXPIRED})
-        self.register_handler(name="not_ready", method=handle_drop_not_ready, drop_session_states={DropSession.State.NOT_READY})
-        self.register_handler(name="no_other_handler", method=handle_no_handler_found, chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN})
+        self.register_handler(name="not ready", method=handle_drop_not_ready, drop_session_states={DropSession.State.NOT_READY})
+        self.register_handler(name="no other handler found", method=handle_no_handler_found, chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN})
         self.register_handler(name="privacy",  regex="^p$", method=privacy_policy_handler)
-        self.register_handler(name="inventory", regex="^(i|inventory)$", method=inventory_handler,
-                              drop_session_states={DropSession.State.ACCEPTED, DropSession.State.OFFERED})
+        self.register_handler(name="inventory", regex="^(i|inventory)$", method=inventory_handler, drop_session_states={DropSession.State.ACCEPTED, DropSession.State.OFFERED})
 
     def find_and_greet_targets(self, campaign):
         for customer in self.campaign.get_target_customers():
@@ -175,12 +178,16 @@ class Mobot:
                                                                      campaign=campaign,
                                                                      campaign_description=campaign.description))
 
+    def _shutdown_now(self, *args):
+        self._executor.shutdown(wait=False)
 
+    def _shutdown_gracefully(self, *args):
+        self._executor.shutdown(wait=True)
 
     def run(self, max_messages=0):
         self.signal.register_subscriber(self._subscriber)
         self.register_default_handlers()
-        with ThreadPoolExecutor(4) as executor:
+        with self._executor as executor:
             self._executor_futures.append(executor.submit(self.signal.run_chat, True))
             while True:
                 for message in self._subscriber.receive_messages():
@@ -195,4 +202,4 @@ class Mobot:
                         if self._subscriber.total_received == max_messages:
                             executor.shutdown(wait=True)
                             return
-            executor.shutdown(wait=True)
+            self._executor.shutdown(wait=True)

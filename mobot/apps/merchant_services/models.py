@@ -158,6 +158,10 @@ class ProductGroup(Trackable):
     name = models.TextField(
         help_text="A group of products offered together as a single product which may come in different descriptions/sizes")
 
+    @property
+    def inventory(self):
+        self.products.all()
+
 
 class Product(Trackable):
     store_ref = models.ForeignKey(Store, on_delete=models.CASCADE)
