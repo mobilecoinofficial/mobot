@@ -2,7 +2,7 @@ import argparse
 
 import pytz
 from django.core.management.base import BaseCommand
-from mobot.apps.merchant_services.models import Product, Merchant, Store, Drop
+from mobot.apps.merchant_services.models import Product, Merchant, Store, Campaign, ProductGroup, InventoryItem
 from django.conf import settings
 from typing import List
 from typedate import TypeDate
@@ -166,9 +166,12 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         try:
             if options.get("reset_all_drops"):
+                Product.objects.all().delete()
+                ProductGroup.objects.all().delete()
+                InventoryItem.objects.all().delete()
                 Merchant.objects.all().delete()
                 Store.objects.all().delete()
-                Drop.objects.all().delete()
+                Campaign.objects.all().delete()
                 merchant = self.add_default_merchant()
                 store = self.add_default_store(merchant)
             drops = Drop.objects.all()
