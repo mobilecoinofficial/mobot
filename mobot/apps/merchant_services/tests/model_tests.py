@@ -29,7 +29,7 @@ class CustomerTestCase(TestCase):
 
     def _add_hoodie(self, size: str, price: Money = Money(Decimal(15.0), currency=GBP)) -> Product:
         hoodie_product, created = Product.objects.get_or_create(
-            name=f"Hoodie Size {size}",
+            name=f"Hoodie {size}",
             price=price,
             description=f"MobileCoin Hoodie {size}",
             product_group=self.hoodie_product_group,

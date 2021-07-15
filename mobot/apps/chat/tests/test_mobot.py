@@ -4,12 +4,10 @@ from django.test import TestCase, override_settings
 from unittest import mock
 from unittest.mock import MagicMock
 import logging
-from itertools import starmap
 
 import django
 django.setup()
 
-from mobot.apps.merchant_services.models import Merchant, Customer, Campaign, Product, ProductGroup, DropSession, Order, InventoryItem
 from mobot.apps.merchant_services.tests.fixtures import StoreFixtures
 
 from mobilecoin import Client

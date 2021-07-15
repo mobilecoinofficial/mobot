@@ -101,6 +101,8 @@ class MessageContextManager:
                 return message_log
 
             def __exit__(self, exc_type, exc_val, exc_tb):
+                self.drop_session.save()
+                self.chat_session.save()
                 pass
 
         ctx = MessageContext()

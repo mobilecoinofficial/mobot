@@ -23,11 +23,10 @@ class StoreFixtures:
     def __init__(self):
         self.merchant = self.add_default_merchant(STORE_PHONE_NUMBER)
         self.store = self.add_default_store(self.merchant)
-        self.cust_us = self.add_default_customer(name="Bob", phone_number="+18054412653")
+        self.cust_us = self.add_default_customer(name="Greg", phone_number="+18054412653")
         self.cust_uk = self.add_default_customer("Adam", phone_number="+447441433906")
         self.original_drop = self.add_default_campaign()
         self.hoodie_product_group = StoreFixtures.add_hoodie_product_group()
-        self.hoodie_inventory = self.add_default_inventory()
 
     def _add_hoodie(self, size: str, price: Money = Money(Decimal(25.0), currency=GBP)) -> Product:
         hoodie_product, created = Product.objects.get_or_create(

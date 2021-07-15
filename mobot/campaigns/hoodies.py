@@ -6,8 +6,8 @@ from django.db import models
 
 """ Still figuring out if this file is necessary """
 class Size(str, Enum):
-    S = "small"
-    M = "medium"
-    L = "large"
-    XL = "extralarge"
-    XXL = "extraextralarge"
+    S = "S"
+    M = "M"
+    L = "L"
+    XL = "XL"
+    XXL = "XXL"
