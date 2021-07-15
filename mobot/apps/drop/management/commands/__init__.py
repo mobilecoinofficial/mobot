@@ -1,6 +1,6 @@
 import os
 import sys
-from mobot.apps.merchant_services.models import Campaign, Product, ProductGroup, Store, Merchant, Order
+from mobot.apps.merchant_services.models import Campaign, Product, ProductGroup, Store, Merchant, Order, InventoryItem
 from mobot.campaigns.hoodies import Size
 from mobot.lib.currency import MOB, PMOB
 
