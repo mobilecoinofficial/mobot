@@ -109,9 +109,6 @@ class Command(BaseCommand):
             store.save()
         return store
 
-    def add_products(self, product_group_name: str, inventory: Dict[Size, int]):
-        pass
-
     def get_or_add_sized_product(self, product_group: ProductGroup, size: str, price: Money = Money(Decimal(25.0), currency=GBP)) -> Product:
         hoodie_product, created = Product.objects.get_or_create(
             name=f"{product_group.name}-{size}",
