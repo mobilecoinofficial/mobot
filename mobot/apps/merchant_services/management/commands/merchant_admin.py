@@ -159,35 +159,6 @@ class Command(BaseCommand):
         m.save()
         return m
 
-    def add_default_drops(self, store: Store, **options) -> List[Drop]:
-        Drop.objects.filter(name__startswith="Initial Airdrop", store_ref=store).delete()
-        original_drop, _ = Drop.objects.update_or_create(name="Initial AirDrop",
-                            pre_drop_description="Get free MOB from MobileCoin!",
-                            store_ref=store,
-                            description="My Store",
-                            number_restriction=["+44"],
-                            advertisement_start_time=datetime.datetime.utcnow(),
-                            start_time=datetime.datetime.utcnow(),
-                            end_time=datetime.datetime.utcnow() + datetime.timedelta(days=3.0),
-                            price=Money(Decimal(3.0), GBP),
-                            quota=100)
-
-        dropped = Drop.objects.filter(name__startswith="Bonus AirDrop").delete()
-
-        bonus_drops = [Drop.objects.update_or_create(name=f"Bonus AirDrop {price}",
-                            pre_drop_description="Get free MOB from MobileCoin!",
-                            store_ref=store,
-                            description="My Store",
-                            number_restriction=["+44"],
-                            advertisement_start_time=datetime.datetime.utcnow(),
-                            start_time=datetime.datetime.utcnow(),
-                            end_time=datetime.datetime.utcnow() + datetime.timedelta(days=3.0),
-                            quota=quota,
-                            price=Money(Decimal(price), GBP)) for quota, price in [(80, 2.0), (10, 7.0), (7, 22.0), (3, 47)]]
-        print(original_drop)
-        for bonus in bonus_drops:
-            print(bonus)
-        return original_drop, bonus_drops
 
     def make_mobot_default_store(self):
         pass
@@ -200,7 +171,6 @@ class Command(BaseCommand):
                 Drop.objects.all().delete()
                 merchant = self.add_default_merchant()
                 store = self.add_default_store(merchant)
-                airdrop, bonus_drops = self.add_default_drops(store)
             drops = Drop.objects.all()
             for drop in drops:
                 print(drop)

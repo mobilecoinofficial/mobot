@@ -4,6 +4,8 @@ import phonenumbers
 from phonenumbers import PhoneNumber
 from mobot.lib.currency import *
 from decimal import Decimal
+from typedate import TypeDate
+
 from django.conf import settings
 
 from ..commands import *
@@ -44,8 +46,29 @@ class Command(BaseCommand):
         parser.add_argument('-n', '--store-phone-number', type=phonenumbers.parse, required=True)
         parser.add_argument('-s', '--store-name', type=str, required=False)
         parser.add_argument('-p', '--product-name', type=str, help="Name of the product group", required=False, default="Hoodie")
+        parser.add_argument('-c', '--campaign-name', type=str, help="Name of the campaign", required=False, default="Hoodie Drop")
+        parser.add_argument('-q', '--quota', type=int, help="Quota, if any, for number of people who can participate in campaign")
         parser.add_argument('-i', '--inventory', type=json.loads, help="JSON of the inventory for the product at various sizes; e.g '{'S': 10, 'M': 10, 'L': 10 }'", default='{}')
         parser.add_argument('-d', '--description', required=False)
+        parser.add_argument('-r', '--number-restriction', required=False, type=str, help="Country code restriction of product")
+        parser.add_argument(
+            '--start-time',
+            help="start datetime UTC",
+            type=TypeDate('%Y-%m-%d %H:%M:%S', timezone='UTC'),
+            required=False,
+        )
+        parser.add_argument(
+            '--end-time',
+            help="end datetime UTC",
+            type=TypeDate('%Y-%m-%d %H:%M:%S', timezone='UTC'),
+            required=False,
+        )
+        parser.add_argument(
+            '--advertisement-start-time',
+            help="advertisement start datetime UTC",
+            type=TypeDate('%Y-%m-%d %H:%M:%S', timezone='UTC'),
+            required=False,
+        )
         parser.add_argument('--price', required=False, type=Decimal)
         parser.add_argument('--currency', default=GBP)
 
@@ -85,6 +108,28 @@ class Command(BaseCommand):
         )
         return hoodie_product
 
+    def add_campaign(self, **options) -> Campaign:
+        campaign_name = options.get('campaign_name')
+        start_time = options.get('start_time')
+        end_time = options.get('end_time')
+        adv_start = options.get('advertisement_start_time')
+        quota = options.get('quota')
+        number_restriction = options.get('number_restriction')
+        store = Store.objects.get(merchant_ref__phone_number=self.store_phone_number)
+        # Will fail if product group not created/given.
+        product_group = ProductGroup.objects.get(name=self.product_name)
+
+        return Campaign.objects.create(
+            name=campaign_name,
+            store=store,
+            advertisement_start_time=adv_start,
+            product_group=product_group,
+            start_time=start_time,
+            end_time=end_time,
+            quota=quota,
+            number_restriction=number_restriction,
+        )
+
     def handle(self, *args, **options):
         self.inventory = self._load_sizes(options['inventory'])
         self.product_name = options.get('product_name')
@@ -93,6 +138,7 @@ class Command(BaseCommand):
         self.action = options.get('action')
         self.store = None
         self.product = None
+
         price = options.get('price')
         currency = options['currency'] # safe as it has a default
         price_with_currency: Optional[Money] = None if not price else Money(price, currency)
@@ -116,5 +162,8 @@ class Command(BaseCommand):
                         # Delete existing product inventory and update with current amounts
                         InventoryItem.objects.filter(product=product).delete()
                         product.add_inventory(amt_available)
+
+        if self.action == DropManagmentActions.ADD_CAMPAIGN:
+            self.add_campaign(options)
 
 
