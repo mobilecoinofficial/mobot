@@ -11,7 +11,7 @@ from mobot.signald_client.types import Message as SignalMessage
 from mobot.signald_client import Signal
 
 
-class MessageContextBase(ABC):
+class MobotContext(ABC):
     customer: Customer
     message: SignalMessage
     campaign: Campaign
@@ -24,7 +24,7 @@ class MessageContextBase(ABC):
     signal: Signal
 
     def log_and_send_message(self, text: str):
-        sent_message = Message.objects.create(
+        Message.objects.create(
             customer=self.customer,
             text=text,
             chat_session=self.chat_session,
@@ -36,19 +36,20 @@ class MessageContextBase(ABC):
         pass
 
 
-class MessageContextFactory:
+class MessageContextManager:
     def __init__(self, mobot: MobotBot, root_logger: Logger, signal: Signal):
         self.mobot = mobot
         self.root_logger: Logger = root_logger
         self.signal = signal
-        self.contexts: Dict[str, MessageContextBase] = dict()
+        self.contexts: Dict[str, MobotContext] = dict()
 
-    def get_message_context(self, message: SignalMessage = None, customer: Customer = None) -> MessageContextBase:
+
+    def get_message_context(self, message: SignalMessage = None, customer: Customer = None) -> MobotContext:
         current_context = self.contexts.get(message.source)
         if current_context:
             return current_context
 
-        class MessageContext(MessageContextBase):
+        class MessageContext(MobotContext):
             """Context for current customer"""
             def __init__(self, signal=self.signal, root_logger=self.root_logger, mobot=self.mobot):
                 self.signal = signal
@@ -97,8 +98,6 @@ class MessageContextFactory:
                     created_at=timezone.make_aware(datetime.datetime.utcfromtimestamp(self.message.timestamp)),
                     direction=MessageDirection.MESSAGE_DIRECTION_RECEIVED
                 )
-                self.logger.debug(f"Updating context for {self.customer}")
-                self.drop_session, _ = self.get_active_drop_session()
                 return message_log
 
             def __exit__(self, exc_type, exc_val, exc_tb):
