@@ -35,9 +35,15 @@ class MobotTests(TestCase):
         self.logger = logging.getLogger("MobotTests")
         self.mobilecoin_client = Client("foo")
 
-    @unittest.skip
+    def _get_mobot(self) -> Mobot:
+        signal_client = Signal(str(self.fixtures.merchant.phone_number))
+        signal_client.send_message = MagicMock()
+        mobilecoin_client = Client("foo")
+        mobot = Mobot(signal=signal_client, mobilecoin_client=mobilecoin_client,
+                      campaign=self.fixtures.original_drop, store=self.fixtures.store)
+        return mobot
+
     def test_can_instantiate_mobot(self):
-        campaign = self.fixtures.original_drop
         subscriber = QueueSubscriber(name="Mobot")
         with mock.patch.object(Signal, 'receive_messages', return_value=produce_messages(1)) as mock_method:
             signal_client = Signal(str(self.fixtures.merchant.phone_number))
@@ -46,7 +52,6 @@ class MobotTests(TestCase):
             mobot = Mobot(signal=signal_client, mobilecoin_client=mobilecoin_client, campaign=self.fixtures.original_drop, store=self.fixtures.store)
 
     def test_can_register_and_handle_hello_world(self):
-        campaign = self.fixtures.original_drop
         with mock.patch.object(Signal, 'receive_messages', return_value=[produce_message("hello", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number))]) as mock_method:
             signal_client = Signal(str(self.fixtures.merchant.phone_number))
             signal_client.send_message = MagicMock()
@@ -63,27 +68,17 @@ class MobotTests(TestCase):
             mobot_messages = {str(message) for message in Message.objects.all()}
             self.assertEqual(expected_message_strings, mobot_messages)
 
-    @unittest.skip
     def test_can_handle_unknown_match(self):
         with mock.patch.object(Signal, 'receive_messages', return_value=[produce_message("Blah", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number))]) as mock_method:
-            signal_client = Signal(str(self.fixtures.merchant.phone_number))
-            signal_client.send_message = MagicMock()
-            mobilecoin_client = Client("foo")
-            mobot = Mobot(signal=signal_client, mobilecoin_client=mobilecoin_client,
-                          campaign=self.fixtures.original_drop, store=self.fixtures.store)
+            mobot = self._get_mobot()
             mobot.run(max_messages=1)
             for message in Message.objects.all():
                 print_message(message, self.logger)
             self.assertEqual(Message.objects.count(), 3)
 
-    @unittest.skip
     def test_can_show_privacy_policy(self):
         with mock.patch.object(Signal, 'receive_messages', return_value=[produce_message("p", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number))]) as mock_method:
-            signal_client = Signal(str(self.fixtures.merchant.phone_number))
-            signal_client.send_message = MagicMock()
-            mobilecoin_client = Client("foo")
-            mobot = Mobot(signal=signal_client, mobilecoin_client=mobilecoin_client,
-                          campaign=self.fixtures.original_drop, store=self.fixtures.store)
+            mobot = self._get_mobot()
             mobot.run(max_messages=1)
             self.assertEqual(Message.objects.count(), 2)
             mobot_messages = [message for message in Message.objects.all()]
@@ -95,11 +90,7 @@ class MobotTests(TestCase):
 
     def test_can_handle_inventory(self):
         with mock.patch.object(Signal, 'receive_messages', return_value=[produce_message("hi", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number)), produce_message("i", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number))]) as mock_method:
-            signal = Signal(str(self.fixtures.merchant.phone_number))
-            signal.send_message = MagicMock()
-            mobot = Mobot(signal=signal, mobilecoin_client=self.mobilecoin_client,
-                          campaign=self.fixtures.original_drop, store=self.fixtures.store)
-
+            mobot = self._get_mobot()
             mobot.run(max_messages=1)
             mobot_messages = [message for message in Message.objects.all()]
             for message in mobot_messages:
