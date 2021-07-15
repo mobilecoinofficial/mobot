@@ -83,7 +83,12 @@ class CustomerTestCase(TestCase):
     def test_can_add_product_to_customer_order(self):
         small_hoodie = self._add_hoodie(size=Size.S)
         small_hoodie.add_inventory(1)
-        customer = self.cust_us
+        curr_inv = small_hoodie.inventory.filter(order=None).count()
+        customer = self.cust_uk
+        order = Order.objects.order_product(product=small_hoodie, customer=customer)
+        self.assertEqual(small_hoodie.available, curr_inv - 1)
+
+        # Find an inventory item not yet ordered
 
 
 

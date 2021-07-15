@@ -13,6 +13,7 @@ from moneyed import Money
 from phonenumber_field.modelfields import PhoneNumberField
 from address.models import AddressField
 from address.models import Address
+from django.db.transaction import atomic
 
 from django.contrib.auth.models import User
 from mobot.signald_client import Signal
@@ -181,8 +182,12 @@ class Product(Trackable):
         abstract = False
         default_related_name = 'products'
 
+    @property
+    def available(self) -> int:
+        return self.inventory.filter(order=None).count()
+
     def has_inventory(self) -> bool:
-        return self.inventory.count() > 0
+        return self.inventory.filter(order=None).count() > 0
 
     def add_inventory(self, number: int, sku: str = None) -> QuerySet:
         if not sku:
@@ -222,10 +227,24 @@ class InventoryItem(Trackable):
         return f"{self.product.description}"
 
 
-class OrderItem(Trackable):
-    item = models.OneToOneField(InventoryItem, on_delete=models.SET_NULL, null=True, blank=True)
-    is_ordered = models.BooleanField(default=False)
-    date_ordered = models.DateTimeField(null=True)
+class OutOfStockException(Exception):
+    pass
+
+
+class OrderManager(models.Manager):
+    @atomic
+    def order_product(self, product: Product, customer: Customer) -> QuerySet:
+        order = self.create(customer=customer, product=product)
+        try:
+            inventory_item = InventoryItem.objects.get(order=None)
+            inventory_item.order = order
+            inventory_item.save()
+        except InventoryItem.DoesNotExist:
+            order.delete()
+            raise OutOfStockException(f"All out of {product}!")
+        finally:
+            order.save()
+            return order
 
 
 class Order(Trackable):
@@ -240,10 +259,15 @@ class Order(Trackable):
                                 related_name="order", db_index=True, blank=True, null=True, on_delete=models.CASCADE,
                                 unique=True)
     product = models.ForeignKey(Product, on_delete=models.DO_NOTHING, blank=False, null=False)
-    owner = models.ForeignKey(Customer, on_delete=models.DO_NOTHING, blank=False, null=False, db_index=True)
-    price = MoneyField(blank=False, null=False, max_digits=14, decimal_places=5)
+    customer = models.ForeignKey(Customer, on_delete=models.DO_NOTHING, blank=False, null=False, db_index=True)
+    price = MoneyField(blank=True, null=True, max_digits=14, decimal_places=5)
     state = FSMIntegerField(choices=State.choices, default=State.STATUS_NEW)
-    shipment = models.OneToOneField(Shipment, related_name="sale", on_delete=models.CASCADE, default=Shipment())
+    shipment = models.OneToOneField(Shipment, related_name="sale", on_delete=models.CASCADE, blank=True, null=True)
+    objects = OrderManager()
+
+    @property
+    def total_price(self):
+        return self.price if self.price else self.product.price
 
 
 class CampaignGroup(ValidatableMixin):
