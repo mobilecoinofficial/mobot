@@ -112,10 +112,9 @@ class Command(BaseCommand):
                     product = self.get_or_add_sized_product(product_group=self.product_group, price=price_with_currency, size=size)
                     if self.action == DropManagmentActions.ADD_INVENTORY:
                         product.add_inventory(amt_available)
-
-
-
-
-
+                    else:
+                        # Delete existing product inventory and update with current amounts
+                        InventoryItem.objects.filter(product=product).delete()
+                        product.add_inventory(amt_available)
 
 

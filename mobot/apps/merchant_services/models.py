@@ -184,9 +184,11 @@ class Product(Trackable):
     def has_inventory(self) -> bool:
         return self.inventory.count() > 0
 
-    def add_inventory(self, number: int) -> QuerySet:
+    def add_inventory(self, number: int, sku: str = None) -> QuerySet:
+        if not sku:
+            sku = f"{self.id}-item"
         created = InventoryItem.objects.bulk_create([
-            InventoryItem(product=self) for _ in range(number)
+            InventoryItem(product=self, sku=sku) for _ in range(number)
         ])
         return created
 
@@ -212,6 +214,7 @@ class Shipment(Trackable):
 
 class InventoryItem(Trackable):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="inventory")
+    sku = models.CharField(max_length=50, null=True, blank=True, db_index=True)
     is_ordered = models.BooleanField(default=False)
     date_ordered = models.DateTimeField(blank=True, null=True)
 
