@@ -31,9 +31,9 @@ def inventory_handler(context: MobotContext):
 
     def get_inv_strings():
         for product in products:
-            if 0 > product.inventory.count() > 5:
+            if 0 > product.available > 5:
                 yield f"{product.name}(Item ID {product.id}): - In Stock "
-            elif product.inventory.count() > 0:
+            elif product.available > 0:
                 yield f"{product.name}(Item ID {product.id}) - Running out - only {product.inventory.count()} left!"
         inventory_string = "\n   ".join(get_inv_strings())
         message = ChatStrings.INVENTORY.format(stock=inventory_string)
