@@ -178,28 +178,30 @@ class Mobot:
                                                                      campaign=campaign,
                                                                      campaign_description=campaign.description))
 
-    def _shutdown_now(self, *args):
+    def _shutdown_now(self):
         self._executor.shutdown(wait=False)
 
-    def _shutdown_gracefully(self, *args):
+    def _shutdown_gracefully(self):
         self._executor.shutdown(wait=True)
+
+    def _submit_future(self, callable: Callable, *args):
+        self._executor_futures.append(self._executor.submit(callable, *args))
 
     def run(self, max_messages=0):
         self.signal.register_subscriber(self._subscriber)
         self.register_default_handlers()
-        with self._executor as executor:
-            self._executor_futures.append(executor.submit(self.signal.run_chat, True))
-            while True:
-                for message in self._subscriber.receive_messages():
-                    self.logger.debug(f"Mobot received message: {message}")
-                    self._executor_futures.append(executor.submit(self.find_and_greet_targets, self.campaign))
-                    # Handle in foreground while I'm testing
-                    if settings.TEST:
-                        self._handle_chat(message)
-                    else:
-                        self._executor_futures.append(executor.submit(self._handle_chat, message))
-                    if max_messages:
-                        if self._subscriber.total_received == max_messages:
-                            executor.shutdown(wait=True)
-                            return
+        self._submit_future(self.signal.run_chat, True)
+        while True:
+            for message in self._subscriber.receive_messages():
+                self.logger.debug(f"Mobot received message: {message}")
+                self._executor_futures.append(self._executor.submit(self.find_and_greet_targets, self.campaign))
+                # Handle in foreground while I'm testing
+                if settings.TEST:
+                    self._handle_chat(message)
+                else:
+                    self._submit_future(self._handle_chat, message)
+                if max_messages:
+                    if self._subscriber.total_received == max_messages:
+                        self._shutdown_gracefully()
+                        return
             self._executor.shutdown(wait=True)
