@@ -224,7 +224,7 @@ class InventoryItem(Trackable):
     date_ordered = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.product.description}"
+        return f"Inventory Item {self.sku}"
 
 
 class OutOfStockException(Exception):
@@ -242,9 +242,8 @@ class OrderManager(models.Manager):
         except InventoryItem.DoesNotExist:
             order.delete()
             raise OutOfStockException(f"All out of {product}!")
-        finally:
-            order.save()
-            return order
+        order.save()
+        return order
 
 
 class Order(Trackable):

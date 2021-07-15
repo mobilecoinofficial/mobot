@@ -6,10 +6,10 @@ from moneyed import Money, GBP
 from decimal import Decimal
 import django
 django.setup()
-
-
+from address.models import Address, Locality
+from unittest import skip
 from mobot.campaigns.hoodies import Size
-from mobot.apps.merchant_services.models import Customer, Store, Merchant, Product, InventoryItem, Campaign, Validation, ProductGroup, Order
+from mobot.apps.merchant_services.models import Customer, Store, Merchant, Product, InventoryItem, Campaign, Validation, ProductGroup, Order, Shipment
 from mobot.apps.merchant_services.tests.fixtures import StoreFixtures
 
 
@@ -56,7 +56,6 @@ class CustomerTestCase(TestCase):
         adam = Customer.objects.get(name="Adam")
         self.assertEqual(greg.phone_number, "+18054412653")
 
-
     def test_can_add_44_validation_and_find_customers(self):
         original_drop: Campaign = self.original_drop
         validation = self.basic_fixtures.add_customer_44_validation(original_drop)
@@ -80,15 +79,23 @@ class CustomerTestCase(TestCase):
         inv = large_hoodie.inventory.all()
         self.assertEqual(len(inv), 10)
 
+
     def test_can_add_product_to_customer_order(self):
+        from mobot.apps.merchant_services.models import OutOfStockException
         small_hoodie = self._add_hoodie(size=Size.S)
         small_hoodie.add_inventory(1)
         curr_inv = small_hoodie.inventory.filter(order=None).count()
         customer = self.cust_uk
         order = Order.objects.order_product(product=small_hoodie, customer=customer)
+        print(order)
         self.assertEqual(small_hoodie.available, curr_inv - 1)
+        self.assertEqual(small_hoodie.available, 0)
+        with self.assertRaises(OutOfStockException):
+            new_order = Order.objects.order_product(product=small_hoodie, customer=customer)
 
-        # Find an inventory item not yet ordered
+    def test_can_parse_shipping_address(self):
+        print("Not yet implemented!")
+        pass
 
 
 
