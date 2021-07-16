@@ -45,7 +45,7 @@ class Command(BaseCommand):
         """
     def __init__(self, *args, **kwargs):
         self.product: Product = None
-        self.store: Store = None
+        self.store: MobotStore = None
         self.merchant: Merchant = None
         self.product_group: ProductGroup = None
         self.orders: Iterable[Order] = []
@@ -97,12 +97,12 @@ class Command(BaseCommand):
             sized[Size(key)] = value
         return sized
 
-    def add_or_get_store(self, **options) -> Store:
+    def add_or_get_store(self, **options) -> MobotStore:
         phone_number = options.get("store_phone_number")
         name = options.get("store_name")
         merchant_name = options.get("merchant_name")
         merchant, _ = Merchant.objects.get_or_create(name=merchant_name, phone_number=phone_number)
-        store, created = Store.objects.get_or_create(name=name, phone_number=phone_number)
+        store, created = MobotStore.objects.get_or_create(name=name, phone_number=phone_number)
         if created:
             if name:
                 store.name = name
@@ -133,7 +133,7 @@ class Command(BaseCommand):
         adv_start = options.get('advertisement_start_time')
         quota = options.get('quota')
         number_restriction = options.get('number_restriction').replace("+", "")  # Clean up the + if user adds it
-        store = Store.objects.get(merchant_ref__phone_number=self.store_phone_number)
+        store = MobotStore.objects.get(merchant_ref__phone_number=self.store_phone_number)
         # Will fail if product group not created/given.
         product_group = ProductGroup.objects.get(name=self.product_name)
 

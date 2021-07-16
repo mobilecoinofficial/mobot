@@ -1,7 +1,7 @@
 from django.db import models
 from django_fsm import FSMIntegerField
 
-from mobot.apps.merchant_services.models import Customer, Store, Trackable, DropSession, Campaign
+from mobot.apps.merchant_services.models import Customer, MobotStore, Trackable, DropSession, Campaign
 
 
 class MobotBotManager(models.Manager):
@@ -19,7 +19,7 @@ class MobotBotManager(models.Manager):
 
 class MobotBot(Trackable):
     name = models.CharField(blank=False, null=False, max_length=255, db_index=True, unique=True)
-    store = models.ForeignKey(Store, db_index=True, on_delete=models.CASCADE, related_name="mobots")
+    store = models.ForeignKey(MobotStore, db_index=True, on_delete=models.CASCADE, related_name="mobots")
     campaign = models.OneToOneField(Campaign, db_index=True, related_name="mobot", on_delete=models.DO_NOTHING)
     objects = MobotBotManager()
 

@@ -7,7 +7,6 @@ echo "Setting up env"
 . /app/mobot/app_scripts/set_up_env.sh
 . /app/mobot/app_scripts/create_wallet.sh
 . /app/mobot/app_scripts/delete_dbs.sh
-. /app/mobot/app_scripts/create_wallet.sh
 . /app/mobot/app_scripts/reset_admin.sh
 . /app/mobot/app_scripts/admin_start.sh
 

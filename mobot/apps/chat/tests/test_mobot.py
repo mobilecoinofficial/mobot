@@ -89,7 +89,7 @@ class MobotTests(TestCase):
                 print_message(message, self.logger)
 
     def test_can_handle_inventory(self):
-        with mock.patch.object(Signal, 'receive_messages', return_value=[produce_message("hi", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number)), produce_message("i", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number))]) as mock_method:
+        with mock.patch.object(Signal, 'receive_messages', return_value=[produce_message("i", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number)), produce_message("i", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number))]) as mock_method:
             mobot = self._get_mobot()
             mobot.run(max_messages=1)
             mobot_messages = [message for message in Message.objects.all()]

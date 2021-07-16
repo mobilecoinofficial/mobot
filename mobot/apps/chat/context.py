@@ -5,7 +5,7 @@ from abc import ABC
 
 from django.utils import timezone
 from mobot.apps.chat.models import Message, MessageDirection, MobotBot, MobotChatSession
-from mobot.apps.merchant_services.models import Customer, CustomerStorePreferences, DropSession, Store, Campaign
+from mobot.apps.merchant_services.models import Customer, CustomerStorePreferences, DropSession, MobotStore, Campaign
 
 from mobot.signald_client.types import Message as SignalMessage
 from mobot.signald_client import Signal
@@ -17,7 +17,7 @@ class MobotContext(ABC):
     campaign: Campaign
     drop_session: DropSession
     mobot: MobotBot
-    store: Store
+    store: MobotStore
     store_preferences: CustomerStorePreferences
     chat_session: MobotChatSession
     logger: Logger
@@ -42,7 +42,6 @@ class MessageContextManager:
         self.root_logger: Logger = root_logger
         self.signal = signal
         self.contexts: Dict[str, MobotContext] = dict()
-
 
     def get_message_context(self, message: SignalMessage = None, customer: Customer = None) -> MobotContext:
         current_context = self.contexts.get(message.source)

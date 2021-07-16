@@ -2,7 +2,7 @@ import argparse
 
 import pytz
 from django.core.management.base import BaseCommand
-from mobot.apps.merchant_services.models import Product, Merchant, Store, Campaign, ProductGroup, InventoryItem
+from mobot.apps.merchant_services.models import Product, Merchant, MobotStore, Campaign, ProductGroup, InventoryItem
 from django.conf import settings
 from typing import List
 from typedate import TypeDate
@@ -149,8 +149,8 @@ class Command(BaseCommand):
         drop_group.add_argument("--reset-all-drops", required=False, action="store_true", default=False, help="Reset all accounts")
 
 
-    def add_default_store(self, merchant: Merchant, **options) -> Store:
-        s, created = Store.objects.get_or_create(merchant_ref=merchant, name="MobileCoin Coin Drop Store")
+    def add_default_store(self, merchant: Merchant, **options) -> MobotStore:
+        s, created = MobotStore.objects.get_or_create(merchant_ref=merchant, name="MobileCoin Coin Drop Store")
         s.save()
         return s
 
@@ -170,7 +170,7 @@ class Command(BaseCommand):
                 ProductGroup.objects.all().delete()
                 InventoryItem.objects.all().delete()
                 Merchant.objects.all().delete()
-                Store.objects.all().delete()
+                MobotStore.objects.all().delete()
                 Campaign.objects.all().delete()
                 merchant = self.add_default_merchant()
                 store = self.add_default_store(merchant)
