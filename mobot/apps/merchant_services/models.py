@@ -138,7 +138,7 @@ class Merchant(UserAccount):
     merchant_description = models.TextField(blank=True, default="A Mobot Merchant")
     objects = models.Manager()
 
-class MobotStore(Trackable):
+class Store(Trackable):
     name = models.TextField(blank=True, null=True, default="Mobot Shop")
     description = models.TextField(blank=True, null=True, default="Mobot Shop sells all kinds of goodies")
     privacy_policy_url = models.URLField(blank=True, default="https://mobilecoin.com/privacy")
@@ -150,7 +150,7 @@ class MobotStore(Trackable):
 
 class CustomerStorePreferences(Trackable):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    store = models.ForeignKey(MobotStore, on_delete=models.CASCADE, related_name="stores")
+    store_ref = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="stores")
     allows_contact = models.BooleanField(default=False)
 
 
@@ -165,7 +165,7 @@ class ProductGroup(Trackable):
 
 
 class Product(Trackable):
-    store = models.ForeignKey(MobotStore, on_delete=models.CASCADE)
+    store_ref = models.ForeignKey(Store, on_delete=models.CASCADE)
     product_group = models.ForeignKey(ProductGroup, on_delete=models.CASCADE, null=True, blank=True, default=None,
                                       related_name="products")
     name = models.TextField(blank=False, null=False, default="Hoodie(M)")
@@ -198,6 +198,25 @@ class Product(Trackable):
         return created
 
 
+
+class Shipment(Trackable):
+    class State(models.IntegerChoices):
+        CREATED = -1, 'created'
+        ADDRESS_RECEIVED = 0, 'address_received'
+        ADDRESS_CONFIRMED = 1, 'address_confirmed'
+        SHIPPED = 2, 'shipped'
+
+    state = models.IntegerField(default=State.CREATED, choices=State.choices)
+    tracking_number = models.TextField(help_text="Tracking number for texts", blank=True, null=True)
+    carrier = models.TextField(help_text="Carrier ID", blank=True, null=True)
+    address = AddressField(help_text="Customer shipping address", blank=True, null=True)
+
+    def confirm_address(self, address: Address):
+        self.address = address
+        self.address.save()
+        self.address.raw
+
+
 class InventoryItem(Trackable):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="inventory")
     sku = models.CharField(max_length=50, null=True, blank=True, db_index=True)
@@ -217,7 +236,7 @@ class OrderManager(models.Manager):
     def order_product(self, product: Product, customer: Customer) -> QuerySet:
         order = self.create(customer=customer, product=product)
         try:
-            inventory_item = InventoryItem.objects.get(order=None, product=product)
+            inventory_item = InventoryItem.objects.get(order=None)
             inventory_item.order = order
             inventory_item.save()
         except InventoryItem.DoesNotExist:
@@ -231,9 +250,8 @@ class Order(Trackable):
     class State(models.IntegerChoices):
         STATUS_NEW = 0, 'new'
         STATUS_AWAITING_SHIPMENT_INFO = 1, 'awaiting_shipment_info'
-        STATUS_SHIPMENT_INFO_RECEIVED = 2, 'shipment_info_received'
-        STATUS_PAYMENT_REQUESTED = 3, 'awaiting_payment'
-        STATUS_PAYMENT_RECEIVED = 4, 'payment_received'
+        STATUS_PAYMENT_REQUESTED = 2, 'awaiting_payment'
+        STATUS_PAYMENT_RECEIVED = 3, 'payment_received'
 
     # By making this unique, we fail if we've found
     item = models.OneToOneField(InventoryItem,
@@ -243,7 +261,7 @@ class Order(Trackable):
     customer = models.ForeignKey(Customer, on_delete=models.DO_NOTHING, blank=False, null=False, db_index=True)
     price = MoneyField(blank=True, null=True, max_digits=14, decimal_places=5)
     state = FSMIntegerField(choices=State.choices, default=State.STATUS_NEW)
-    shipment = models.OneToOneField(AddressField, related_name="sale", on_delete=models.CASCADE, blank=True, null=True)
+    shipment = models.OneToOneField(Shipment, related_name="sale", on_delete=models.CASCADE, blank=True, null=True)
     objects = OrderManager()
 
     @property
@@ -256,7 +274,7 @@ class CampaignGroup(ValidatableMixin):
 
 
 class CampaignManager(models.Manager):
-    def active_campaigns_by_store(self, store: MobotStore) -> QuerySet:
+    def active_campaigns_by_store(self, store: Store) -> QuerySet:
         super().get_queryset().filter(store=store)
 
 
@@ -271,7 +289,7 @@ class Campaign(ValidatableMixin):
     adjusted_price = MoneyField(max_digits=14, default=None, decimal_places=5, default_currency="PMB", blank=True,
                                 null=True)
     number_restriction = models.CharField(max_length=3)
-    store = models.ForeignKey(MobotStore, on_delete=models.DO_NOTHING, db_index=True)
+    store = models.ForeignKey(Store, on_delete=models.DO_NOTHING, db_index=True)
     campaign_groups = models.ManyToManyField(CampaignGroup, related_name="campaigns")
     objects = CampaignManager()
 

@@ -8,7 +8,7 @@ from moneyed import Money, GBP, Currency
 from decimal import Decimal
 from django.utils import timezone as tz
 from dataclasses import dataclass
-from mobot.apps.merchant_services.models import Customer, Merchant, MobotStore, Product, ProductGroup, DropSession, InventoryItem, Campaign, CampaignGroup, Validation
+from mobot.apps.merchant_services.models import Customer, Merchant, Store, Product, ProductGroup, DropSession, InventoryItem, Campaign, CampaignGroup, Validation
 from mobot.campaigns.hoodies import Size
 
 STORE_PHONE_NUMBER = "+447441433907"
@@ -61,8 +61,8 @@ class StoreFixtures:
         except TypeError as e:
             self.logger.exception(f"{name}:{phone_number}")
 
-    def add_default_store(self, merchant: Merchant) -> MobotStore:
-        s, created = MobotStore.objects.get_or_create(merchant_ref=merchant, name="Hoodie Store")
+    def add_default_store(self, merchant: Merchant) -> Store:
+        s, created = Store.objects.get_or_create(merchant_ref=merchant, name="Hoodie Store")
         s.save()
         return s
 
@@ -95,7 +95,7 @@ class StoreFixtures:
                             advertisement_start_time=tz.make_aware(datetime.datetime.now(), tz.get_current_timezone()),
                             start_time=tz.make_aware(datetime.datetime.now(), tz.get_current_timezone()),
                             end_time=tz.make_aware(datetime.datetime.now() + datetime.timedelta(days=3.0), tz.get_current_timezone()),
-                            adjusted_price=Money(20.0, GBP),
+                            adjusted_price=Money(20.0, "GBP"),
                             number_restriction="44",
                             quota=100)
 

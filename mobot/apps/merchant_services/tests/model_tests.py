@@ -9,7 +9,7 @@ django.setup()
 from address.models import Address, Locality
 from unittest import skip
 from mobot.campaigns.hoodies import Size
-from mobot.apps.merchant_services.models import Customer, MobotStore, Merchant, Product, InventoryItem, Campaign, Validation, ProductGroup, Order, Shipment
+from mobot.apps.merchant_services.models import Customer, Store, Merchant, Product, InventoryItem, Campaign, Validation, ProductGroup, Order, Shipment
 from mobot.apps.merchant_services.tests.fixtures import StoreFixtures
 
 
@@ -81,12 +81,12 @@ class CustomerTestCase(TestCase):
         inv = large_hoodie.inventory.all()
         self.assertEqual(len(inv), 10)
 
+
     def test_can_add_product_to_customer_order(self):
         from mobot.apps.merchant_services.models import OutOfStockException
         small_hoodie = self._add_hoodie(size=Size.S)
         small_hoodie.add_inventory(1)
         curr_inv = small_hoodie.inventory.filter(order=None).count()
-        self.assertEqual(curr_inv, 1)
         customer = self.cust_uk
         order = Order.objects.order_product(product=small_hoodie, customer=customer)
         print(order)
