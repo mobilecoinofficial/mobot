@@ -23,8 +23,10 @@ USE_TZ = True
 TEST = True
 
 FEE_PMOB = None
+MINIMUM_FEE_PMOB = 0.0
 ACCOUNT_ID = None
 STORE_ADDRESS = None
+PUBLIC_ADDRESS = None
 
 fs_client = fullservice.Client(FULLSERVICE_URL)
 if not TEST:
@@ -35,6 +37,7 @@ if not TEST:
         account_obj = accounts_map[account_id]
         STORE_ADDRESS = account_obj['main_address']
         ACCOUNT_ID = account_obj['account_id']
+
     except Exception as e:
         print("Failed to get full service account ID")
         if not DEBUG:

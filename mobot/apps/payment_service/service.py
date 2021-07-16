@@ -15,7 +15,6 @@ from mobot.apps.payment_service.models import *
 
 AccountId = NewType('AccountId', str) # Full service account ID
 PaymentAmount = NewType('PaymentAmount', float)
-Address = NewType('Address', str)
 Receipt = NewType('Receipt', str) # is this true?
 TransactionId = NewType('TransactionId', str) # Hex transaction ID
 
@@ -40,19 +39,23 @@ def _signald_to_fullservice(r):
         }
     }
 
+
 class TransactionTimeoutException(Exception):
+    """For use when this is better"""
     pass
+
 
 class PaymentService:
 
-    def __init__(self, mobilecoin_client: mobilecoin.Client):
-        self.mobilecoin_client = mobilecoin_client
+    def __init__(self, mobilecoin_client: mobilecoin.Client, account_id=None):
+        self.client = mobilecoin_client
         self.executor = ThreadPoolExecutor(4)
+        self.account_id = account_id if account_id else settings.ACCOUNT_ID
         self._futures = []
         self.logger = logging.getLogger("PaymentService")
 
-    def submit_payment_intent(self, account_id: AccountId, amount: PaymentAmount, to_address: Address) -> Payment:
-        transaction_log = from_dict(TransactionLog, data=self.client.build_and_submit_transaction(account_id, amount, to_address))
+    def submit_payment_intent(self, amount: PaymentAmount, to_address: str) -> Payment:
+        transaction_log = from_dict(TransactionLog, data=self.client.build_and_submit_transaction(self.account_id, amount, to_address))
         transaction = Transaction(transaction_id=transaction_log.txo_id)
         transaction.save()
         payment = Payment(transaction=transaction)
@@ -61,37 +64,33 @@ class PaymentService:
 
     def get_payment_status(self, payment: Payment) -> Payment:
         ## TODO: Brian: Help with format of this returned object
-        txo: Transaction = self.client.check_receiver_receipt_status(address=Address, receipt=payment.transaction.receipt)
+        return self.get_payment_result(transaction=payment.transaction)
 
-    def get_payment_result(self, transaction: Transaction, max_time_secs: float = 30) -> Payment:
-        start_time = time.time()
-        time_elapsed = 0
-        attempts = 0
-        try:
-            while transaction.transaction_status == transaction.Status.TransactionPending:
-                time_elapsed = time.time() - start_time
-                if time_elapsed > max_time_secs:
-                    raise TransactionTimeoutException(f"Transaction polling lasted longer than max time {max_time_secs}")
-                try:
-                    self.client.poll_txo(transaction.transaction_id)
-                except Exception as e:
-                    transaction.transaction_status = transaction.Status.Other
-                    self.logger.exception("TxOut did not land yet")
-                    attempts += 1
-                    time.sleep(attempts * 0.5)
-                finally:
-                    transaction.save()
-        except TransactionTimeoutException as e:
-            self.logger.exception(f"Failed to get payment result of {transaction} before timeout.")
+    def get_payment_result(self, receipt, max_time_secs: float = 30) -> Payment:
+        transaction_status = "TransactionPending"
+        receipt_status = {}
 
-    def submit_payment_to_user(self, account_id: AccountId, amount_in_mob: float, customer_payments_address: Address) -> Transaction:
-        tx_proposal = self.client.build_transaction(account_id, amount_in_mob, customer_payments_address)
-        txo_id = self._submit_transaction(tx_proposal, account_id)
+        while transaction_status == "TransactionPending":
+            receipt_status = self.client.check_receiver_receipt_status(self.account_id, _signald_to_fullservice(receipt))
+            transaction_status = receipt_status["receipt_transaction_status"]
+
+            if transaction_status != "TransactionSuccess":
+                return "The transaction failed!"
+
+
+        amount_paid_mob = mobilecoin.pmob2mob(receipt_status.get("txo").get("value_pmob"))
+
+        payment = Payment.objects.create(amount=amount_paid_mob,
+                                         state=Payment.Status.PAYMENT_RECEIVED if amount_paid_mob else Payment.Status.PAYMENT_FAILED)
+
+        return payment
+
+    def submit_payment_to_user(self, amount_in_mob: float, customer_payments_address: str) -> Payment:
+        tx_proposal = self.client.build_transaction(self.account_id, amount_in_mob, customer_payments_address)
+        txo_id = self._submit_transaction(tx_proposal, self.account_id)
         receipt = self._create_receiver_receipt(tx_proposal)
-        transaction = Transaction(transaction_id=txo_id, transaction_amt=amount_in_mob, receipt=receipt)
-
-        result_future = self.executor.submit(self.get_payment_result, transaction)
-        self._futures.append(result_future)
+        payment = self.get_payment_result(receipt)
+        return payment
 
     def _create_receiver_receipt(self, tx_proposal) -> Receipt:
         receiver_receipts = self.client.create_receiver_receipts(tx_proposal)
@@ -110,4 +109,6 @@ class PaymentService:
 
         return list_of_txos[0]["txo_id_hex"]
 
+    def get_transaction_proposal(self, amount_in_mob: float, customer_payments_address = str):
+        return self.client.build_transaction(account_id=self.account_id, amount=amount_in_mob, to_address=customer_payments_address)
 

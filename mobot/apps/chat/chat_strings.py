@@ -44,3 +44,6 @@ class ChatStrings:
     @staticmethod
     def offer_text(customer: Customer, campaign: Campaign) -> str:
         return f"Hey {customer.name} We're happy to offer you the following campaign: {campaign.description}"
+
+    UNSOLICITED_PAYMENT = "MOBot here! You sent us an unsolicited payment. We're returning it minus a network fee to cover our costs. We can't promise to always be paying attention and return unsolicited payments, so we suggest only sending us payments when we request them"
+    OVERPAYMENT = "MOBot here! You've overpaid us by {overpayment_amount} for your order. We'll send the overpayment amount back, minus transaction fees."

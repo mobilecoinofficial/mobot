@@ -15,6 +15,9 @@ from address.models import AddressField
 from address.models import Address
 from django.db.transaction import atomic
 
+from mobot.apps.payment_service.models import Payment
+from mobot.lib.currency import MOB, PMOB
+
 from django.contrib.auth.models import User
 from mobot.signald_client import Signal
 
@@ -27,10 +30,6 @@ logger.setLevel(settings.LOG_LEVEL)
 class Trackable(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
-    created_by = models.ForeignKey(User, related_name='created_%(class)s', on_delete=models.DO_NOTHING, null=True,
-                                   blank=True)
-    updated_by = models.ForeignKey(User, related_name='updated_%(class)s', on_delete=models.DO_NOTHING, null=True,
-                                   blank=True)
 
     class Meta:
         abstract = True
@@ -173,8 +172,8 @@ class Product(Trackable):
     short_description = models.TextField(default="Hoodie, Size M", blank=False, null=False)
     image_link = models.URLField(default=None, blank=True, null=True)
     allows_refund = models.BooleanField(default=True, blank=False, null=False)
-    price = MoneyField(max_digits=14, decimal_places=5, default_currency='GBP', help_text='Price of the product',
-                       blank=False, default=20.0)
+    price = MoneyField(max_digits=14, decimal_places=5, default_currency=PMOB, help_text='Price of the product in PMOB',
+                       blank=False, default=0.0)
     metadata = models.JSONField(blank=False, null=False, db_index=True, default=dict)
 
     class Meta:
@@ -229,27 +228,26 @@ class OrderManager(models.Manager):
 
 class Order(Trackable):
     class State(models.IntegerChoices):
-        STATUS_NEW = 0, 'new'
-        STATUS_AWAITING_SHIPMENT_INFO = 1, 'awaiting_shipment_info'
-        STATUS_SHIPMENT_INFO_RECEIVED = 2, 'shipment_info_received'
-        STATUS_PAYMENT_REQUESTED = 3, 'awaiting_payment'
-        STATUS_PAYMENT_RECEIVED = 4, 'payment_received'
+        NEW = 0, 'new'
+        AWAITING_SHIPMENT_INFO = 1, 'awaiting_shipment_info'
+        SHIPPING_INFO_RECEIVED = 2, 'shipment_info_received'
+        PAYMENT_REQUESTED = 3, 'awaiting_payment'
+        PAYMENT_RECEIVED = 4, 'payment_received'
+        OVERPAID = 5, 'overpaid'
 
-    # By making this unique, we fail if we've found
+    state = FSMIntegerField(choices=State.choices, default=State.NEW)
     item = models.OneToOneField(InventoryItem,
                                 related_name="order", db_index=True, blank=True, null=True, on_delete=models.CASCADE,
                                 unique=True)
     product = models.ForeignKey(Product, on_delete=models.DO_NOTHING, blank=False, null=False)
     customer = models.ForeignKey(Customer, on_delete=models.DO_NOTHING, blank=False, null=False, db_index=True)
-    price = MoneyField(blank=True, null=True, max_digits=14, decimal_places=5)
-    state = FSMIntegerField(choices=State.choices, default=State.STATUS_NEW)
-    shipment = models.OneToOneField(AddressField, related_name="sale", on_delete=models.CASCADE, blank=True, null=True)
+    address = AddressField(blank=True, null=True)
+    payment = models.OneToOneField(Payment, related_name="order", on_delete=models.DO_NOTHING, blank=True, null=True)
     objects = OrderManager()
 
     @property
-    def total_price(self):
-        return self.price if self.price else self.product.price
-
+    def overpayment_amount(self) -> Money:
+        return self.payment.amount - self.product.price
 
 class CampaignGroup(ValidatableMixin):
     name = models.TextField(help_text="Campaign group name", blank=False, null=False)

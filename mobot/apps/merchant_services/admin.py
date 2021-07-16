@@ -1,5 +1,5 @@
 from django.contrib import admin
-from mobot.apps.merchant_services.models import MobotStore, Customer, CustomerStorePreferences, Merchant, Product, Shipment, Order, Campaign, UserAccount
+from mobot.apps.merchant_services.models import MobotStore, Customer, CustomerStorePreferences, Merchant, Product, Order, Campaign, UserAccount
 from mobot.apps.payment_service.models import Payment, Transaction
 from mobot.apps.chat.models import Message
 
@@ -44,7 +44,7 @@ class TransactionAdmin(admin.ModelAdmin):
 class ProductAdmin(admin.ModelAdmin):
     pass
 
-@admin.register(Shipment)
-class ShipmentAdmin(admin.ModelAdmin):
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
     pass
 

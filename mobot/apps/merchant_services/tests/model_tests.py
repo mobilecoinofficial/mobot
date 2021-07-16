@@ -6,10 +6,9 @@ from moneyed import Money, GBP
 from decimal import Decimal
 import django
 django.setup()
-from address.models import Address, Locality
-from unittest import skip
+
 from mobot.campaigns.hoodies import Size
-from mobot.apps.merchant_services.models import Customer, MobotStore, Merchant, Product, InventoryItem, Campaign, Validation, ProductGroup, Order, Shipment
+from mobot.apps.merchant_services.models import Customer, Product, InventoryItem, Campaign, Order
 from mobot.apps.merchant_services.tests.fixtures import StoreFixtures
 
 
@@ -33,7 +32,7 @@ class CustomerTestCase(TestCase):
             price=price,
             description=f"MobileCoin Hoodie {size}",
             product_group=self.hoodie_product_group,
-            store_ref=self.store,
+            store=self.store,
             metadata=dict(size=size)
         )
         return hoodie_product
