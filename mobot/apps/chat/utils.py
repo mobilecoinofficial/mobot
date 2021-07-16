@@ -31,3 +31,17 @@ def chat_session_state_filter(states: Set[MobotChatSession.State]) -> MobotConte
         return ctx.chat_session.state in states if states else True
 
     return _filter
+
+
+def signald_to_fullservice(payment_receipt):
+    return {
+        "object": "receiver_receipt",
+        "public_key": payment_receipt['txo_public_key'],
+        "confirmation": payment_receipt['txo_confirmation'],
+        "tombstone_block": str(payment_receipt['tombstone']),
+        "amount": {
+            "object": "amount",
+            "commitment": payment_receipt['amount_commitment'],
+            "masked_value": str(payment_receipt['amount_masked'])
+        }
+    }

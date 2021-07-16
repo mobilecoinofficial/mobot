@@ -39,25 +39,18 @@ class MobotTests(TestCase):
         signal_client = Signal(str(self.fixtures.merchant.phone_number))
         signal_client.send_message = MagicMock()
         mobilecoin_client = Client("foo")
-        mobot = Mobot(signal=signal_client, mobilecoin_client=mobilecoin_client,
+        mobot = Mobot(signal=signal_client, fullservice=mobilecoin_client,
                       campaign=self.fixtures.original_drop, store=self.fixtures.store)
         return mobot
 
     def test_can_instantiate_mobot(self):
         subscriber = QueueSubscriber(name="Mobot")
         with mock.patch.object(Signal, 'receive_messages', return_value=produce_messages(1)) as mock_method:
-            signal_client = Signal(str(self.fixtures.merchant.phone_number))
-            signal_client.register_subscriber(subscriber)
-            mobilecoin_client = Client("foo")
-            mobot = Mobot(signal=signal_client, mobilecoin_client=mobilecoin_client, campaign=self.fixtures.original_drop, store=self.fixtures.store)
+            mobot = self._get_mobot()
 
     def test_can_register_and_handle_hello_world(self):
         with mock.patch.object(Signal, 'receive_messages', return_value=[produce_message("hello", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number))]) as mock_method:
-            signal_client = Signal(str(self.fixtures.merchant.phone_number))
-            signal_client.send_message = MagicMock()
-            mobilecoin_client = Client("foo")
-            mobot = Mobot(signal=signal_client, mobilecoin_client=mobilecoin_client,
-                          campaign=self.fixtures.original_drop, store=self.fixtures.store)
+            mobot = self._get_mobot()
             mobot.register_handler(name="test", regex="^hello$", method=_test_handler)
             mobot.run(max_messages=1)
             for message in Message.objects.all():
@@ -71,6 +64,7 @@ class MobotTests(TestCase):
     def test_can_handle_unknown_match(self):
         with mock.patch.object(Signal, 'receive_messages', return_value=[produce_message("Blah", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number))]) as mock_method:
             mobot = self._get_mobot()
+            mobot.register_default_handlers()
             mobot.run(max_messages=1)
             for message in Message.objects.all():
                 print_message(message, self.logger)
@@ -79,6 +73,7 @@ class MobotTests(TestCase):
     def test_can_show_privacy_policy(self):
         with mock.patch.object(Signal, 'receive_messages', return_value=[produce_message("p", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number))]) as mock_method:
             mobot = self._get_mobot()
+            mobot.register_default_handlers()
             mobot.run(max_messages=1)
             self.assertEqual(Message.objects.count(), 2)
             mobot_messages = [message for message in Message.objects.all()]
@@ -91,6 +86,7 @@ class MobotTests(TestCase):
     def test_can_handle_inventory(self):
         with mock.patch.object(Signal, 'receive_messages', return_value=[produce_message("i", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number)), produce_message("i", username=self.fixtures.cust_uk.name, source=str(self.fixtures.cust_uk.phone_number))]) as mock_method:
             mobot = self._get_mobot()
+            mobot.register_default_handlers()
             mobot.run(max_messages=1)
             mobot_messages = [message for message in Message.objects.all()]
             for message in mobot_messages:

@@ -1,4 +1,6 @@
 from django.db import models
+from djmoney.models.fields import MoneyField
+from mobot.lib.currency import PMOB, MOB
 
 
 class Transaction(models.Model):
@@ -8,7 +10,6 @@ class Transaction(models.Model):
         TransactionSuccess = 1
         Other = 2
 
-    transaction_id = models.TextField(primary_key=True)
     transaction_amt = models.FloatField(default=0.0)
     transaction_status = models.IntegerField(choices=Status.choices, default=Status.TransactionSubmitted)
     receipt = models.TextField(blank=True)
@@ -35,7 +36,8 @@ class Payment(models.Model):
         PAYMENT_FAILED = 2
 
     status = models.IntegerField(choices=Status.choices, default=Status.PAYMENT_NOT_SUBMITTED)
-    transaction = models.ForeignKey(Transaction, on_delete=models.CASCADE)
+    amount = MoneyField(max_digits=14, decimal_places=5, default_currency=PMOB, help_text='Price of the product in PMOB',
+                       blank=False, default=0.0)
 
     def clean(self):
         if self.transaction.failed:
