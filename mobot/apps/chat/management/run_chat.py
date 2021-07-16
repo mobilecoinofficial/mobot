@@ -1,7 +1,6 @@
 import mobilecoin
 from django.core.management.base import BaseCommand
 from argparse import ArgumentParser
-from mobot.apps.chat.models import MobotChatSession, MobotBot
 from mobot.apps.chat.chat_client import Mobot
 from mobot.signald_client import Signal
 from mobot.apps.merchant_services.models import Campaign, Merchant, MobotStore
