@@ -1,3 +1,5 @@
+# Copyright (c) 2021 MobileCoin. All rights reserved.
+
 """mobot URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:

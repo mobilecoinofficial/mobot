@@ -1,3 +1,5 @@
+# Copyright (c) 2021 MobileCoin. All rights reserved.
+
 """
 Django settings for mobot project.
 

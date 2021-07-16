@@ -1,3 +1,5 @@
+# Copyright (c) 2021 MobileCoin. All rights reserved.
+
 from datetime import tzinfo
 import os
 import time
