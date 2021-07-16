@@ -9,12 +9,13 @@ from django.conf import settings
 from django.utils import timezone
 
 from .models import MobotBot
-from mobot.apps.merchant_services.models import Customer, CustomerStorePreferences, Campaign, MobotStore
+from mobot.apps.merchant_services.models import Customer, CustomerStorePreferences, Campaign, MobotStore, Order
 from mobot.signald_client import Signal
 from mobot.lib.signal import SignalCustomerDataClient
 from mobot.signald_client.types import Message as SignalMessage
 from mobot.signald_client.main import QueueSubscriber
 from mobot.apps.chat.context import MessageContextManager
+from mobot.apps.payment_service.service import PaymentService
 from .handlers import *
 from .utils import *
 
@@ -61,18 +62,21 @@ class MobotDispatcher:
 
 
 class Mobot:
-    def __init__(self, signal: Signal, mobilecoin_client: mobilecoin.Client, store: MobotStore, campaign: Campaign,
-                 subscriber: QueueSubscriber = None, **kwargs):
+    def __init__(self,
+                 signal: Signal,
+                 fullservice: mobilecoin.Client,
+                 store: MobotStore,
+                 campaign: Campaign):
         self.name = f"Mobot-{store.name}"
         self.logger = logging.getLogger(f"Mobot-{store.id}")
         self.signal = signal
         self.campaign = campaign
         self.store = store
-        self.mobilecoin_client = mobilecoin_client
+        self.payment_service = PaymentService(fullservice)
         self.mobot: MobotBot = self.get_mobot_bot()
-        self.message_context_manager = MessageContextManager(self.mobot, self.logger, self.signal)
+        self.message_context_manager = MessageContextManager(self.mobot, self.logger, self.signal, payment_service=self.payment_service)
         self.customer_data_client = SignalCustomerDataClient(signal=self.signal)
-        self._subscriber = subscriber if subscriber else QueueSubscriber(self.name)
+        self._subscriber = QueueSubscriber(self.name)
         self._executor_futures = []
         self.handlers = []
         self._executor = ThreadPoolExecutor(4)
@@ -137,8 +141,8 @@ class Mobot:
         with context:
             matching_handlers = []
             for handler in self.handlers:
-                if handler.context_matches(context) and handler.text_filtered:
-                    # First, check for explicit text
+                # First, check for explicit text or payment
+                if handler.context_matches(context) and handler.text_filtered or context.message.payment:
                     matching_handlers.append(handler)
             if not matching_handlers:
                 for handler in self.handlers:
@@ -152,6 +156,11 @@ class Mobot:
                     self.logger.exception(f"Failed to run handler for {handler.name}")
             if not matching_handlers:
                 raise NoMatchingHandlerException(message.text)
+
+    def check_ctx_order_contains_unwanted_payment(self, context: MobotContext) -> bool:
+        if context.message.payment:
+            return context.order is not None and context.order.state != Order.State.PAYMENT_REQUESTED
+        return False
 
     def register_default_handlers(self):
         self.register_handler(name="unsubscribe", regex="^(u|unsubscribe)$", method=unsubscribe_handler)
@@ -177,18 +186,20 @@ class Mobot:
         self.register_handler(name="privacy", regex="^(p|privacy)$", method=privacy_policy_handler)
         self.register_handler(name="inventory", regex="^(i|inventory)$", method=inventory_handler,
                               drop_session_states={DropSession.State.ACCEPTED, DropSession.State.OFFERED})
+        self.register_handler(name="unsolicited_payment", method=handle_unsolicited_payment,
+                              ctx_conditions=[self.check_ctx_order_contains_unwanted_payment])
+        self.register_handler(name="payment", method=handle_order_payment)
 
     def find_and_greet_targets(self, campaign):
         for customer in self.campaign.get_target_customers():
             preferences, created = CustomerStorePreferences.objects.get_or_create(customer=customer,
                                                                                   store_ref=campaign.store)
-
-            self.logger.info("Reaching out to existing customers if they pass target validation")
             ctx = self.get_context_from_customer(customer)
             if ctx.drop_session.state == DropSession.State.CREATED:
-                ctx.log_and_send_message(ChatStrings.GREETING.format(store=self.store,
-                                                                     campaign=campaign,
-                                                                     campaign_description=campaign.description))
+                if preferences.allows_contact:
+                    ctx.log_and_send_message(ChatStrings.GREETING.format(store=self.store,
+                                                                         campaign=campaign,
+                                                                         campaign_description=campaign.description))
 
     def _shutdown_now(self):
         self._executor.shutdown(wait=False)
@@ -201,12 +212,11 @@ class Mobot:
 
     def run(self, max_messages=0):
         self.signal.register_subscriber(self._subscriber)
-        self.register_default_handlers()
         self._submit_future(self.signal.run_chat, True)
         while True:
             for message in self._subscriber.receive_messages():
                 self.logger.debug(f"Mobot received message: {message}")
-                self._executor_futures.append(self._executor.submit(self.find_and_greet_targets, self.campaign))
+                self._submit_future(self.find_and_greet_targets, self.campaign)
                 # Handle in foreground while I'm testing
                 if settings.TEST:
                     self._handle_chat(message)
