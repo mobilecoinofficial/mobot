@@ -373,7 +373,6 @@ class Signal:
         self._payment_handlers.append(func)
         return func
 
-
     def run_chat(self, auto_send_receipts=False):
         """
         Start the chat event loop.
