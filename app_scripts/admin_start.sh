@@ -31,6 +31,9 @@ python /app/mobot/manage.py migrate payment_service
 python /app/mobot/manage.py makemigrations merchant_services
 python /app/mobot/manage.py migrate payment_service
 
+python /app/mobot/manage.py makemigrations chat
+python /app/mobot/manage.py migrate chat
+
 python /app/mobot/manage.py createcachetable
 # python /app/mobot/manage.py merchant_admin
 
