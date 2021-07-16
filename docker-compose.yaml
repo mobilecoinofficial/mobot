@@ -15,11 +15,13 @@ services:
         ipv4_address: 10.200.0.5
 
   signald:
-    image: mobilecoin/signald:latest
+    image: mobilecoin/signald:0.12.0-mc.0.0.3-staging
     volumes:
     - signald:/signald
     expose:
     - 15432
+    ports:
+    - "15432:15432"
     networks:
       mobot:
         ipv4_address: 10.200.0.6
@@ -36,6 +38,8 @@ services:
     - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node2.test.mobilecoin.com/
     expose:
     - 9090
+    ports:
+    - "9090:9090"
     networks:
       mobot:
         ipv4_address: 10.200.0.7
@@ -73,7 +77,7 @@ services:
     depends_on:
     - db
     - signald
-    # - full-service
+    - full-service
     - admin
     networks:
       mobot:
