@@ -19,9 +19,6 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 python /app/mobot/manage.py makemigrations exchange
 python /app/mobot/manage.py migrate exchange
 
-python /app/mobot/manage.py makemigrations chat
-python /app/mobot/manage.py migrate chat
-
 python /app/mobot/manage.py makemigrations common
 python /app/mobot/manage.py migrate common
 
@@ -29,7 +26,7 @@ python /app/mobot/manage.py makemigrations payment_service
 python /app/mobot/manage.py migrate payment_service
 
 python /app/mobot/manage.py makemigrations merchant_services
-python /app/mobot/manage.py migrate payment_service
+python /app/mobot/manage.py migrate merchant_services
 
 python /app/mobot/manage.py makemigrations chat
 python /app/mobot/manage.py migrate chat
