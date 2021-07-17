@@ -3,7 +3,7 @@
     <deployment type="docker-compose.yml">
       <settings>
         <option name="buildKitEnabledForCompose" value="true" />
-        <option name="envFilePath" value="" />
+        <option name="envFilePath" value="$PROJECT_DIR$/test.env" />
         <option name="services">
           <list>
             <option value="db" />
@@ -11,9 +11,12 @@
           </list>
         </option>
         <option name="sourceFilePath" value="docker-compose.yml" />
+        <option name="upAlwaysRecreate" value="true" />
         <option name="upDetach" value="false" />
         <option name="upExitCodeFromService" value="" />
         <option name="upRemoveOrphans" value="true" />
+        <option name="upRenewAnonVolumes" value="true" />
+
         <option name="upTimeout" value="" />
       </settings>
     </deployment>
