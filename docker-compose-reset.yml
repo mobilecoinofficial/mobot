@@ -41,7 +41,7 @@ services:
       dockerfile: ./Dockerfile.dev
     entrypoint: /bin/bash /scripts/init.sh admin
     env_file:
-    - ./docker/env.env
+    - ./docker/reset.env
     volumes:
     - signald:/signald
     depends_on:
@@ -51,6 +51,29 @@ services:
     networks:
       mobot:
         ipv4_address: 10.200.0.8
+
+  chatbot:
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 20s
+        max_attempts: 1
+        window: 120s
+    build:
+      context: .
+      dockerfile: ./Dockerfile.dev
+    entrypoint: /bin/bash /scripts/init.sh chat_shell
+    env_file:
+    - ./docker/env.env
+    volumes:
+    - signald:/signald
+    depends_on:
+    - db
+    - admin
+    networks:
+      mobot:
+        ipv4_address: 10.200.0.10
+
 
 volumes:
   db:

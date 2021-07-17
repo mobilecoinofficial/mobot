@@ -1,7 +1,4 @@
-#!/usr/bin/env bash
-
-set -x
-
+. /app/mobot/app_scripts/reset_admin.sh
 
 # uncomment if migrations fail
 if [ "${RESET_ALL}" == true ]; then
@@ -41,12 +38,3 @@ python /app/mobot/manage.py makemigrations chat
 python /app/mobot/manage.py migrate chat
 
 python /app/mobot/manage.py migrate
-python /app/mobot/manage.py createcachetable
-
-# python /app/mobot/manage.py merchant_admin
-
-
-#/app/mobot/app_scripts/admin.sh create_wallet
-
-
-uwsgi --ini /app/mobot/uwsgi.ini
