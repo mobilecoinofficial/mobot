@@ -43,7 +43,6 @@ if not TEST:
         if not DEBUG:
             raise e
 
-
     try:
         network_status_response = fs_client.get_network_status()
         FEE_PMOB = int(network_status_response['fee_pmob'])

@@ -129,6 +129,9 @@ class Customer(UserAccount):
     received_sticker_pack = models.BooleanField(default=False)
     objects = models.Manager()
 
+    def __str__(self):
+        return f"Customer({self.name}, {self.phone_number})"
+
 
 class Merchant(UserAccount):
     class Meta(UserAccount.Meta):
@@ -137,6 +140,10 @@ class Merchant(UserAccount):
     merchant_description = models.TextField(blank=True, default="A Mobot Merchant")
     objects = models.Manager()
 
+    def __str__(self):
+        return f"Merchant({self.name}, {self.phone_number})"
+
+
 class MobotStore(Trackable):
     name = models.TextField(blank=True, null=True, default="Mobot Shop")
     description = models.TextField(blank=True, null=True, default="Mobot Shop sells all kinds of goodies")
@@ -144,7 +151,7 @@ class MobotStore(Trackable):
     merchant_ref = models.ForeignKey(Merchant, on_delete=models.CASCADE, related_name="store_owner")
 
     def __str__(self):
-        return f'{self.name}:{self.phone_number}:store'
+        return f'{self.name}:{self.description}{self.merchant_ref.phone_number}:store'
 
 
 class CustomerStorePreferences(Trackable):
