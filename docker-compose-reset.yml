@@ -41,7 +41,7 @@ services:
       dockerfile: ./Dockerfile.dev
     entrypoint: /bin/bash /scripts/init.sh admin
     env_file:
-    - ./docker/env.env
+    - ./docker/reset.env
     volumes:
     - signald:/signald
     depends_on:
