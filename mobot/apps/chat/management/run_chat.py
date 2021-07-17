@@ -1,7 +1,6 @@
 import mobilecoin
 from django.core.management.base import BaseCommand
 from argparse import ArgumentParser
-from mobot.apps.chat.models import MobotChatSession, MobotBot
 from mobot.apps.chat.chat_client import Mobot
 from mobot.signald_client import Signal
 from mobot.apps.merchant_services.models import Campaign, Merchant, MobotStore
@@ -16,8 +15,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         campaign_id = options['campaign_id']
         store_id = options['store_id']
-        campaign = Campaign.objects.get(id=campaign_id)
-        store = MobotStore.objects.get(id=store_id)
+        campaign = Campaign.objects.get(pk=campaign_id)
+        store = MobotStore.objects.get(pk=store_id)
         signal = Signal(str(MobotStore.merchant_ref.phone_number))
         fullservice_client = settings.fullservice
         chat = Mobot(signal=signal, mobilecoin_client=fullservice_client, campaign=campaign, store=store)

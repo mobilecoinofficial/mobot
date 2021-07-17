@@ -3,13 +3,9 @@
     <deployment type="docker-compose.yml">
       <settings>
         <option name="buildKitEnabledForCompose" value="true" />
-        <option name="envFilePath" value="$PROJECT_DIR$/docker/env" />
+        <option name="envFilePath" value="" />
         <option name="envVars">
           <list>
-            <DockerEnvVarImpl>
-              <option name="name" value="FLUSH" />
-              <option name="value" value="true" />
-            </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="MAKE_ADMIN" />
               <option name="value" value="true" />
@@ -20,9 +16,13 @@
             </DockerEnvVarImpl>
           </list>
         </option>
-        <option name="removeVolumesOnComposeDown" value="true" />
-        <option name="sourceFilePath" value="docker-compose.yml" />
-        <option name="upAlwaysRecreate" value="true" />
+        <option name="services">
+          <list>
+            <option value="db" />
+            <option value="admin" />
+          </list>
+        </option>
+        <option name="sourceFilePath" value="docker-compose-reset.yml" />
         <option name="upDetach" value="false" />
         <option name="upExitCodeFromService" value="" />
         <option name="upRemoveOrphans" value="true" />

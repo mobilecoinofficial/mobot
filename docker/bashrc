@@ -1,1 +1,2 @@
 source /app/mobot/app_scripts/set_up_env.sh
+source /tmp/env.sh

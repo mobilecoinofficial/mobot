@@ -49,16 +49,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_celery_results',
     'djmoney',
     'djmoney.contrib.exchange',
     'django_fsm',
     'address',
     'mobot.apps.common.apps.CommonAppConfig',
     'mobot.apps.drop.apps.DropAppConfig',
-    'mobot.apps.chat.apps.MobotChatAppsConfig',
     'mobot.apps.payment_service.apps.PaymentServiceAppConfig',
     'mobot.apps.merchant_services.apps.MerchantServicesConfig',
+    'mobot.apps.chat.apps.MobotChatAppsConfig',
     'mobot.apps.mobot_web.apps.MobotWebConfig'
 ]
 
@@ -126,7 +125,6 @@ if DATABASE == "postgresql":
             'LOCATION': 'cache_table',
         }
     }
-
 else:
     # https://docs.microsoft.com/en-us/azure/app-service/configure-custom-container?pivots=container-linux#use-persistent-shared-storage
     DB_ROOT = BASE_DIR if DEBUG else '/home'
