@@ -1,126 +1,67 @@
-# mobot
-Mobilecoin/Signal Chatbot integration
+Where I left off.
 
-## Local Config
+I got the bulk of the logic for accepting and returning payments done, though it's untested.
 
-| Variable | Description |
-| --- | --- |
-| `DATABASE` | Type of DB `postgresql` or `sqlite` |
-| `DATABASE_NAME` | PostgreSQL database name |
-| `DATABASE_USER` | PostgreSQL database user |
-| `DATABASE_PASSWORD` | PostgreSQL database password |
-| `DATABASE_SSL_MODE` | PostgreSQL database SSL mode (`preferred`) |
-| `DATABASE_HOST` | PostgreSQL database host |
-| `SIGNALD_ADDRESS` | `signald` service host |
-| `FULLSERVICE_ADDRESS` | `full-service` service host |
-| `DEBUG` | django - debug value |
-| `SECRET_KEY` | django - secret key value |
-| `ALLOWED_HOSTS` | django - Allowed request `Host` header values |
-| `STORE_NUMBER` | run_mobot_client - signal phone number |
+I fixed up the docker build so the environment and all object models migrate successfully in Postgresql.
 
+Start up your Pycharm, and rebuild all docker images from cache. You'll need pipenv, direnv, and pyenv installed, and you'll need python 3.9.5.
 
-## Running with docker-compose
+There are some hints in host_management_scripts/install_local_environment.sh, but that's some stuff I was working on to automate host setup and didn't quite finish up. It worked on parts of it for me, but they're more personal utilities and I guarantee nothing. They may make it into a future PR.
 
-This compose file has been set up to run in production mode. 
+There's a command at python mobot/manage.py set_up_drops to help do this stuff, but I didn't quite finish it. It's almost working, though.
 
-```
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose up --build
-```
+I'd need to stand up a test campaign and run signal bot to test the manage command I made for mobot, which you can run by running the Admin service, then logging into that using docker exec -it <container id> /bin/bash.
 
-This will start up:
+Get into the django shell with:
 
-* postgresql
-* signald
-* full-service
+|
 
-This will build:
+python mobot/manage.py shell
 
-* admin
-* mobot-client
+ |
 
-### Setup
+Once you're there, you can create a Merchant object, then a Store object using the merchant object:
 
-On first start up after database and apps are up, you'll need to create an admin user for the portal.
+|
 
-```
-docker-compose exec admin python manage.py createsuperuser
-<follow prompts>
-```
+from mobot.apps.merchant_services.models import *
 
-### Admin Portal
+from mobot.lib.currency import *
 
-The docker compose uses static IP addresses in the 10.200.0.0/24 range. 
+merchant = Merchant.objects.create(name="greg",phone_number="+18054412653")
 
-The portal can be reached at http://10.200.0.8:8000/admin/
+store = MobotStore.objects.create(merchant_ref=merchant, description="Hoodie shop, we sell hoodies", name="HoodieShop")
 
-Bonus add a `/etc/hosts` entry to `mobot.local` and browse to a more friendly address:
+ |
 
-```
-10.200.0.8 mobot.local
-```
+From there,  you can go on and create campaign and validations and inventory as show in the unit tests here:
 
-http://mobot.local:8000/admin/
+<https://github.com/mobilecoinofficial/mobot/blob/gr-mobot-0.1/mobot/apps/merchant_services/tests/fixtures.py>
 
+Or, you can finish up the mobot/apps/drop/management/commands/set_up_drops.py command to help out. It's something I threw together and didn't have time to finish entirely. It'll automate a few of the drop creation bits.
 
-### Subscribing a number
+Running Mobot itself is fairly straightforward, once all dependencies are set up. You can run it off the admin box by getting a terminal in and running
 
-1. Start apps
-    Mobot-client may fail on initial subscribe.
+|
 
-1. Exec into signald container and use nc to register number and complete captcha, and text validation.
+python mobot/manage.py run_chat --campaign-id (campaign PK) --store-id (store PK)
 
-    ```
-    docker-compose exec -it signald bash
-    nc 0.0.0.0 15432
-    ```
+ |
 
-    Generate captcha code https://signalcaptchas.org/registration/generate.html
+You'll be able to get the pk of any object by searching for it using django's shell and accessing the "pk" attribute. The chat should just run.
 
-    ```
-    {"type": "register", "username":"+12034058799", "captcha": ""}
-    ```
+In production, you can set up an init script once you know your campaign and store id.
 
-    Verify with text message.
+I wish I'd had more time to make it super simple, but all the pieces are pretty much there.
 
-    ```
-    {"type": "verify", "username":"+12034058799", "code": ""}
-    ```
+Please look at the unit tests available to see how the various systems operate. They cover a lot of the behavior.
 
-    Subscribe to see messages flow.
+Be careful around the new Payment additions. I wanted to throw a couple in there, but I didn't finish in time.
 
-    ```
-    {"type": "subscribe", "username":"+12034058799"}
-    ```
+Also, do note that you can define hoodie prices in GBP. There's a few exaples of a function called "currency_convert" provided by a library I wrote a MOB extension/FTX query handler for. This means you can put prices in the DB and convert them to MOB based on the last known price against the USD market, should you choose. There's a command defined at
 
-## CI/CD
+<https://github.com/mobilecoinofficial/mobot/blob/gr-mobot-0.1/mobot/apps/merchant_services/management/commands/convert_currency.py>
 
-Pushes to `develop` will build an image with a 'sha-12345678' type tag. Chart with new deployed to staging.
+You can run that with python mobot/manage.py convert_currency --value 10 --from USD --to MOB
 
-Pushes to `main` will build an image with a semver `0.0.0` type tag. Chart with new tagged container will be deployed to production.
-
-### Auto Tagging
-
-Tags are semver `v0.0.0` style. 
-
-By default pushes to `main` will automatically bump the latest `patch`. To bump `major`, `minor` or no tag `none` add `#major`, `#minor`, `#patch`, `#none` to the commit message.
-
-### CI/CD Config
-
-**Configuration Values**
-
-Variables for CI/CD and configuration are defined in GitHub Secrets for this repo. These values are not actually secrets, but I wanted a way to change values without having to commit new code.
-
-A template for the Helm chart values is in `.github/workflows/helpers/vaules.template.yaml`
-
-| Variable | Description | Location |
-| --- | --- | --- |
-| `mobotConfig.storeNumbers` | List of store signal phone numbers | values.yaml file saved in `<environment>_VALUES` variable, GitHub Secrets |
-| `mobotConfig.hostname` | FQDN for ingress and django admin portal | values.yaml file saved in `<environment>_VALUES` variable, GitHub Secrets |
-
-**Secret Values**
-
-Secrets are predefined for the deployment environment via Terraform configuration.  Actual values are specified in variables attached to the `tf-cloud` workspace and passed down as variables to child workspaces in Terraform Cloud.
-
-| Variable | Location |
-| --- | --- |
-| `SECRET_KEY` | `<environment>_mobot_secret_key` variable in Terraform |
+From within the admin container you can do a ton of administration of drop features, and use an iPython shell for direct access to the current objects for quick scripts and playing around.
