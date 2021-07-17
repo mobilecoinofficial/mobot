@@ -1,0 +1,91 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    volumes:
+    - db:/var/lib/postgresql/data
+    env_file:
+    - ./docker/env.env
+    expose:
+    - 5432
+    networks:
+      mobot:
+        ipv4_address: 10.200.0.5
+
+  signald:
+    image: mobilecoin/signald:0.12.0-mc.0.0.3-staging
+    volumes:
+    - signald:/signald
+    expose:
+    - 15432
+    networks:
+      mobot:
+        ipv4_address: 10.200.0.6
+
+  admin:
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 20s
+        max_attempts: 1
+        window: 120s
+    build:
+      context: .
+      dockerfile: ./Dockerfile.dev
+    entrypoint: /bin/bash /scripts/init.sh admin
+    env_file:
+    - ./docker/env.env
+    volumes:
+    - signald:/signald
+    depends_on:
+    - db
+    expose:
+    - 8000
+    networks:
+      mobot:
+        ipv4_address: 10.200.0.8
+
+  chatbot:
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 20s
+        max_attempts: 1
+        window: 120s
+    build:
+      context: .
+      dockerfile: ./Dockerfile.dev
+    entrypoint: /bin/bash /scripts/init.sh chat_shell
+    env_file:
+    - ./docker/env.env
+    volumes:
+    - signald:/signald
+    depends_on:
+    - db
+    - admin
+    networks:
+      mobot:
+        ipv4_address: 10.200.0.10
+
+
+volumes:
+  db:
+    external: true
+  signald:
+    external: true
+  full-service:
+    external: true
+
+networks:
+  mobot:
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.200.0.0/24
