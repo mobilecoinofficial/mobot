@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 source $SCRIPT_DIR/set_up_env.sh
