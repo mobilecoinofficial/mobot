@@ -26,7 +26,7 @@ case $start_cmd in
     ;;
 
   chat_shell)
-    /usr/bin/env bash
+    python mobot/manage.py
     ;;
 
   *)
