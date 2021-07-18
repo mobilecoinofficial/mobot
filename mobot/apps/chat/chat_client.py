@@ -170,7 +170,6 @@ class Mobot:
         return context.message.payment is not None
 
     def register_default_handlers(self):
-        # FIXME: regex should be case agnostic
         self.register_handler(name="unsubscribe", regex="^(u|unsubscribe)$", method=unsubscribe_handler)
         self.register_handler(name="subscribe", regex="^(s|subscribe)$", method=subscribe_handler)
         self.register_handler(name="greet", method=handle_greet_customer,
@@ -190,6 +189,9 @@ class Mobot:
                               drop_session_states={DropSession.State.EXPIRED})
         self.register_handler(name="not ready", method=handle_drop_not_ready,
                               drop_session_states={DropSession.State.NOT_READY})
+        # FIXME: get two responses to no other handler found, and also sometimes get non-null exception
+        # django.db.utils.IntegrityError: null value in column "text" of relation "chat_message" violates not-null constraint
+        # DETAIL:  Failing row contains (46, 2021-07-18 21:20:48.916259+00, 2021-07-18 21:20:48.916278+00, null, 0, , +19163337739).
         self.register_handler(name="no other handler found", method=handle_no_handler_found,
                               chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN})
         self.register_handler(name="privacy", regex="^(p|privacy)$", method=privacy_policy_handler)

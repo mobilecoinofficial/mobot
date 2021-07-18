@@ -119,7 +119,7 @@ def handle_order_selected(context: MobotContext):
     if selection_id.isnumeric():
         product = context.campaign.product_group.products.get(id=int(selection_id))
         _order = Order.objects.order_product(product=product, customer=context.customer)
-        context.log_and_send_message(ChatStrings.ITEM_ORDERED_PRICE.format(item=product.name, price=product.price, price_unit=product.price_currency))
+        context.log_and_send_message(ChatStrings.ITEM_ORDERED_PRICE.format(item=product.name, price=product.price.amount, price_unit=product.price_currency))
     else:
         context.log_and_send_message(ChatStrings.INVALID_PURCHASE_FORMAT)
     # TODO more error handling/incorporate regex assumptions?
