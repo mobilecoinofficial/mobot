@@ -60,6 +60,8 @@ class Command(BaseCommand):
         parser.add_argument('-p', '--phone-number', type=phonenumbers.parse,
                             required=False)  # Assume same as merchant for now
         parser.add_argument('-n', '--name', type=str, required=False)
+        parser.add_argument('-m', '--merchant', type=str, required=False)
+        parser.add_argument('-s', '--')
         parser.add_argument('-q', '--quota', type=int,
                             help="Quota, if any, for number of people who can participate in campaign")
         parser.add_argument('-i', '--inventory', type=json.loads,

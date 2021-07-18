@@ -27,6 +27,8 @@ def print_message(message: Message, logger: logging.Logger):
 
 
 
+# FIXME: make sure the mock messages match the format of the actual signald messages
+
 @override_settings(DEBUG=True, TEST=True)
 class MobotTests(TestCase):
 

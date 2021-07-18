@@ -30,22 +30,22 @@ def subscribe_handler(context: MobotContext):
     if context.store_preferences.allows_contact:
         context.log_and_send_message(ChatStrings.SUBSCRIBED_ALREADY)
     else:
+        # FIXME: Do the subscribe
         context.log_and_send_message(ChatStrings.SUBSCRIBED_FIRST_TIME)
 
 
 def inventory_handler(context: MobotContext):
-    products = context.campaign.product_group.products
 
     def get_inv_strings():
-        for product in products:
-            if 0 > product.available > 5:
+        for product in context.campaign.product_group.products.iterator():
+            if 0 < product.available <= 10: # FIXME: Make this configurable
                 yield f"{product.name}(Item ID {product.id}): - In Stock "
             elif product.available > 0:
-                yield f"{product.name}(Item ID {product.id}) - Running out - only {product.inventory.count()} left!"
-        inventory_string = "\n   ".join(get_inv_strings())
-        message = ChatStrings.INVENTORY.format(stock=inventory_string)
-        context.log_and_send_message(message)
+                yield f"{product.name}(Item ID {product.id}) - Running out - only {product.available} left!"
 
+    inventory_string = "\n   ".join(get_inv_strings())
+    message = ChatStrings.INVENTORY.format(stock=inventory_string)
+    context.log_and_send_message(message)
 
 def privacy_policy_handler(context: MobotContext):
     context.log_and_send_message(context.store.privacy_policy_url)

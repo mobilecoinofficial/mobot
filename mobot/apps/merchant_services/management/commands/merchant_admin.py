@@ -165,8 +165,20 @@ class Command(BaseCommand):
         p.save()
 
         # Add inventory
-        small, created = Product.objects.get_or_create(name="Small", store=store)
+        # FIXME: an issue with precision of pmob - needs to be able to handle 10^12
+        small, created = Product.objects.get_or_create(name="Small", store=store, product_group=p, price=1_000_000)
         small.add_inventory(10)
+
+        medium, created = Product.objects.get_or_create(name="Medium", store=store, product_group=p, price=1_000_000)
+        medium.add_inventory(10)
+
+        large, created = Product.objects.get_or_create(name="Large", store=store, product_group=p, price=1_000_000)
+        large.add_inventory(10)
+
+        xlarge, created = Product.objects.get_or_create(name="XLarge", store=store, product_group=p, price=1_000_000)
+        xlarge.add_inventory(10)
+
+        p.save()
         return p
 
     def create_default_campaign(self, product_group: ProductGroup, store: MobotStore) -> Campaign:
@@ -179,7 +191,7 @@ class Command(BaseCommand):
             start_time=tz.make_aware(datetime.datetime.now(), tz.get_current_timezone()),
             end_time=tz.make_aware(datetime.datetime.now() + datetime.timedelta(days=3.0), tz.get_current_timezone()),
             adjusted_price=Money(20.0, GBP),
-            number_restriction="44",
+            number_restriction="1",
             quota=100)
         return c
 

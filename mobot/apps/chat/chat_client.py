@@ -153,7 +153,9 @@ class Mobot:
             matching_handlers.sort(key=lambda matched_handler: matched_handler.order)
             for handler in matching_handlers:
                 try:
+                    print(f"\033[1;35m Attempting to handle {handler}\033[0m")
                     handler.handle(context)
+                    print(f"\033[1;35m Handler handled {handler}\033[0m")
                 except Exception:
                     self.logger.exception(f"Failed to run handler for {handler.name}")
             if not matching_handlers:
@@ -191,9 +193,8 @@ class Mobot:
         self.register_handler(name="no other handler found", method=handle_no_handler_found,
                               chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN})
         self.register_handler(name="privacy", regex="^(P|p|privacy)$", method=privacy_policy_handler)
-        # FIXME: inventory handler doesn't seem to work
-        self.register_handler(name="inventory", regex="^(I|i|inventory)$", method=inventory_handler,
-                              drop_session_states={DropSession.State.ACCEPTED, DropSession.State.OFFERED})
+        # FIXME: inventory handler doesn't seem to work, and I get 2 "Sorry, I didn't understand that" responses - I think the issue was area code was not allowed - should make sure the response is "You can't participate"
+        self.register_handler(name="inventory", regex="^(I|i|inventory)$", method=inventory_handler) # FIXME should this have drop_session_states?
         self.register_handler(name="unsolicited_payment", method=handle_unsolicited_payment,
                               ctx_conditions=[self.check_ctx_order_contains_unwanted_payment])
         self.register_handler(name="payment", method=handle_order_payment,
