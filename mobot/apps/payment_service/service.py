@@ -27,6 +27,7 @@ class TransactionLog:
     receipt: Receipt
 
 def _signald_to_fullservice(r):
+    print(f"\033[1;32 Got r = {r}\033[0m")
     return {
         "object": "receiver_receipt",
         "public_key": r['txo_public_key'],

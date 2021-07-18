@@ -27,7 +27,7 @@ class StoreFixtures:
         self.cust_uk = self.add_default_customer("Adam", phone_number="+447441433906")
         self.cust_uk_2 = self.add_default_customer("Sara", phone_number="+447441433911")
         self.original_drop = self.add_default_campaign()
-        self.hoodie_product_group = StoreFixtures.add_hoodie_product_group()
+        self.hoodie_product_group = StoreFixtures.add_hoodie_product_group() # duplicate? Done as part of add_default_campaign
 
     def _add_hoodie(self, size: str, price: Money = Money(Decimal(25.0), currency=GBP)) -> Product:
         hoodie_product, created = Product.objects.get_or_create(

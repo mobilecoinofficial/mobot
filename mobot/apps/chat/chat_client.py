@@ -142,11 +142,13 @@ class Mobot:
             matching_handlers = []
             for handler in self.handlers:
                 # First, check for explicit text or payment
-                if handler.context_matches(context) and handler.text_filtered or context.message.payment:
+                if handler.context_matches(context) and handler.text_filtered or context.message.payment is not None:
+                    print(f"\033[1;34m Appending handler {handler}!\033[0m")
                     matching_handlers.append(handler)
             if not matching_handlers:
                 for handler in self.handlers:
                     if handler.context_matches(context):
+                        print(f"\033[1;31m Appending handler {handler}!\033[0m")
                         matching_handlers.append(handler)
             matching_handlers.sort(key=lambda matched_handler: matched_handler.order)
             for handler in matching_handlers:
@@ -162,18 +164,23 @@ class Mobot:
             return context.order is not None and context.order.state != Order.State.PAYMENT_REQUESTED
         return False
 
+    def check_ctx_order_contains_payment(self, context: MobotContext) -> bool:
+        return context.message.payment is not None
+
     def register_default_handlers(self):
-        self.register_handler(name="unsubscribe", regex="^(u|unsubscribe)$", method=unsubscribe_handler)
-        self.register_handler(name="subscribe", regex="^(s|subscribe)$", method=subscribe_handler)
+        # FIXME: regex should be case agnostic
+        self.register_handler(name="unsubscribe", regex="^(U|u|unsubscribe)$", method=unsubscribe_handler)
+        self.register_handler(name="subscribe", regex="^(S|s|subscribe)$", method=subscribe_handler)
         self.register_handler(name="greet", method=handle_greet_customer,
                               chat_session_states={MobotChatSession.State.NOT_GREETED},
                               order=1)  # First, say hello to the customer
+        self.register_handler(name="redisplay", regex="^(\?)$", method=handle_greet_customer)
         self.register_handler(name="start", method=handle_start_conversation,
                               chat_session_states={MobotChatSession.State.NOT_GREETED},
                               order=2)  # Then, handle setting up drop session
-        self.register_handler(name="offer_accepted", regex="^(y|yes)$", method=handle_drop_offer_accepted,
+        self.register_handler(name="offer_accepted", regex="^(Y|y|yes)$", method=handle_drop_offer_accepted,
                               drop_session_states={DropSession.State.OFFERED})
-        self.register_handler(name="offer_rejected", regex="^(n|no)$", method=handle_drop_offer_rejected,
+        self.register_handler(name="offer_rejected", regex="^(N|n|no)$", method=handle_drop_offer_rejected,
                               drop_session_states={DropSession.State.OFFERED})
         self.register_handler(name="already greeted", method=handle_already_greeted,
                               chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN})
@@ -183,12 +190,14 @@ class Mobot:
                               drop_session_states={DropSession.State.NOT_READY})
         self.register_handler(name="no other handler found", method=handle_no_handler_found,
                               chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN})
-        self.register_handler(name="privacy", regex="^(p|privacy)$", method=privacy_policy_handler)
-        self.register_handler(name="inventory", regex="^(i|inventory)$", method=inventory_handler,
+        self.register_handler(name="privacy", regex="^(P|p|privacy)$", method=privacy_policy_handler)
+        # FIXME: inventory handler doesn't seem to work
+        self.register_handler(name="inventory", regex="^(I|i|inventory)$", method=inventory_handler,
                               drop_session_states={DropSession.State.ACCEPTED, DropSession.State.OFFERED})
         self.register_handler(name="unsolicited_payment", method=handle_unsolicited_payment,
                               ctx_conditions=[self.check_ctx_order_contains_unwanted_payment])
-        self.register_handler(name="payment", method=handle_order_payment)
+        self.register_handler(name="payment", method=handle_order_payment,
+                              ctx_conditions=[self.check_ctx_order_contains_payment])
 
     def find_and_greet_targets(self, campaign):
         for customer in self.campaign.get_target_customers():

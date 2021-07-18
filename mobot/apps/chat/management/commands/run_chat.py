@@ -5,7 +5,8 @@ from mobot.apps.chat.chat_client import Mobot
 from mobot.signald_client import Signal
 from mobot.apps.merchant_services.models import Campaign, Merchant, MobotStore
 from django.conf import settings
-
+import mobilecoin as mc
+import time
 
 class Command(BaseCommand):
     def add_arguments(self, parser: ArgumentParser):
@@ -17,8 +18,11 @@ class Command(BaseCommand):
         store_id = options['store_id']
         campaign = Campaign.objects.get(pk=campaign_id)
         store = MobotStore.objects.get(pk=store_id)
-        signal = Signal(str(MobotStore.merchant_ref.phone_number))
-        fullservice_client = settings.fullservice
-        chat = Mobot(signal=signal, mobilecoin_client=fullservice_client, campaign=campaign, store=store)
+
+        # FIXME: Should use env vars from settings
+        mcc = mc.Client(url=f"http://127.0.0.1:9090/wallet")
+        signal = Signal(f"+{store.merchant_ref.phone_number.country_code}{store.merchant_ref.phone_number.national_number}",
+                        socket_path=("host.docker.internal", 15432))
+        chat = Mobot(signal=signal, fullservice=mcc, campaign=campaign, store=store)
         chat.register_default_handlers()
         chat.run()

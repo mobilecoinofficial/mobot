@@ -61,6 +61,7 @@ class MessageContextManager:
             """Context for current customer"""
             def __init__(self, signal=self.signal, root_logger=self.root_logger, mobot=self.mobot, payment_service=self.payment_service):
                 self.signal = signal
+                # FIXME: Add unittest - message looks like: DEBUG:Mobot-1:Mobot received message: Message(username='+12252174798', source={'number': '+19163337739', 'uuid': '05b7f122-9271-4f7f-b60e-8f2a7a71cbdf'}, text='Test', source_device=1, timestamp=1626572253155, timestamp_iso='2021-07-18T01:37:33.155Z', expiration_secs=0, is_receipt=None, attachments=[], quote=None, group_info={}, payment=None)
                 self.customer = self.get_customer_from_message(message) if message else customer
                 self.payment_service = payment_service
                 self.message = message
@@ -84,7 +85,7 @@ class MessageContextManager:
 
 
             def get_customer_from_message(self, message: SignalMessage) -> Customer:
-                customer, _ = Customer.objects.get_or_create(phone_number=message.source, name=message.username)
+                customer, _ = Customer.objects.get_or_create(phone_number=message.source['number'], name=message.username)
                 return customer
 
             def get_chat_session_with_customer(self) -> MobotChatSession:
@@ -112,7 +113,7 @@ class MessageContextManager:
                     customer=self.customer,
                     text=self.message.text,
                     chat_session=self.chat_session,
-                    created_at=timezone.make_aware(datetime.datetime.utcfromtimestamp(self.message.timestamp)),
+                    created_at=timezone.make_aware(datetime.datetime.utcfromtimestamp(int(self.message.timestamp/100))),
                     direction=MessageDirection.MESSAGE_DIRECTION_RECEIVED
                 )
                 return message_log

@@ -3,6 +3,8 @@ import argparse
 import pytz
 from django.core.management.base import BaseCommand
 from mobot.apps.merchant_services.models import Product, Merchant, MobotStore, Campaign, ProductGroup, InventoryItem
+from mobot.lib.currency import *
+from django.utils import timezone as tz
 from django.conf import settings
 from typing import List
 from typedate import TypeDate
@@ -24,7 +26,6 @@ def parse_extra(parser, namespace):
 
 class Command(BaseCommand):
     help = 'Administer mobot store'
-
 
     def add_arguments(self, parser: argparse.ArgumentParser):
         # Named (optional) arguments
@@ -148,20 +149,42 @@ class Command(BaseCommand):
 
         drop_group.add_argument("--reset-all-drops", required=False, action="store_true", default=False, help="Reset all accounts")
 
-
     def add_default_store(self, merchant: Merchant, **options) -> MobotStore:
-        s, created = MobotStore.objects.get_or_create(merchant_ref=merchant, name="MobileCoin Coin Drop Store")
+        s, created = MobotStore.objects.get_or_create(merchant_ref=merchant, name="MobileCoin Hoodie Drop Store", description="We sell Hoodies!")
         s.save()
         return s
 
     def add_default_merchant(self, **options) -> Merchant:
-        m, created = Merchant.objects.get_or_create(name="MobileCoin Official Merchant", phone_number=settings.STORE_NUMBER)
+        m, created = Merchant.objects.get_or_create(name="MobileCoin Official Merchant",
+                                                    phone_number="+12252174798") #FIXME: settings.STORE_NUMBER)
         m.save()
         return m
 
+    def add_default_product_group(self, store: MobotStore, **options) -> ProductGroup:
+        p = ProductGroup(name="Hoodies")
+        p.save()
+
+        # Add inventory
+        small, created = Product.objects.get_or_create(name="Small", store=store)
+        small.add_inventory(10)
+        return p
+
+    def create_default_campaign(self, product_group: ProductGroup, store: MobotStore) -> Campaign:
+        c = Campaign.objects.create(
+            name="MobileCoin Hoodie Sale",
+            product_group=product_group,
+            store=store,
+            pre_drop_description="Sweet MobileCoin Hoodies",
+            advertisement_start_time=tz.make_aware(datetime.datetime.now(), tz.get_current_timezone()),
+            start_time=tz.make_aware(datetime.datetime.now(), tz.get_current_timezone()),
+            end_time=tz.make_aware(datetime.datetime.now() + datetime.timedelta(days=3.0), tz.get_current_timezone()),
+            adjusted_price=Money(20.0, GBP),
+            number_restriction="44",
+            quota=100)
+        return c
 
     def make_mobot_default_store(self):
-        pass
+        print("TEST")
 
     def handle(self, *args, **options):
         try:
@@ -172,12 +195,18 @@ class Command(BaseCommand):
                 Merchant.objects.all().delete()
                 MobotStore.objects.all().delete()
                 Campaign.objects.all().delete()
-                merchant = self.add_default_merchant()
-                store = self.add_default_store(merchant)
-            drops = Drop.objects.all()
-            for drop in drops:
-                print(drop)
-                print(convert_money(drop.price, 'PMB'))
+            print("\033[1;33m ABOUT TO ADD MERCHANT\033[0m")
+            merchant = self.add_default_merchant()
+            print("\033[1;33m ADDED MERCHANT\033[0m")
+
+            store = self.add_default_store(merchant)
+            product_group = self.add_default_product_group(store)
+            campaign = self.create_default_campaign(product_group, store)
+
+            # drops = Drop.objects.all()
+            # for drop in drops:
+            #     print(drop)
+            #     print(convert_money(drop.price, 'PMB'))
         except KeyboardInterrupt as e:
             print()
             pass
