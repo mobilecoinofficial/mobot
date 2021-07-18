@@ -223,7 +223,7 @@ class OrderManager(models.Manager):
     def order_product(self, product: Product, customer: Customer) -> QuerySet:
         order = self.create(customer=customer, product=product)
         try:
-            inventory_item = InventoryItem.objects.get(order=None, product=product)
+            inventory_item = InventoryItem.objects.get(order=None, product=product).first()
             inventory_item.order = order
             inventory_item.save()
         except InventoryItem.DoesNotExist:

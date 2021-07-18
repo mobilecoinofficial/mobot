@@ -29,6 +29,8 @@ class ChatStrings:
     SUBSCRIBED_FIRST_TIME = "Thanks, we'll let you know about future drops from this store!"
     NOT_VALID_FOR_CAMPAIGN = "Sorry, the current campaign requires a number with a country code of {country_code}"
     DIDNT_UNDERSTAND = "Sorry, I didn't understand that."
+    ITEM_ORDERED_PRICE = "You have ordered {item}. Please send me {price} {price_unit}."
+    INVALID_PURCHASE_FORMAT = "Please use the format 'buy <item-id>' to place an order. Press i to view the available inventory."
 
     INVENTORY = """We've got the following items in stock:
         {stock}

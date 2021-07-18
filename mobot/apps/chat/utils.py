@@ -9,7 +9,7 @@ MobotContextFilter = NewType('MobotContextFilter', Callable[[MobotContext], bool
 
 
 def regex_filter(regex: str) -> MobotContextFilter:
-    compiled_regex = re.compile(regex)
+    compiled_regex = re.compile(regex, re.IGNORECASE)
 
     def matches(ctx: MobotContext):
         if re.search(compiled_regex, ctx.message.text):

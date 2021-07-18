@@ -171,8 +171,8 @@ class Mobot:
 
     def register_default_handlers(self):
         # FIXME: regex should be case agnostic
-        self.register_handler(name="unsubscribe", regex="^(U|u|unsubscribe)$", method=unsubscribe_handler)
-        self.register_handler(name="subscribe", regex="^(S|s|subscribe)$", method=subscribe_handler)
+        self.register_handler(name="unsubscribe", regex="^(u|unsubscribe)$", method=unsubscribe_handler)
+        self.register_handler(name="subscribe", regex="^(s|subscribe)$", method=subscribe_handler)
         self.register_handler(name="greet", method=handle_greet_customer,
                               chat_session_states={MobotChatSession.State.NOT_GREETED},
                               order=1)  # First, say hello to the customer
@@ -180,9 +180,9 @@ class Mobot:
         self.register_handler(name="start", method=handle_start_conversation,
                               chat_session_states={MobotChatSession.State.NOT_GREETED},
                               order=2)  # Then, handle setting up drop session
-        self.register_handler(name="offer_accepted", regex="^(Y|y|yes)$", method=handle_drop_offer_accepted,
+        self.register_handler(name="offer_accepted", regex="^(y|yes)$", method=handle_drop_offer_accepted,
                               drop_session_states={DropSession.State.OFFERED})
-        self.register_handler(name="offer_rejected", regex="^(N|n|no)$", method=handle_drop_offer_rejected,
+        self.register_handler(name="offer_rejected", regex="^(n|no)$", method=handle_drop_offer_rejected,
                               drop_session_states={DropSession.State.OFFERED})
         self.register_handler(name="already greeted", method=handle_already_greeted,
                               chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN})
@@ -192,13 +192,14 @@ class Mobot:
                               drop_session_states={DropSession.State.NOT_READY})
         self.register_handler(name="no other handler found", method=handle_no_handler_found,
                               chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN})
-        self.register_handler(name="privacy", regex="^(P|p|privacy)$", method=privacy_policy_handler)
-        # FIXME: inventory handler doesn't seem to work, and I get 2 "Sorry, I didn't understand that" responses - I think the issue was area code was not allowed - should make sure the response is "You can't participate"
-        self.register_handler(name="inventory", regex="^(I|i|inventory)$", method=inventory_handler) # FIXME should this have drop_session_states?
+        self.register_handler(name="privacy", regex="^(p|privacy)$", method=privacy_policy_handler)
+        self.register_handler(name="inventory", regex="^(i|inventory)$", method=inventory_handler) # FIXME should this have drop_session_states?
         self.register_handler(name="unsolicited_payment", method=handle_unsolicited_payment,
                               ctx_conditions=[self.check_ctx_order_contains_unwanted_payment])
         self.register_handler(name="payment", method=handle_order_payment,
                               ctx_conditions=[self.check_ctx_order_contains_payment])
+        # FIXME: better regex (what if more than 10 items?)
+        self.register_handler(name="order_selected", regex="^(buy.*[0-9])$", method=handle_order_selected)
 
     def find_and_greet_targets(self, campaign):
         for customer in self.campaign.get_target_customers():

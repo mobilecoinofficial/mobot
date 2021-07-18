@@ -47,6 +47,7 @@ def inventory_handler(context: MobotContext):
     message = ChatStrings.INVENTORY.format(stock=inventory_string)
     context.log_and_send_message(message)
 
+
 def privacy_policy_handler(context: MobotContext):
     context.log_and_send_message(context.store.privacy_policy_url)
 
@@ -113,6 +114,15 @@ def handle_unsolicited_payment(context: MobotContext):
     context.log_and_send_message(ChatStrings.UNSOLICITED_PAYMENT)
     return
 
+def handle_order_selected(context: MobotContext):
+    selection_id = context.message.text.lower().strip('buy').strip()
+    if selection_id.isnumeric():
+        product = context.campaign.product_group.products.get(id=int(selection_id))
+        _order = Order.objects.order_product(product=product, customer=context.customer)
+        context.log_and_send_message(ChatStrings.ITEM_ORDERED_PRICE.format(item=product.name, price=product.price, price_unit=product.price_currency))
+    else:
+        context.log_and_send_message(ChatStrings.INVALID_PURCHASE_FORMAT)
+    # TODO more error handling/incorporate regex assumptions?
 
 def handle_order_payment(context: MobotContext):
     payment: Payment = context.payment_service.get_payment_result(context.message.payment)
