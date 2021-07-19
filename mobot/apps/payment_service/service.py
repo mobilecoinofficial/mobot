@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from dacite import from_dict
 from concurrent.futures import ThreadPoolExecutor
 from django.conf import settings
+from decimal import Decimal
 
 import mobilecoin
 
@@ -51,7 +52,12 @@ class PaymentService:
     def __init__(self, mobilecoin_client: mobilecoin.Client, account_id=None):
         self.client = mobilecoin_client
         self.executor = ThreadPoolExecutor(4)
-        self.account_id = account_id if account_id else settings.ACCOUNT_ID
+        # FIXME: Better management of passing the account_id and setting default
+        # self.account_id = account_id if account_id else settings.ACCOUNT_ID
+        all_accounts_response = self.client.get_all_accounts()
+        account_id = next(iter(all_accounts_response))
+        account_obj = all_accounts_response[account_id]
+        self.public_address = account_obj['main_address']
         self._futures = []
         self.logger = logging.getLogger("PaymentService")
 
@@ -72,17 +78,20 @@ class PaymentService:
         receipt_status = {}
 
         while transaction_status == "TransactionPending":
-            receipt_status = self.client.check_receiver_receipt_status(self.account_id, _signald_to_fullservice(receipt))
+            receipt_status = self.client.check_receiver_receipt_status(self.public_address, _signald_to_fullservice(receipt))
             transaction_status = receipt_status["receipt_transaction_status"]
 
             if transaction_status != "TransactionSuccess":
                 return "The transaction failed!"
 
+        print(f"\033[1;33m Got receipt status {receipt_status}\033[0m")
 
-        amount_paid_mob = mobilecoin.pmob2mob(receipt_status.get("txo").get("value_pmob"))
+        # FIXME: We should probably be making sure we're doing everything in pmob to avoid precision issues
+        # amount_paid_mob = mobilecoin.pmob2mob(receipt_status.get("txo").get("value_pmob"))
+        amount_paid_pmob = Decimal(receipt_status.get("txo").get("value_pmob"))
 
-        payment = Payment.objects.create(amount=amount_paid_mob,
-                                         state=Payment.Status.PAYMENT_RECEIVED if amount_paid_mob else Payment.Status.PAYMENT_FAILED)
+        payment = Payment.objects.create(amount=amount_paid_pmob,
+                                         status=Payment.Status.PAYMENT_RECEIVED if amount_paid_pmob else Payment.Status.PAYMENT_FAILED)
 
         return payment
 

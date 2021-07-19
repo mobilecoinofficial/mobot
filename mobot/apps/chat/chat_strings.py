@@ -49,3 +49,8 @@ class ChatStrings:
 
     UNSOLICITED_PAYMENT = "MOBot here! You sent us an unsolicited payment. We're returning it minus a network fee to cover our costs. We can't promise to always be paying attention and return unsolicited payments, so we suggest only sending us payments when we request them"
     OVERPAYMENT = "MOBot here! You've overpaid us by {overpayment_amount} for your order. We'll send the overpayment amount back, minus transaction fees."
+    ORDER_INVALID = "MOBot here! Something went wrong with your order. We received your payment so we'll return it post haste!"
+
+    PURCHASE_SUCCESSFUL = "Thank you for the payment of {price} for the item {item}. Please enter your address."
+
+    # FIXME: Add address collection flow

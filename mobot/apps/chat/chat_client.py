@@ -141,11 +141,8 @@ class Mobot:
         with context:
             matching_handlers = []
             for handler in self.handlers:
-                # First, check for explicit payment
-                if context.message.payment is not None:
-                    matching_handlers.append(handler)
-                # Second, check for explicit text - context_matches will fail on a payment message FIXME: unittest
-                elif handler.context_matches(context) and handler.text_filtered:
+                # First, check for explicit text that has been filtered to match the handler's regex
+                if handler.context_matches(context) and handler.text_filtered:
                     print(f"\033[1;34m Appending handler {handler}!\033[0m")
                     matching_handlers.append(handler)
             if not matching_handlers:

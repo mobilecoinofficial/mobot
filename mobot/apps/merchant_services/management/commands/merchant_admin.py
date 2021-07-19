@@ -166,16 +166,16 @@ class Command(BaseCommand):
 
         # Add inventory
         # FIXME: an issue with precision of pmob - needs to be able to handle 10^12
-        small, created = Product.objects.get_or_create(name="Small", store=store, product_group=p, price=1_000_000)
+        small, created = Product.objects.get_or_create(name="Small", store=store, product_group=p, price=Decimal(1_000_000))
         small.add_inventory(10)
 
-        medium, created = Product.objects.get_or_create(name="Medium", store=store, product_group=p, price=1_000_000)
+        medium, created = Product.objects.get_or_create(name="Medium", store=store, product_group=p, price=Decimal(1_000_000))
         medium.add_inventory(10)
 
-        large, created = Product.objects.get_or_create(name="Large", store=store, product_group=p, price=1_000_000)
+        large, created = Product.objects.get_or_create(name="Large", store=store, product_group=p, price=Decimal(1_000_000))
         large.add_inventory(10)
 
-        xlarge, created = Product.objects.get_or_create(name="XLarge", store=store, product_group=p, price=1_000_000)
+        xlarge, created = Product.objects.get_or_create(name="XLarge", store=store, product_group=p, price=Decimal(1_000_000))
         xlarge.add_inventory(10)
 
         p.save()

@@ -12,8 +12,12 @@ def regex_filter(regex: str) -> MobotContextFilter:
     compiled_regex = re.compile(regex, re.IGNORECASE)
 
     def matches(ctx: MobotContext):
+        if ctx.message.text is None: # In the case of payments, text is None
+            return False
+
         if re.search(compiled_regex, ctx.message.text):
             return True
+
         return False
 
     return matches

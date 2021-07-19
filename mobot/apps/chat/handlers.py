@@ -127,17 +127,30 @@ def handle_order_selected(context: MobotContext):
 
 def handle_order_payment(context: MobotContext):
     payment: Payment = context.payment_service.get_payment_result(context.message.payment)
-    order = context.order
+    order = context.get_order()
+
+    if order is None:
+        context.log_and_send_message(ChatStrings.ORDER_INVALID)
+        # FIXME: And send back the funds
+        return
+
     order.payment = payment
     order.save()
-    payment_amount = payment.amount
-    overpayment_amount = order.overpayment_amount
+
+    print(f"\033[1;36m Got payment amount {payment.amount} but product price is {order.product.price}\033[0m")
+
     if payment.amount >= order.product.price:
         context.order.state = Order.State.PAYMENT_RECEIVED
-    if overpayment_amount:
-        overpayment_amount_mob = convert_money(overpayment_amount, MOB)  # Convert to MOB
+        context.order.save()
+        context.log_and_send_message(ChatStrings.PURCHASE_SUCCESSFUL.format(price=payment.amount, item=context.order.item))
+        return
+
+    # FIXME: Handle below and add tests
+    # FIXME: Handle multiple payments for the same order
+    if order.overpayment_amount:
+        overpayment_amount_mob = convert_money(order.overpayment_amount, MOB)  # Convert to MOB
         context.log_and_send_message(ChatStrings.OVERPAYMENT.format(overpayment_amount=overpayment_amount_mob))
-        context.send_payment_to_user(convert_money(overpayment_amount, MOB), cover_fee=False)
+        context.send_payment_to_user(convert_money(order.overpayment_amount, MOB), cover_fee=False)
 
 """ For unittests, payment messages look like:
 

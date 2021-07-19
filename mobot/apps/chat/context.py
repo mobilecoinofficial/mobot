@@ -79,9 +79,9 @@ class MessageContextManager:
 
             def get_order(self) -> Optional[Order]:
                 try:
-                    Order.objects.get(product__product_group=self.campaign.product_group, customer=self.customer)
+                    return Order.objects.get(product__product_group=self.campaign.product_group, customer=self.customer)
                 except Order.MultipleObjectsReturned:
-                    # FIXME: What should we do here? Delete them all and ask the user to start over?
+                    # FIXME: What should we do here? We should probably make sure you can never add an order if another one is in-flight
                     return None
                 except Order.DoesNotExist:
                     return None
