@@ -145,8 +145,13 @@ class Mobot:
                 if handler.context_matches(context) and handler.text_filtered:
                     print(f"\033[1;34m Appending handler {handler}!\033[0m")
                     matching_handlers.append(handler)
+                # Then check for payment
+                if handler.context_matches(context) and context.message.payment is not None:
+                    print(f"\033[1;32m Appending handler {handler}!\033[0m")
+                    matching_handlers.append(handler)
             if not matching_handlers:
                 for handler in self.handlers:
+                    # Now add remaining handlers such as already-greeted or no-other-handler
                     if handler.context_matches(context):
                         print(f"\033[1;31m Appending handler {handler}!\033[0m")
                         matching_handlers.append(handler)
@@ -193,7 +198,8 @@ class Mobot:
         # django.db.utils.IntegrityError: null value in column "text" of relation "chat_message" violates not-null constraint
         # DETAIL:  Failing row contains (46, 2021-07-18 21:20:48.916259+00, 2021-07-18 21:20:48.916278+00, null, 0, , +19163337739).
         self.register_handler(name="no other handler found", method=handle_no_handler_found,
-                              chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN})
+                              chat_session_states={MobotChatSession.State.INTRODUCTION_GIVEN},
+                              order=100) # FIXME: This fires way more than it should
         self.register_handler(name="privacy", regex="^(p|privacy)$", method=privacy_policy_handler)
         self.register_handler(name="inventory", regex="^(i|inventory)$", method=inventory_handler) # FIXME should this have drop_session_states?
         self.register_handler(name="unsolicited_payment", method=handle_unsolicited_payment,

@@ -55,11 +55,11 @@ def privacy_policy_handler(context: MobotContext):
 def handle_no_handler_found(context: MobotContext):
     context.log_and_send_message(ChatStrings.DIDNT_UNDERSTAND)
 
-
+# FIXME: This and handle_no_handler_found are getting appended together, so it fires twice
 def handle_already_greeted(context: MobotContext):
     context.logger.debug(
         f"User {context.customer.phone_number} already greeted, so handling as if this is an unknown command")
-    handle_no_handler_found(context)
+    # handle_no_handler_found(context)
 
 
 def handle_validate_customer(context: MobotContext):
@@ -142,7 +142,8 @@ def handle_order_payment(context: MobotContext):
     if payment.amount >= order.product.price:
         context.order.state = Order.State.PAYMENT_RECEIVED
         context.order.save()
-        context.log_and_send_message(ChatStrings.PURCHASE_SUCCESSFUL.format(price=payment.amount, item=context.order.item))
+        # FIXME: payment.amount displays as PMB100,000,000.00
+        context.log_and_send_message(ChatStrings.PURCHASE_SUCCESSFUL.format(price=payment.amount, item=context.order.item.product.name))
         return
 
     # FIXME: Handle below and add tests
