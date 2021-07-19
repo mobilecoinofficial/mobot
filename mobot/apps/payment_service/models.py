@@ -36,7 +36,9 @@ class Payment(models.Model):
         PAYMENT_FAILED = 2
 
     status = models.IntegerField(choices=Status.choices, default=Status.PAYMENT_NOT_SUBMITTED)
-    amount = MoneyField(max_digits=14, decimal_places=5, default_currency=PMOB, help_text='Price of the product in PMOB',
+    # For pmob, decimal_places could be 0, and max_digits would need to hold u64::max (20 digits)
+    # If we store in MOB, then we need to support 12 decimal places, as 1 MOB = 10^12 pMOB
+    amount = MoneyField(max_digits=20, decimal_places=12, default_currency=PMOB, help_text='Price of the product in PMOB',
                        blank=False, default=0.0)
 
     def clean(self):
