@@ -20,9 +20,15 @@ class Command(BaseCommand):
         store = MobotStore.objects.get(pk=store_id)
 
         # FIXME: Should use env vars from settings
-        mcc = mc.Client(url=f"http://127.0.0.1:9090/wallet")
+        mcc = mc.Client(url=f"http://host.docker.internal:9090/wallet") # FIXME: configurable (this is for mac)
+        all_accounts_response = mcc.get_all_accounts()
+        account_id = next(iter(all_accounts_response))
+        account_obj = all_accounts_response[account_id]
+        public_address = account_obj['main_address']
+
         signal = Signal(f"+{store.merchant_ref.phone_number.country_code}{store.merchant_ref.phone_number.national_number}",
                         socket_path=("host.docker.internal", 15432))
+        signal.set_profile("MOBot TestNet", public_address, "logo.png", False)
         chat = Mobot(signal=signal, fullservice=mcc, campaign=campaign, store=store)
         chat.register_default_handlers()
         chat.run()

@@ -50,7 +50,7 @@ class MessageDirection(models.IntegerChoices):
 
 class Message(Trackable):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, db_index=True)
-    text = models.TextField()
+    text = models.TextField(default=None, blank=True, null=True) # Allow Nullable - payments have None text, as do random messages
     direction = models.PositiveIntegerField(choices=MessageDirection.choices)
     chat_session = models.ForeignKey(MobotChatSession, on_delete=models.CASCADE, blank=False, null=False, related_name="messages", db_index=True)
 

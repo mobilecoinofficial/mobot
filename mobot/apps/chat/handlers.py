@@ -119,6 +119,7 @@ def handle_order_selected(context: MobotContext):
     if selection_id.isnumeric():
         product = context.campaign.product_group.products.get(id=int(selection_id))
         _order = Order.objects.order_product(product=product, customer=context.customer)
+        # FIXME: convert to MOB
         context.log_and_send_message(ChatStrings.ITEM_ORDERED_PRICE.format(item=product.name, price=product.price.amount, price_unit=product.price_currency))
     else:
         context.log_and_send_message(ChatStrings.INVALID_PURCHASE_FORMAT)
@@ -137,3 +138,12 @@ def handle_order_payment(context: MobotContext):
         overpayment_amount_mob = convert_money(overpayment_amount, MOB)  # Convert to MOB
         context.log_and_send_message(ChatStrings.OVERPAYMENT.format(overpayment_amount=overpayment_amount_mob))
         context.send_payment_to_user(convert_money(overpayment_amount, MOB), cover_fee=False)
+
+""" For unittests, payment messages look like:
+
+DEBUG:Signal Subscriber:Received message from {'number': '+19163337739', 'uuid': '05b7f122-9271-4f7f-b60e-8f2a7a71cbdf'} with payload None containing payment: {'txo_public_key': '0A20EC3C38D1219046DF8CED52C3262C1D527840EC5DEF50508536F338B3BC64DF14', 'txo_confirmation': '0A20325B43757610C55492B8123D4259AC3792FC9DEC354F5F69FAA21D27F3BA775E', 'tombstone': 160801, 'amount_commitment': '200AC7C93AEA002725B1482E5E7CE9D3E0C786C770523C34E3741FF91E3EC123', 'amount_masked': 7280631925107399455}
+DEBUG:Mobot-1:Mobot received message: Message(username='+12252174798', source={'number': '+19163337739', 'uuid': '05b7f122-9271-4f7f-b60e-8f2a7a71cbdf'}, text=None, source_device=0, timestamp=1626664443582, timestamp_iso='2021-07-19T03:14:03.582Z', expiration_secs=0, is_receipt=None, attachments=[], quote=None, group_info={}, payment={'txo_public_key': '0A20EC3C38D1219046DF8CED52C3262C1D527840EC5DEF50508536F338B3BC64DF14', 'txo_confirmation': '0A20325B43757610C55492B8123D4259AC3792FC9DEC354F5F69FAA21D27F3BA775E', 'tombstone': 160801, 'amount_commitment': '200AC7C93AEA002725B1482E5E7CE9D3E0C786C770523C34E3741FF91E3EC123', 'amount_masked': 7280631925107399455})
+DEBUG:Mobot-1:Attempting to match message: None
+DEBUG:Mobot-1.{'number': '+19163337739', 'uuid': '05b7f122-9271-4f7f-b60e-8f2a7a71cbdf'}-context:Entering message context for {'number': '+19163337739', 'uuid': '05b7f122-9271-4f7f-b60e-8f2a7a71cbdf'}
+
+"""

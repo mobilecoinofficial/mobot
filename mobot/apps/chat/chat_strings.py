@@ -23,7 +23,7 @@ class ChatStrings:
     NO_INFO_FUTURE_DROPS = "You will no longer receive notifications about future drops."
     NOT_RECEIVING_NOTIFICATIONS = "You are not currently receiving any notifications"
     OFFER = "We'd love to offer you a chance to participate in our latest drop, {drop_description}. Please respond with a (y)es or (n)o."
-    OFFER_ACCEPTED = "So glad to hear you're interested!"
+    OFFER_ACCEPTED = "So glad to hear you're interested! Press i to see our current inventory."
     OFFER_REJECTED = "No worries! If you change your mind, just say hello again and let us know!"
     SUBSCRIBED_ALREADY = "You are already subscribed to receive notifications from this store! Thanks!"
     SUBSCRIBED_FIRST_TIME = "Thanks, we'll let you know about future drops from this store!"

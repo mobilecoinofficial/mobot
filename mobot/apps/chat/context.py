@@ -80,6 +80,9 @@ class MessageContextManager:
             def get_order(self) -> Optional[Order]:
                 try:
                     Order.objects.get(product__product_group=self.campaign.product_group, customer=self.customer)
+                except Order.MultipleObjectsReturned:
+                    # FIXME: What should we do here? Delete them all and ask the user to start over?
+                    return None
                 except Order.DoesNotExist:
                     return None
 
@@ -109,9 +112,10 @@ class MessageContextManager:
 
             def __enter__(self):
                 self.logger.debug(f"Entering message context for {message.source}")
+
                 message_log = Message.objects.create(
                     customer=self.customer,
-                    text=self.message.text,
+                    text=self.message.text, # FIXME: We need to allow null on the message because of payments and other interim messages with null text
                     chat_session=self.chat_session,
                     created_at=timezone.make_aware(datetime.datetime.utcfromtimestamp(int(self.message.timestamp/100))),
                     direction=MessageDirection.MESSAGE_DIRECTION_RECEIVED
