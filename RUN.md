@@ -1,5 +1,11 @@
 # Running MOBot
 
+#### Note to Developers
+
+* MOBot is still early in its development. While work is progressing to incorporate payments and streamline for deployment,
+  you may experience various hiccups and pain points. Please reach out to the [Community Forums](https://community.mobilecoin.foundation/)
+  and we are happy to help with any speed bumps or resolve ambiguities.
+
 ## Development Environment
 
 MOBot is a [Django](https://www.djangoproject.com/) app, and integrates well with various development environments, such as PyCharm.
