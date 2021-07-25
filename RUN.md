@@ -25,7 +25,7 @@ However, we include instructions below for running both for completion.
 
 ### Build and Run Locally
 
-For testing, we build and run locally, using the signal staging network, and the MobileCoin TestNet. The steps are roughly the following:
+For testing, we build and run locally, using the Signal staging network, and the MobileCoin TestNet. The steps are roughly the following:
 
 1. Set up and run signald
 1. Set up and run full-service
