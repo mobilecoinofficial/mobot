@@ -140,7 +140,7 @@ For testing, we build and run locally, using the Signal staging network, and the
 
 #### Add Inventory
 
-1. From the main page, select Items > +Add, and fill out the form.
+1. From the main page, select Items > +Add, and fill out the form (e.g. Name: Coin if doing an airdrop; note that the airdrop code is a special use case of doing a drop of something for sale. It needs an item for "sale" which is being created here, but actually will be giving away coins that are configured elsewhere).
 
 #### Create a Drop
 
