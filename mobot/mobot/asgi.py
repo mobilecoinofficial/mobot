@@ -1,3 +1,5 @@
+# Copyright (c) 2021 MobileCoin. All rights reserved.
+
 """
 ASGI config for mobot project.
 

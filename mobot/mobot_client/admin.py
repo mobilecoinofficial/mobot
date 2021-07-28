@@ -1,3 +1,5 @@
+# Copyright (c) 2021 MobileCoin. All rights reserved.
+
 from django.contrib import admin
 from .models import Store, Customer, Drop, Item, CustomerStorePreferences, DropSession, Message, BonusCoin, ChatbotSettings
 
