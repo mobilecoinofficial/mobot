@@ -154,18 +154,12 @@ These are the instructions for creating an AirDrop for Coins.
 
 ### Set Up and Run the MOBot Client
 
-1. In a new terminal window, create a virtual environment and install the requirements.
+1. In a new terminal window, enter the previously set up virtual environment.
 
     ```shell
-    git clone git@github.com:mobilecoinofficial/mobot.git
     cd mobot/mobot
-    python3 -m venv venv
     source venv/bin/activate
-    pip3 install -r requirements.txt
-    ```
-   
-    Note: If you are having issues with psycopg2, you may want to make sure that Python 3.9.5 is installed and postgresql is installed.
-   
+    ```    
 1. Prepare the environment for Django
 
     ```shell
