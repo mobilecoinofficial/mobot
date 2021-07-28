@@ -1,3 +1,5 @@
+# This code is copied from [pysignald](https://pypi.org/project/pysignald/) and modified to run locally with payments
+
 import attr
 
 

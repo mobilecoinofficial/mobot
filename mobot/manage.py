@@ -1,3 +1,5 @@
+# Copyright (c) 2021 MobileCoin. All rights reserved.
+
 #!/usr/bin/env python
 """Django's command-line utility for administrative tasks."""
 import os
