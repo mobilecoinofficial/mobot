@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.core.management.base import BaseCommand
 from signald_client import Signal
 from mobot_client.models import Store, Customer, DropSession, Drop, CustomerStorePreferences, Message, BonusCoin, ChatbotSettings, Order, Sku
-import mobilecoin as mc
+import full_service_cli as mc
 from decimal import Decimal
 import googlemaps
 
@@ -34,7 +34,7 @@ account_obj = all_accounts_response[ACCOUNT_ID]
 PUBLIC_ADDRESS = account_obj['main_address']
 
 get_network_status_response = mcc.get_network_status()
-MINIMUM_FEE_PMOB = get_network_status_response['fee_pmob']
+MINIMUM_FEE_PMOB = int(get_network_status_response['fee_pmob'])
 
 DROP_TYPE_AIRDROP = 0
 DROP_TYPE_ITEM = 1
@@ -64,23 +64,18 @@ MESSAGE_DIRECTION_SENT = 1
 
 bot_name = ChatbotSettings.load().name
 bot_avatar_filename = ChatbotSettings.load().avatar_filename
-signal.set_profile(bot_name, PUBLIC_ADDRESS, bot_avatar_filename, False)
+b64_public_address = mc.utility.b58_wrapper_to_b64_public_address(PUBLIC_ADDRESS)
 
-def _signald_to_fullservice(r):
-    return {
-        "object": "receiver_receipt",
-        "public_key": r['txo_public_key'],
-        "confirmation": r['txo_confirmation'],
-        "tombstone_block": str(r['tombstone']),
-        "amount": {
-            "object": "amount",
-            "commitment": r['amount_commitment'],
-            "masked_value": str(r['amount_masked'])
-        }
-    }
+resp = signal.set_profile(bot_name, b64_public_address, bot_avatar_filename, True)
+print('set profile response', resp)
+if resp.get('error'):
+    assert False, resp
 
 
 def send_mob_to_customer(source, amount_mob, cover_transaction_fee):
+    if isinstance(source, dict):
+        source = source['number']
+
     customer_payments_address = get_payments_address(source)
     if customer_payments_address is None:
         signal.send_message(source,
@@ -92,13 +87,15 @@ def send_mob_to_customer(source, amount_mob, cover_transaction_fee):
         amount_mob = amount_mob - Decimal(mc.pmob2mob(MINIMUM_FEE_PMOB))
 
     if amount_mob <= 0:
-        signal.send_message(source, "MOBot here! You sent us an unsolicited payment that we can't return. We suggest only sending us payments when we request them and for the amount requested.")
         return
 
     send_mob_to_address(source, ACCOUNT_ID, amount_mob, customer_payments_address)
 
 
 def send_mob_to_address(source, account_id, amount_in_mob, customer_payments_address):
+    # customer_payments_address is b64 encoded, but full service wants a b58 address
+    customer_payments_address = mc.utility.b64_public_address_to_b58_wrapper(customer_payments_address)
+
     tx_proposal = mcc.build_transaction(account_id, amount_in_mob, customer_payments_address)
     txo_id = submit_transaction(tx_proposal, account_id)
     for _ in range(10):
@@ -129,7 +126,9 @@ def submit_transaction(tx_proposal, account_id):
 
 def send_payment_receipt(source, tx_proposal):
     receiver_receipt = create_receiver_receipt(tx_proposal)
-    signal.send_payment_receipt(source, receiver_receipt, "Refund")
+    receiver_receipt = mc.utility.full_service_receipt_to_b64_receipt(receiver_receipt)
+    resp = signal.send_payment_receipt(source, receiver_receipt, "Refund")
+    print('Send receipt', receiver_receipt, 'to', source, ':', resp)
 
 
 def create_receiver_receipt(tx_proposal):
@@ -184,13 +183,16 @@ def handle_item_payment(source, customer, amount_paid_mob, drop_session):
     item_cost_mob = mc.pmob2mob(drop_session.drop.item.price_in_pmob)
 
     if amount_paid_mob < item_cost_mob:
-        log_and_send_message(customer, source, f"Not enough MOB, sending back {amount_paid_mob.normalize()}")
-        send_mob_to_customer(source, amount_paid_mob, False)
+        if mc.mob2pmob(amount_paid_mob) > MINIMUM_FEE_PMOB:
+            log_and_send_message(customer, source, f"Not enough MOB, sending back {amount_paid_mob.normalize()} (minus network fees)")
+            send_mob_to_customer(source, amount_paid_mob, False)
+        else:
+            log_and_send_message(customer, source, "Not enough MOB, unable to refund since it is less than the network fee")
         return
     
-    if amount_paid_mob > item_cost_mob:
+    if mc.mob2pmob(amount_paid_mob) > mc.mob2pmob(item_cost_mob) + MINIMUM_FEE_PMOB:
         excess = amount_paid_mob - item_cost_mob
-        log_and_send_message(customer, source, f"Sent too much MOB, sending back excess of {excess.normalize()}")
+        log_and_send_message(customer, source, f"Sent too much MOB, sending back excess of {excess.normalize()} (minus network fees)")
         send_mob_to_customer(source, excess, False)
     
     available_options = []
@@ -263,11 +265,19 @@ def handle_payment(source, receipt):
     receipt_status = None
     transaction_status = "TransactionPending"
 
+    if isinstance(source, dict):
+        source = source['number']
+
+    print('received receipt', receipt)
+    receipt = mc.utility.b64_receipt_to_full_service_receipt(receipt.receipt)
+
     while transaction_status == "TransactionPending":
-        receipt_status = mcc.check_receiver_receipt_status(PUBLIC_ADDRESS, _signald_to_fullservice(receipt))
+        receipt_status = mcc.check_receiver_receipt_status(PUBLIC_ADDRESS, receipt)
         transaction_status = receipt_status["receipt_transaction_status"]
+        print('Waiting for', receipt, receipt_status)
 
     if transaction_status != "TransactionSuccess":
+        print('failed', transaction_status)
         return "The transaction failed!"
 
     amount_paid_mob = mc.pmob2mob(receipt_status["txo"]["value_pmob"])
@@ -275,22 +285,23 @@ def handle_payment(source, receipt):
     customer = None
     drop_session = None
 
+    customer, _ = Customer.objects.get_or_create(phone_number=source)
     try:
-        customer, _ = Customer.objects.get_or_create(phone_number=source['number'])
+
         drop_session = DropSession.objects.get(customer=customer, drop__drop_type=DROP_TYPE_AIRDROP, state=SESSION_STATE_WAITING_FOR_BONUS_TRANSACTION)
-        handle_airdrop_payment(source, customer, amount_paid_mob, drop_session)
-    except Exception as e:
-        print(e)
+    except DropSession.DoesNotExist:
         pass
+    else:
+        handle_airdrop_payment(source, customer, amount_paid_mob, drop_session)
+        return
 
     try:
         drop_session = DropSession.objects.get(customer=customer, drop__drop_type=DROP_TYPE_ITEM, state=ITEM_SESSION_STATE_WAITING_FOR_PAYMENT)
-        handle_item_payment(source, customer, amount_paid_mob, drop_session)
-    except Exception as e:
-        print(e)
+    except DropSession.DoesNotExist:
         log_and_send_message(customer, source, "MOBot here! You sent us an unsolicited payment. We're returning it minus a network fee to cover our costs. We can't promise to always be paying attention and return unsolicited payments, so we suggest only sending us payments when we request them")
         send_mob_to_customer(source, amount_paid_mob, False)
-        return
+    else:
+        handle_item_payment(source, customer, amount_paid_mob, drop_session)
 
 def handle_drop_session_allow_contact_requested(message, drop_session):
     if message.text.lower() == "y" or message.text.lower() == "yes":
@@ -590,8 +601,7 @@ def handle_no_active_item_drop_session(customer, message, drop):
     price_in_mob = mc.pmob2mob(drop.item.price_in_pmob)
     log_and_send_message(customer, message.source, f"Send {price_in_mob.normalize()} MOB to reserve your item now!")
 
-    new_drop_session = DropSession(customer=customer, drop=drop, state=ITEM_SESSION_STATE_WAITING_FOR_PAYMENT)
-    new_drop_session.save()
+    new_drop_session, _ = DropSession.objects.get_or_create(customer=customer, drop=drop, state=ITEM_SESSION_STATE_WAITING_FOR_PAYMENT)
 
 
 def handle_no_active_airdrop_drop_session(customer, message, drop):
@@ -741,12 +751,18 @@ def chat_router(message, match):
         handle_no_active_item_drop_session(customer, message, active_drop)
 
 def log_and_send_message(customer, source, text):
+    if isinstance(source, dict):
+        source = source['number']
+
     sent_message = Message(customer=customer, store=store, text=text, direction=MESSAGE_DIRECTION_SENT)
     sent_message.save()
     signal.send_message(source, text)
 
 
 def get_signal_profile_name(source):
+    if isinstance(source, dict):
+        source = source['number']
+
     customer_signal_profile = signal.get_profile(source, True)
     try:
         customer_name = customer_signal_profile['data']['name']
@@ -756,13 +772,12 @@ def get_signal_profile_name(source):
 
 
 def get_payments_address(source):
+    if isinstance(source, dict):
+        source = source['number']
+
     customer_signal_profile = signal.get_profile(source, True)
     print(customer_signal_profile)
-    try:
-        customer_payments_address = customer_signal_profile['data']['paymentsAddress']
-        return customer_payments_address
-    except:
-        return None
+    return customer_signal_profile.get('mobilecoin_address')
 
 
 class Command(BaseCommand):
