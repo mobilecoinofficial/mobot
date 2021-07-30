@@ -16,6 +16,7 @@ class Store(models.Model):
 class Item(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     name = models.TextField()
+    price_in_pmob = models.PositiveIntegerField(default=None, blank=True, null=True)
     description = models.TextField(default=None, blank=True, null=True)
     short_description = models.TextField(default=None, blank=True, null=True)
     image_link = models.TextField(default=None, blank=True, null=True)
@@ -23,8 +24,17 @@ class Item(models.Model):
     def __str__(self):
         return f'{self.name}'
 
+class Sku(models.Model):
+    item = models.ForeignKey(Item, on_delete=models.CASCADE)
+    identifier = models.TextField()
+    quantity = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f'{self.item.name} - {self.identifier}'
+
 class Drop(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
+    drop_type = models.PositiveIntegerField(default=0)
     pre_drop_description = models.TextField()
     advertisment_start_time = models.DateTimeField()
     start_time = models.DateTimeField()
@@ -64,6 +74,7 @@ class DropSession(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     drop = models.ForeignKey(Drop, on_delete=models.CASCADE)
     state = models.IntegerField(default=0)
+    manual_override = models.BooleanField(default=False)
     bonus_coin_claimed = models.ForeignKey(BonusCoin, on_delete=models.CASCADE, default=None, blank=True, null=True)
 
 class Message(models.Model):
@@ -72,6 +83,17 @@ class Message(models.Model):
     text = models.TextField()
     date = models.DateTimeField(auto_now_add=True)
     direction = models.PositiveIntegerField()
+
+class Order(models.Model):
+    customer=models.ForeignKey(Customer, on_delete=models.CASCADE)
+    drop_session=models.ForeignKey(DropSession, on_delete=models.CASCADE)
+    sku=models.ForeignKey(Sku, on_delete=models.CASCADE)
+    date = models.DateTimeField(auto_now_add=True)
+    shipping_address = models.TextField(default=None, blank=True, null=True)
+    shipping_name = models.TextField(default=None, blank=True, null=True)
+    status = models.IntegerField(default=0)
+
+
 
 #------------------------------------------------------------------------------------------
 
