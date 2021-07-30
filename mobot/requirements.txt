@@ -1,10 +1,13 @@
 # requirements for signald
 attrs
 
-git+https://github.com/mobilecoinofficial/full-service.git#subdirectory=cli
-
+base58==2.1.0
 django==3.0.4
 psycopg2==2.8.6
 uwsgi==2.0.19.1
 pyzt
 googlemaps
+protobuf==3.17.3
+
+git+https://gitlab.com/mobilecoin/pysignald.git@8c86588cb2897b2e55608769a506df0d828229a8#egg=pysignald
+django-extensions==3.1.3
