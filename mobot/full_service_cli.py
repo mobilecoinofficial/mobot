@@ -1,3 +1,5 @@
+# Copyright (c) 2021 MobileCoin. All rights reserved.
+
 # A hack to bring in some code from the full-service submodule
 # This will go away once we have a proper Python library
 import os
