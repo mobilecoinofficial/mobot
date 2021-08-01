@@ -6,12 +6,8 @@ import full_service_cli as mc
 from decimal import Decimal
 from mobot_client.drop_session import BaseDropSession, SessionState
 from mobot_client.models import (
-    Customer,
     DropSession,
-    CustomerStorePreferences,
     BonusCoin,
-    Order,
-    Sku,
 )
 
 

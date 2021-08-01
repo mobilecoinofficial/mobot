@@ -237,7 +237,7 @@ class MOBot:
                     message, active_drop_session
                 )
                 return
-            except:
+            except (Exception,):
                 pass
 
             try:
@@ -250,7 +250,7 @@ class MOBot:
                 print(f"found active drop session in state {active_drop_session.state}")
                 if active_drop_session.manual_override:
                     return
-            except:
+            except (Exception,):
                 pass
             else:
                 item_drop = ItemDropSession(self.store, self.payments, self.messenger)

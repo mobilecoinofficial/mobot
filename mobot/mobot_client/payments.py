@@ -5,14 +5,6 @@ import time
 
 from mobot_client.drop_session import ItemSessionState
 from mobot_client.models import (
-    Store,
-    Customer,
-    DropSession,
-    Drop,
-    CustomerStorePreferences,
-    Message,
-    BonusCoin,
-    ChatbotSettings,
     Order,
     Sku,
 )
@@ -174,7 +166,7 @@ class Payments:
             self.messenger.log_and_send_message(
                 customer,
                 source,
-                f"Uh oh! Looks like we're all out of stock, sorry! Refunding your payment now :)",
+                "Uh oh! Looks like we're all out of stock, sorry! Refunding your payment now :)",
             )
             self.send_mob_to_customer(source, item_cost_mob, True)
             drop_session.state = ItemSessionState.REFUNDED.value
