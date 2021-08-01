@@ -7,6 +7,7 @@ import enum
 
 from mobot_client.drop_session import BaseDropSession, ItemSessionState
 from mobot_client.models import Customer, DropSession, CustomerStorePreferences, BonusCoin, Order, Sku
+from mobot_client.chat_strings import ChatStrings
 
 
 class OrderStatus(enum.Enum):
@@ -33,8 +34,8 @@ class ItemDropSession(BaseDropSession):
 
         number_ordered = Order.objects.filter(sku=sku).count()
         if number_ordered >= sku.quantity:
-            self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                                f"Sorry, we're all out of that selection! Refunding your MOB, try again :)")
+            self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.ITEM_SOLD_OUT)
+
             price_in_mob = mc.pmob2mob(drop_session.drop.item.price_in_pmob)
             self.payments.send_mob_to_customer(message.source, price_in_mob, True)
             drop_session.state = ItemSessionState.REFUNDED.value
@@ -44,8 +45,8 @@ class ItemDropSession(BaseDropSession):
         new_order = Order(customer=drop_session.customer, drop_session=drop_session, sku=sku)
         new_order.save()
 
-        self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                            "What address should we send the hoodie to?")
+        self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.ADDRESS_REQUEST)
+
         drop_session.state = ItemSessionState.WAITING_FOR_ADDRESS
         drop_session.save()
 
@@ -56,25 +57,19 @@ class ItemDropSession(BaseDropSession):
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 message.source,
-                ("Commands available are:\n\n"
-                 "'info' - Item info\n"
-                 "'pay' - How to pay\n"
-                 "'terms' - Terms and conditions\n"))
+                ChatStrings.ITEM_HELP)
 
         elif message.text.lower() == "pay":
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 message.source,
-                ("1. Select the attachment (+) icon below and then select Pay\n"
-                 "2. Enter the amount to send ({} MOB)\n"
-                 "3. Tap Pay\n"
-                 "4. Tap Confirm Payment").format(price_in_mob.normalize()))
+                ChatStrings.PAY.format(amount=price_in_mob.normalize()))
 
         elif message.text.lower() == "terms":
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 message.source,
-                "Visit (terms url) for MOBots terms and conditions")
+                ChatStrings.TERMS)
         elif message.text.lower() == "info":
             drop_item = drop_session.drop.item
 
@@ -96,11 +91,10 @@ class ItemDropSession(BaseDropSession):
         else:
             self.messenger.log_and_send_message(drop_session.customer,
                                                 message.source,
-                                                "Commands are help, info, pay, and terms\n\n")
+                                                ChatStrings.ITEM_HELP_SHORT)
 
         price_in_mob = mc.pmob2mob(drop_session.drop.item.price_in_pmob)
-        self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                            f"Please send {price_in_mob.normalize()} MOB to reserve your item now!")
+        self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.RESERVE_ITEM.format(amount=price_in_mob.normalize()))
 
     def handle_item_drop_session_waiting_for_address(self, message, drop_session):
         order = None
