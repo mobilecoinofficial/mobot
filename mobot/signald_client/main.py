@@ -22,6 +22,7 @@ class Signal(_Signal):
         """
         A decorator that registers a chat handler function with a regex.
         """
+        print(f"\033[1;31m Registering chat handler for {regex}\033[0m")
         if not isinstance(regex, RE_TYPE):
             regex = re.compile(regex, re.I)
 
@@ -42,6 +43,7 @@ class Signal(_Signal):
         Start the chat event loop.
         """
         for message in self.receive_messages():
+            print("Receiving message")
             print(message)
 
             if message.payment:
