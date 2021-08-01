@@ -27,3 +27,9 @@ class SignalMessenger:
         )
         sent_message.save()
         self.signal.send_message(source, text, attachments=attachments)
+
+    @staticmethod
+    def log_received(message, customer, store):
+        incoming = Message(customer=customer, store=store, text=message.text,
+                           direction=MessageDirection.RECEIVED.value)
+        incoming.save()

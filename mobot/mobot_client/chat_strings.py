@@ -76,3 +76,5 @@ class ChatStrings:
             message_to_send += f" - {option.identifier}\n"
 
         return message_to_send
+
+    TIMEOUT = "Your session is about to timeout. Send any message to continue."
