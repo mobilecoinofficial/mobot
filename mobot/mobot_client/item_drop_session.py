@@ -45,9 +45,9 @@ class ItemDropSession(BaseDropSession):
         new_order = Order(customer=drop_session.customer, drop_session=drop_session, sku=sku)
         new_order.save()
 
-        self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.ADDRESS_REQUEST)
+        self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.ADDRESS_HOODIE_REQUEST)
 
-        drop_session.state = ItemSessionState.WAITING_FOR_ADDRESS
+        drop_session.state = ItemSessionState.WAITING_FOR_ADDRESS.value
         drop_session.save()
 
     def handle_item_drop_session_waiting_for_payment(self, message, drop_session):
@@ -101,15 +101,15 @@ class ItemDropSession(BaseDropSession):
         try:
             order = Order.objects.get(drop_session=drop_session)
         except:
-            self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                                "We don't seem to have an order for you... something went wrong! Please try again")
+            self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.MISSING_ORDER)
+
             return
 
         address = self.gmaps.geocode(message.text)
 
         if len(address) == 0:
-            self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                                "We couldn't seem to find that address. Please try again!")
+            self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.ADDRESS_NOT_FOUND)
+
             return
 
         order.shipping_address = address[0]['formatted_address']
@@ -118,8 +118,8 @@ class ItemDropSession(BaseDropSession):
         drop_session.state = ItemSessionState.WAITING_FOR_NAME.value
         drop_session.save()
 
-        self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                            "What name should we use to send the order to?")
+        self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.NAME_REQUEST)
+
 
     def handle_item_drop_session_waiting_for_name(self, message, drop_session):
         order = None
@@ -127,7 +127,7 @@ class ItemDropSession(BaseDropSession):
             order = Order.objects.get(drop_session=drop_session)
         except:
             self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                                "We don't seem to have an order for you... something went wrong! Please try again")
+                                                ChatStrings.MISSING_ORDER)
             return
 
         order.shipping_name = message.text
@@ -136,8 +136,7 @@ class ItemDropSession(BaseDropSession):
         drop_session.state = ItemSessionState.SHIPPING_INFO_CONFIRMATION.value
         drop_session.save()
 
-        self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                            f"Does this look correct?\n{order.shipping_name}\n{order.shipping_address}")
+        self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.VERIFY_SHIPPING.format(name=order.shipping_name, address=order.shipping_address))
 
     def handle_item_drop_session_shipping_confirmation(self, message, drop_session):
         order = None
@@ -145,46 +144,42 @@ class ItemDropSession(BaseDropSession):
             order = Order.objects.get(drop_session=drop_session)
         except:
             self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                                "We don't seem to have an order for you... something went wrong! Please try again")
+                                                ChatStrings.MISSING_ORDER)
             return
 
         if message.text.lower() == "no" or message.text.lower() == "n":
             drop_session.state = ItemSessionState.WAITING_FOR_ADDRESS.value
             drop_session.save()
-            self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                                "What address should we ship to?")
+            self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.ADDRESS_REQUEST)
+
             return
 
         order.status = OrderStatus.CONFIRMED.value
         order.save()
 
-        self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                            (f"All set. Your order number is {order.id}\n\n"
-                                             f"1x {order.sku.item.name}, to be shipped to you\n\n"
-                                             f"Please provide your order number ({order.id}) when contacting us "
-                                             "if you have any questions or issues"))
+        self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.ORDER_CONFIRMATION.format(order_id=order.id, sku_name=order.sku.item.name)
+                                            )
 
         if message.text.lower() == "yes" or message.text.lower() == "y":
             if self.customer_has_store_preferences(drop_session.customer):
                 drop_session.state = ItemSessionState.COMPLETED.value
                 drop_session.save()
-                self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                                    "Thanks! MOBot out, buh-bye!")
+                self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.BYE)
+
                 return
 
             drop_session.state = ItemSessionState.ALLOW_CONTACT_REQUESTED.value
             drop_session.save()
-            self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                                "Can we contact you for future drops?")
+            self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.FUTURE_NOTIFICATIONS)
 
-        self.messenger.log_and_send_message(drop_session.customer, message.source, "Valid commands are y(es) and n(o)")
+        self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.NOTIFICATIONS_HELP)
 
     def handle_item_drop_session_allow_contact_requested(self, message, drop_session):
         if message.text.lower() == "n" or message.text.lower() == "no":
             customer_store_prefs = CustomerStorePreferences(customer=drop_session.customer, store=self.store,
                                                             allows_contact=False)
             customer_store_prefs.save()
-            self.messenger.log_and_send_message(drop_session.customer, message.source, "Thanks! MOBot OUT. Buh-bye!")
+            self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.BYE)
             drop_session.state = ItemSessionState.COMPLETED
             drop_session.save()
             return
@@ -193,13 +188,12 @@ class ItemDropSession(BaseDropSession):
             customer_store_prefs = CustomerStorePreferences(customer=drop_session.customer, store=self.store,
                                                             allows_contact=True)
             customer_store_prefs.save()
-            self.messenger.log_and_send_message(drop_session.customer, message.source, "Thanks! MOBot OUT. Buh-bye!")
+            self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.BYE)
             drop_session.state = ItemSessionState.COMPLETED
             drop_session.save()
             return
 
-        self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                            "You can type (y)es or (n)o\n\nWould you like to receive an alert when we are doing future drops?")
+        self.messenger.log_and_send_message(drop_session.customer, message.source, ChatStrings.NOTIFICATIONS_HELP_ALT)
 
     def handle_active_item_drop_session(self, message, drop_session):
         print(drop_session.state)
@@ -230,18 +224,13 @@ class ItemDropSession(BaseDropSession):
     def handle_no_active_item_drop_session(self, customer, message, drop):
         if not customer.phone_number.startswith(drop.number_restriction):
             self.messenger.log_and_send_message(customer, message.source,
-                                                "Hi! MOBot here.\n\nSorry, we are not yet available in your country")
+                                                ChatStrings.COUNTRY_RESTRICTED)
             return
 
         customer_payments_address = self.payments.get_payments_address(message.source)
         if customer_payments_address is None:
             self.messenger.log_and_send_message(customer, message.source,
-                                                ("Hi! MOBot here.\n\nI'm a bot from MobileCoin that assists "
-                                                 "in making purchases using Signal Messenger and MobileCoin\n\n"
-                                                 "Uh oh! In-app payments are not enabled \n\n"
-                                                 f"Enable payments to receive {drop.item.description}\n\n"
-                                                 "More info on enabling payments here: "
-                                                 "https://support.signal.org/hc/en-us/articles/360057625692-In-app-Payments"))
+                                                ChatStrings.PAYMENTS_ENABLED_HELP.format(item_desc=drop.item.description))
             return
 
         available_options = []
@@ -254,17 +243,15 @@ class ItemDropSession(BaseDropSession):
 
         if len(available_options) == 0:
             self.messenger.log_and_send_message(customer, message.source,
-                                                f"Uh oh! Looks like we're all out of stock, sorry!")
+                                                ChatStrings.OUT_OF_STOCK)
             return
 
-        message_to_send = "We have the following available options:\n\n"
-        for option in available_options:
-            message_to_send += f" - {option.identifier}\n"
+        message_to_send = ChatStrings.get_options(available_options)
 
         self.messenger.log_and_send_message(customer, message.source, message_to_send)
         price_in_mob = mc.pmob2mob(drop.item.price_in_pmob)
         self.messenger.log_and_send_message(customer, message.source,
-                                            f"Send {price_in_mob.normalize()} MOB to reserve your item now!")
+                                            ChatStrings.PAYMENT_REQUEST.format(price=price_in_mob.normalize()))
 
         new_drop_session, _ = DropSession.objects.get_or_create(customer=customer, drop=drop,
                                                                 state=ItemSessionState.WAITING_FOR_PAYMENT.value)

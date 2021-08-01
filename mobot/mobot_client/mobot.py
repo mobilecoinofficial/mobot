@@ -15,6 +15,7 @@ from mobot_client.drop_session import BaseDropSession, SessionState, DropType, I
 from mobot_client.air_drop_session import AirDropSession
 from mobot_client.item_drop_session import ItemDropSession
 from mobot_client.payments import Payments
+from mobot_client.chat_strings import ChatStrings
 
 
 class MOBot:
@@ -98,14 +99,13 @@ class MOBot:
 
             try:
                 drop_session = DropSession.objects.get(customer=customer, drop__drop_type=DropType.ITEM.value,
-                                                       state=ItemSessionState.WAITING_FOR_PAYMENT)
+                                                       state=ItemSessionState.WAITING_FOR_PAYMENT.value)
             except DropSession.DoesNotExist:
                 self.messenger.log_and_send_message(customer, source,
-                                                    "MOBot here! You sent us an unsolicited payment. We're returning it minus a network fee to cover our costs. We can't promise to always be paying attention and return unsolicited payments, so we suggest only sending us payments when we request them")
+                                                    ChatStrings.UNSOLICITED_PAYMENT)
                 self.payments.send_mob_to_customer(source, amount_paid_mob, False)
             else:
-                item_drop = ItemDropSession(self.store, self.payments, self.messenger)
-                item_drop.handle_item_payment(source, customer, amount_paid_mob, drop_session)
+                self.payments.handle_item_payment(source, customer, amount_paid_mob, drop_session)
 
         @self.signal.chat_handler("coins")
         def chat_router_coins(message, match):
@@ -136,14 +136,14 @@ class MOBot:
 
             if not store_preferences.allows_contact:
                 self.messenger.log_and_send_message(customer, message.source,
-                                                    "You are not currently receiving any notifications")
+                                                    ChatStrings.NOTIFICATIONS_OFF)
                 return
 
             store_preferences.allows_contact = False
             store_preferences.save()
 
             self.messenger.log_and_send_message(customer, message.source,
-                                                "You will no longer receive notifications about future drops.")
+                                                ChatStrings.DISABLE_NOTIFICATIONS)
 
         @self.signal.chat_handler("subscribe")
         def subscribe_handler(message, _match):
@@ -152,13 +152,13 @@ class MOBot:
                                                                                         store=self.store)
 
             if store_preferences.allows_contact:
-                self.messenger.log_and_send_message(customer, message.source, "You are already subscribed.")
+                self.messenger.log_and_send_message(customer, message.source, ChatStrings.ALREADY_SUBSCRIBED)
                 return
 
             store_preferences.allows_contact = True
             store_preferences.save()
 
-            self.messenger.log_and_send_message(customer, message.source, "We will let you know about future drops!")
+            self.messenger.log_and_send_message(customer, message.source, ChatStrings.SUBSCRIBE_NOTIFICATIONS)
 
         @self.signal.chat_handler("")
         def chat_router(message, match):
@@ -197,19 +197,19 @@ class MOBot:
             if drop_to_advertise is not None:
                 if not customer.phone_number.startswith(drop_to_advertise.number_restriction):
                     self.messenger.log_and_send_message(customer, message.source,
-                                                        "Hi! MOBot here.\n\nSorry, we are not yet available in your country")
+                                                        ChatStrings.COUNTRY_RESTRICTED)
                     return
                 bst_time = drop_to_advertise.start_time.astimezone(pytz.timezone(drop_to_advertise.timezone))
-                response_message = "Hi! MOBot here.\n\nWe're currently closed.\n\nCome back on {0} at {1} for {2}".format(
-                    bst_time.strftime("%A, %b %d"), bst_time.strftime("%-I:%M %p %Z"),
-                    drop_to_advertise.item.description)
+                response_message = ChatStrings.STORE_CLOSED.format(
+                    date=bst_time.strftime("%A, %b %d"), time=bst_time.strftime("%-I:%M %p %Z"),
+                    desc=drop_to_advertise.item.description)
                 self.messenger.log_and_send_message(customer, message.source, response_message)
                 return
 
             active_drop = BaseDropSession.get_active_drop()
             if active_drop is None:
                 self.messenger.log_and_send_message(customer, message.source,
-                                                    "Hi! MOBot here.\n\nWe're currently closed. Buh-Bye!")
+                                                    ChatStrings.STORE_CLOSED_SHORT)
                 return
 
             if active_drop.drop_type == DropType.AIRDROP.value:
@@ -219,6 +219,8 @@ class MOBot:
             if active_drop.drop_type == DropType.ITEM.value:
                 item_drop = ItemDropSession(self.store, self.payments, self.messenger)
                 item_drop.handle_no_active_item_drop_session(customer, message, active_drop)
+
+    # FIXME: Handler for cancel/help?
 
     def run_chat(self):
         print("Now running MOBot chat")
