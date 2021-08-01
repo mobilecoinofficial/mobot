@@ -98,7 +98,7 @@ class BaseDropSession:
     def customer_has_completed_airdrop(customer, drop):
         try:
             _completed_drop_session = DropSession.objects.get(
-                customer=customer, drop=drop, state=SessionState.COMPLETED.value()
+                customer=customer, drop=drop, state=SessionState.COMPLETED.value
             )
             return True
         except (Exception,):
@@ -108,7 +108,7 @@ class BaseDropSession:
     def customer_has_completed_item_drop(customer, drop):
         try:
             DropSession.objects.get(
-                customer=customer, drop=drop, state=ItemSessionState.COMPLETED.value()
+                customer=customer, drop=drop, state=ItemSessionState.COMPLETED.value
             )
             return True
         except (Exception,):

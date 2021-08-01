@@ -1,9 +1,12 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
+import datetime
 import os
 import full_service_cli as mc
 import pytz
+import threading
 
+from background_task import background
 from signald_client import Signal
 
 from mobot_client.logger import SignalMessenger
@@ -13,6 +16,7 @@ from mobot_client.models import (
     CustomerStorePreferences,
     BonusCoin,
     ChatbotSettings,
+    Message,
     Order,
     Sku,
 )
@@ -27,6 +31,8 @@ from mobot_client.air_drop_session import AirDropSession
 from mobot_client.item_drop_session import ItemDropSession
 from mobot_client.payments import Payments
 from mobot_client.chat_strings import ChatStrings
+
+utc = pytz.UTC
 
 
 class MOBot:
@@ -216,10 +222,12 @@ class MOBot:
 
         @self.signal.chat_handler("")
         def chat_router(message, match):
-            print("\033[1;31m NOW ROUTING CHAT\033[0m")
+            # Store the message
+            print("\033[1;33m NOW ROUTING CHAT\033[0m", message)
             customer, _ = Customer.objects.get_or_create(
                 phone_number=message.source["number"]
             )
+            self.messenger.log_received(message, customer, self.store)
             try:
                 active_drop_session = DropSession.objects.get(
                     customer=customer,
@@ -260,7 +268,7 @@ class MOBot:
             drop_to_advertise = BaseDropSession.get_advertising_drop()
             if drop_to_advertise is not None:
                 if not customer.phone_number.startswith(
-                    drop_to_advertise.number_restriction
+                        drop_to_advertise.number_restriction
                 ):
                     self.messenger.log_and_send_message(
                         customer, message.source, ChatStrings.COUNTRY_RESTRICTED
@@ -300,6 +308,25 @@ class MOBot:
 
     # FIXME: Handler for cancel/help?
 
+    @background(schedule=10)
+    def process_timeouts(self):
+        print("\033[1;33m processing timeouts\033[0m")
+        for customer in Customer.objects.iterator():
+            print("for customer", customer)
+            last_message = Message.objects.filter(
+                direction=0,
+                customer=customer.phone_number
+            ).values('customer', 'date').order_by('-date').first()
+            print("last message", last_message)
+            time_delta = (utc.localize(datetime.datetime.now()) - last_message['date']).seconds
+            print("time delta = ", time_delta)
+            if time_delta > 10:
+                print("sending message")
+                self.messenger.log_and_send_message(customer, customer.phone_number, ChatStrings.TIMEOUT)
+
     def run_chat(self):
+        print("About to process timeouts")
+        self.process_timeouts.now(self)
+
         print("Now running MOBot chat")
         self.signal.run_chat(True)

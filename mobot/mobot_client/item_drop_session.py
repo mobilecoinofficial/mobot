@@ -234,7 +234,7 @@ class ItemDropSession(BaseDropSession):
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source, ChatStrings.BYE
             )
-            drop_session.state = ItemSessionState.COMPLETED
+            drop_session.state = ItemSessionState.COMPLETED.value
             drop_session.save()
             return
 
@@ -246,7 +246,7 @@ class ItemDropSession(BaseDropSession):
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source, ChatStrings.BYE
             )
-            drop_session.state = ItemSessionState.COMPLETED
+            drop_session.state = ItemSessionState.COMPLETED.value
             drop_session.save()
             return
 

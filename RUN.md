@@ -174,6 +174,24 @@ These are the instructions for creating an AirDrop for Coins.
     python3 manage.py run_mobot_client
     ```
 
+### Debugging with the Django shell
+
+1. Launch the Django shell
+
+    ```shell
+    cd mobot/mobot
+    source venv/bin/activate
+    export DEBUG=TRUE
+    export SECRET_KEY=123
+    python3 manage.py shell
+    ```
+
+1. Import the models and interact with the database objects
+
+    ```shell
+    from mobot_client.models import *
+    ```
+
 ## Running Locally with Docker
 
 ### Local Config
