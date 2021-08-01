@@ -1,5 +1,6 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
+
 class ChatStrings:
 
     # General
@@ -11,10 +12,14 @@ class ChatStrings:
     Would you like to receive an alert when we are doing future drops?
     """
     NOTIFICATIONS_OFF = "You are not currently receiving any notifications"
-    DISABLE_NOTIFICATIONS = "You will no longer receive notifications about future drops."
+    DISABLE_NOTIFICATIONS = (
+        "You will no longer receive notifications about future drops."
+    )
     ALREADY_SUBSCRIBED = "You are already subscribed."
     SUBSCRIBE_NOTIFICATIONS = "We will let you know about future drops!"
-    COUNTRY_RESTRICTED = "Hi! MOBot here.\n\nSorry, we are not yet available in your country"
+    COUNTRY_RESTRICTED = (
+        "Hi! MOBot here.\n\nSorry, we are not yet available in your country"
+    )
     PAYMENTS_ENABLED_HELP = """Hi! MOBot here.
 
     I'm a bot from MobileCoin that assists in making purchases using Signal Messenger and MobileCoin.
@@ -31,7 +36,9 @@ class ChatStrings:
 
     # Item Drop Strings
     OUT_OF_STOCK = "Uh oh! Looks like we're all out of stock, sorry!"
-    ITEM_SOLD_OUT = "Sorry, we're all out of that selection! Refunding your MOB, try again :)"
+    ITEM_SOLD_OUT = (
+        "Sorry, we're all out of that selection! Refunding your MOB, try again :)"
+    )
     ADDRESS_HOODIE_REQUEST = "What address should we send the hoodie to?"
     ADDRESS_REQUEST = "What address should we ship to?"
     ITEM_HELP = """Commands available are:

@@ -11,15 +11,19 @@ class MessageDirection(enum.Enum):
 
 
 class SignalMessenger:
-
     def __init__(self, signal, store):
         self.signal = signal
         self.store = store
 
     def log_and_send_message(self, customer, source, text, attachments=[]):
         if isinstance(source, dict):
-            source = source['number']
+            source = source["number"]
 
-        sent_message = Message(customer=customer, store=self.store, text=text, direction=MessageDirection.SENT.value)
+        sent_message = Message(
+            customer=customer,
+            store=self.store,
+            text=text,
+            direction=MessageDirection.SENT.value,
+        )
         sent_message.save()
         self.signal.send_message(source, text, attachments=attachments)
