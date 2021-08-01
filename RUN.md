@@ -96,6 +96,7 @@ For testing, we build and run locally, using the Signal staging network, and the
 
     ```shell
     git clone git@github.com:mobilecoinofficial/mobot.git
+    git submodule update --init --recursive
     cd mobot/mobot
     python3 -m venv venv
     source venv/bin/activate
@@ -298,3 +299,17 @@ Secrets are predefined for the deployment environment via Terraform configuratio
 | Variable | Location |
 | --- | --- |
 | `SECRET_KEY` | `<environment>_mobot_secret_key` variable in Terraform |
+
+## UnitTests
+
+To get a dump of your data, you can run the following from within the virutal environment:
+
+```shell
+python3 manage.py dumpdata mobot_client --indent 4 > ./mobot_client/fixtures/mobot_client.json
+```
+
+Then to test:
+
+```shell
+python3 manage.py test
+```
