@@ -7,10 +7,8 @@ import enum
 
 from mobot_client.drop_session import BaseDropSession, ItemSessionState
 from mobot_client.models import (
-    Customer,
     DropSession,
     CustomerStorePreferences,
-    BonusCoin,
     Order,
     Sku,
 )
@@ -35,7 +33,7 @@ class ItemDropSession(BaseDropSession):
             sku = Sku.objects.get(
                 item=drop_session.drop.item, identifier__iexact=message.text
             )
-        except:
+        except (Exception,):
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 message.source,
@@ -127,7 +125,7 @@ class ItemDropSession(BaseDropSession):
         order = None
         try:
             order = Order.objects.get(drop_session=drop_session)
-        except:
+        except (Exception,):
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source, ChatStrings.MISSING_ORDER
             )
@@ -157,7 +155,7 @@ class ItemDropSession(BaseDropSession):
         order = None
         try:
             order = Order.objects.get(drop_session=drop_session)
-        except:
+        except (Exception,):
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source, ChatStrings.MISSING_ORDER
             )
@@ -181,7 +179,7 @@ class ItemDropSession(BaseDropSession):
         order = None
         try:
             order = Order.objects.get(drop_session=drop_session)
-        except:
+        except (Exception,):
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source, ChatStrings.MISSING_ORDER
             )

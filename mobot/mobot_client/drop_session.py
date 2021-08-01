@@ -82,7 +82,7 @@ class BaseDropSession:
                 customer=customer, store=store_to_check
             )
             return customer_store_preferences
-        except:
+        except (Exception,):
             return None
 
     def customer_has_store_preferences(self, customer):
@@ -91,7 +91,7 @@ class BaseDropSession:
                 customer=customer, store=self.store
             )
             return True
-        except:
+        except (Exception,):
             return False
 
     @staticmethod
@@ -101,7 +101,7 @@ class BaseDropSession:
                 customer=customer, drop=drop, state=SessionState.COMPLETED.value()
             )
             return True
-        except:
+        except (Exception,):
             return False
 
     @staticmethod
@@ -111,7 +111,7 @@ class BaseDropSession:
                 customer=customer, drop=drop, state=ItemSessionState.COMPLETED.value()
             )
             return True
-        except:
+        except (Exception,):
             return False
 
     @staticmethod
