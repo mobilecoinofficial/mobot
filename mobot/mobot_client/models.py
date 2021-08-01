@@ -10,7 +10,7 @@ class Store(models.Model):
     privacy_policy_url = models.TextField()
 
     def __str__(self):
-        return f'{self.name} ({self.phone_number})'
+        return f"{self.name} ({self.phone_number})"
 
 
 class Item(models.Model):
@@ -22,7 +22,7 @@ class Item(models.Model):
     image_link = models.TextField(default=None, blank=True, null=True)
 
     def __str__(self):
-        return f'{self.name}'
+        return f"{self.name}"
 
 
 class Sku(models.Model):
@@ -31,7 +31,7 @@ class Sku(models.Model):
     quantity = models.PositiveIntegerField(default=0)
 
     def __str__(self):
-        return f'{self.item.name} - {self.identifier}'
+        return f"{self.item.name} - {self.identifier}"
 
 
 class Drop(models.Model):
@@ -53,7 +53,7 @@ class Drop(models.Model):
         return amount * self.conversion_rate_mob_to_currency
 
     def __str__(self):
-        return f'{self.store.name} - {self.item.name}'
+        return f"{self.store.name} - {self.item.name}"
 
 
 class BonusCoin(models.Model):
@@ -67,7 +67,7 @@ class Customer(models.Model):
     received_sticker_pack = models.BooleanField(default=False)
 
     def __str__(self):
-        return f'{self.phone_number}'
+        return f"{self.phone_number}"
 
 
 class CustomerStorePreferences(models.Model):
@@ -81,7 +81,9 @@ class DropSession(models.Model):
     drop = models.ForeignKey(Drop, on_delete=models.CASCADE)
     state = models.IntegerField(default=0)
     manual_override = models.BooleanField(default=False)
-    bonus_coin_claimed = models.ForeignKey(BonusCoin, on_delete=models.CASCADE, default=None, blank=True, null=True)
+    bonus_coin_claimed = models.ForeignKey(
+        BonusCoin, on_delete=models.CASCADE, default=None, blank=True, null=True
+    )
 
 
 class Message(models.Model):
@@ -103,6 +105,7 @@ class Order(models.Model):
 
 
 # ------------------------------------------------------------------------------------------
+
 
 class SingletonModel(models.Model):
     class Meta:

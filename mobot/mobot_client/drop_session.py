@@ -39,7 +39,6 @@ class DropType(enum.Enum):
 
 
 class BaseDropSession:
-
     def __init__(self, store, payments, messenger):
         self.store = store
         self.payments = payments
@@ -47,8 +46,9 @@ class BaseDropSession:
 
     @staticmethod
     def get_advertising_drop():
-        drops_to_advertise = Drop.objects.filter(advertisment_start_time__lte=timezone.now()).filter(
-            start_time__gt=timezone.now())
+        drops_to_advertise = Drop.objects.filter(
+            advertisment_start_time__lte=timezone.now()
+        ).filter(start_time__gt=timezone.now())
 
         if len(drops_to_advertise) > 0:
             return drops_to_advertise[0]
@@ -56,18 +56,21 @@ class BaseDropSession:
 
     def under_drop_quota(self, drop):
         number_initial_drops_finished = DropSession.objects.filter(
-            drop=drop,
-            state__gt=SessionState.READY_TO_RECEIVE_INITIAL.value
+            drop=drop, state__gt=SessionState.READY_TO_RECEIVE_INITIAL.value
         ).count()
         return number_initial_drops_finished < drop.initial_coin_limit
 
     def minimum_coin_available(self, drop):
         unspent_pmob = self.payments.get_unspent_pmob()
-        return unspent_pmob >= (drop.initial_coin_amount_pmob + int(self.payments.get_minimum_fee_pmob()))
+        return unspent_pmob >= (
+            drop.initial_coin_amount_pmob + int(self.payments.get_minimum_fee_pmob())
+        )
 
     @staticmethod
     def get_active_drop():
-        active_drops = Drop.objects.filter(start_time__lte=timezone.now()).filter(end_time__gte=timezone.now())
+        active_drops = Drop.objects.filter(start_time__lte=timezone.now()).filter(
+            end_time__gte=timezone.now()
+        )
         if len(active_drops) == 0:
             return None
         return active_drops[0]
@@ -75,14 +78,18 @@ class BaseDropSession:
     @staticmethod
     def get_customer_store_preferences(customer, store_to_check):
         try:
-            customer_store_preferences = CustomerStorePreferences.objects.get(customer=customer, store=store_to_check)
+            customer_store_preferences = CustomerStorePreferences.objects.get(
+                customer=customer, store=store_to_check
+            )
             return customer_store_preferences
         except:
             return None
 
     def customer_has_store_preferences(self, customer):
         try:
-            _ = CustomerStorePreferences.objects.get(customer=customer, store=self.store)
+            _ = CustomerStorePreferences.objects.get(
+                customer=customer, store=self.store
+            )
             return True
         except:
             return False
@@ -90,8 +97,9 @@ class BaseDropSession:
     @staticmethod
     def customer_has_completed_airdrop(customer, drop):
         try:
-            _completed_drop_session = DropSession.objects.get(customer=customer, drop=drop,
-                                                              state=SessionState.COMPLETED.value())
+            _completed_drop_session = DropSession.objects.get(
+                customer=customer, drop=drop, state=SessionState.COMPLETED.value()
+            )
             return True
         except:
             return False
@@ -99,7 +107,9 @@ class BaseDropSession:
     @staticmethod
     def customer_has_completed_item_drop(customer, drop):
         try:
-            DropSession.objects.get(customer=customer, drop=drop, state=ItemSessionState.COMPLETED.value())
+            DropSession.objects.get(
+                customer=customer, drop=drop, state=ItemSessionState.COMPLETED.value()
+            )
             return True
         except:
             return False
@@ -116,74 +126,114 @@ class BaseDropSession:
 
     def handle_drop_session_allow_contact_requested(self, message, drop_session):
         if message.text.lower() == "y" or message.text.lower() == "yes":
-            customer_prefs = CustomerStorePreferences(customer=drop_session.customer, store=self.store,
-                                                      allows_contact=True)
+            customer_prefs = CustomerStorePreferences(
+                customer=drop_session.customer, store=self.store, allows_contact=True
+            )
             customer_prefs.save()
             drop_session.state = SessionState.COMPLETED.value
             drop_session.save()
-            self.messenger.log_and_send_message(drop_session.customer, message.source, "Thanks! MOBot OUT. Buh-bye")
+            self.messenger.log_and_send_message(
+                drop_session.customer, message.source, "Thanks! MOBot OUT. Buh-bye"
+            )
             return
 
         if message.text.lower() == "n" or message.text.lower() == "no":
-            customer_prefs = CustomerStorePreferences(customer=drop_session.customer, store=self.store,
-                                                      allows_contact=False)
+            customer_prefs = CustomerStorePreferences(
+                customer=drop_session.customer, store=self.store, allows_contact=False
+            )
             customer_prefs.save()
             drop_session.state = SessionState.COMPLETED.value
             drop_session.save()
-            self.messenger.log_and_send_message(drop_session.customer, message.source, "Thanks! MOBot OUT. Buh-bye")
+            self.messenger.log_and_send_message(
+                drop_session.customer, message.source, "Thanks! MOBot OUT. Buh-bye"
+            )
             return
 
         if message.text.lower() == "p" or message.text.lower() == "privacy":
-            self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                                f"Our privacy policy is available here: {self.store.privacy_policy_url}\n\nWould you like to receive alerts for future drops?")
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                f"Our privacy policy is available here: {self.store.privacy_policy_url}\n\nWould you like to receive alerts for future drops?",
+            )
             return
 
         if message.text.lower() == "help":
-            self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                                "You can type (y)es, (n)o, or (p)rivacy policy\n\nWould you like to receive alerts for future drops?")
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                "You can type (y)es, (n)o, or (p)rivacy policy\n\nWould you like to receive alerts for future drops?",
+            )
             return
 
-        self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                            "You can type (y)es, (n)o, or (p)rivacy policy\n\nWould you like to receive alerts for future drops?")
+        self.messenger.log_and_send_message(
+            drop_session.customer,
+            message.source,
+            "You can type (y)es, (n)o, or (p)rivacy policy\n\nWould you like to receive alerts for future drops?",
+        )
 
     def handle_drop_session_ready_to_receive(self, message, drop_session):
-        if message.text.lower() == "n" or message.text.lower() == "no" or message.text.lower() == "cancel":
+        if (
+            message.text.lower() == "n"
+            or message.text.lower() == "no"
+            or message.text.lower() == "cancel"
+        ):
             drop_session.state = SessionState.CANCELLED.value
             drop_session.save()
-            self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                                "session cancelled, message us again when you're ready!")
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                "session cancelled, message us again when you're ready!",
+            )
             return
 
         if message.text.lower() == "y" or message.text.lower() == "yes":
             if not self.under_drop_quota(drop_session.drop):
-                self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                                    "Too late! We've distributed all of the MOB allocated to this airdrop.\n\nSorry 😭")
+                self.messenger.log_and_send_message(
+                    drop_session.customer,
+                    message.source,
+                    "Too late! We've distributed all of the MOB allocated to this airdrop.\n\nSorry 😭",
+                )
                 drop_session.state = SessionState.COMPLETED.value
                 drop_session.save()
                 return
 
             if not self.minimum_coin_available(drop_session.drop):
-                self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                                    "Too late! We've distributed all of the MOB allocated to this airdrop.\n\nSorry 😭")
+                self.messenger.log_and_send_message(
+                    drop_session.customer,
+                    message.source,
+                    "Too late! We've distributed all of the MOB allocated to this airdrop.\n\nSorry 😭",
+                )
                 drop_session.state = SessionState.COMPLETED.value
                 drop_session.save()
                 return
 
             amount_in_mob = mc.pmob2mob(drop_session.drop.initial_coin_amount_pmob)
             self.payments.send_mob_to_customer(message.source, amount_in_mob, True)
-            self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                                f"Great! We've just sent you {amount_in_mob.normalize()} MOB (~£3). Send us 0.01 MOB, and we'll send it back, plus more! You could end up with as much as £50 of MOB")
-            self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                                "To see your balance and send a payment:\n\n1. Select the attachment icon and select Pay\n2. Enter the amount you want to send (e.g. 0.01 MOB)\n3. Tap Pay\n4. Tap Confirm Payment")
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                f"Great! We've just sent you {amount_in_mob.normalize()} MOB (~£3). Send us 0.01 MOB, and we'll send it back, plus more! You could end up with as much as £50 of MOB",
+            )
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                "To see your balance and send a payment:\n\n1. Select the attachment icon and select Pay\n2. Enter the amount you want to send (e.g. 0.01 MOB)\n3. Tap Pay\n4. Tap Confirm Payment",
+            )
 
             drop_session.state = SessionState.WAITING_FOR_BONUS_TRANSACTION.value
             drop_session.save()
             return
 
         if message.text.lower() == "help":
-            self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                                "You can type (y)es, or (n)o\n\nReady?")
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                "You can type (y)es, or (n)o\n\nReady?",
+            )
             return
 
-        self.messenger.log_and_send_message(drop_session.customer, message.source,
-                                            "You can type (y)es, or (n)o\n\nReady?")
+        self.messenger.log_and_send_message(
+            drop_session.customer,
+            message.source,
+            "You can type (y)es, or (n)o\n\nReady?",
+        )
