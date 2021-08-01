@@ -47,13 +47,14 @@ SESSION_STATE_COMPLETED = 3
 
 ITEM_SESSION_STATE_REFUNDED = -2
 ITEM_SESSION_STATE_CANCELLED = -1
-ITEM_SESSION_STATE_WAITING_FOR_PAYMENT = 0
-ITEM_SESSION_STATE_WAITING_FOR_SIZE = 1
-ITEM_SESSION_STATE_WAITING_FOR_ADDRESS = 2
-ITEM_SESSION_STATE_WAITING_FOR_NAME = 3
-ITEM_SESSION_STATE_SHIPPING_INFO_CONFIRMATION = 4
-ITEM_SESSION_STATE_ALLOW_CONTACT_REQUESTED = 5
-ITEM_SESSION_STATE_COMPLETED = 6
+ITEM_SESSION_STATE_NEW = 0
+ITEM_SESSION_STATE_WAITING_FOR_PAYMENT = 1
+ITEM_SESSION_STATE_WAITING_FOR_SIZE = 2
+ITEM_SESSION_STATE_WAITING_FOR_ADDRESS = 3
+ITEM_SESSION_STATE_WAITING_FOR_NAME = 4
+ITEM_SESSION_STATE_SHIPPING_INFO_CONFIRMATION = 5
+ITEM_SESSION_STATE_ALLOW_CONTACT_REQUESTED = 6
+ITEM_SESSION_STATE_COMPLETED = 7
 
 ORDER_STATUS_STARTED = 0
 ORDER_STATUS_CONFIRMED = 1
@@ -421,6 +422,53 @@ def handle_item_drop_session_waiting_for_size(message, drop_session):
 
 def handle_item_drop_session_waiting_for_payment(message, drop_session):
     price_in_mob = mc.pmob2mob(drop_session.drop.item.price_in_pmob)
+
+    if message.text.lower() == "help":
+        log_and_send_message(
+            drop_session.customer,
+            message.source,
+            ("Commands available are:\n\n"
+             "'info' - Item info\n"
+             "'pay' - How to pay\n"
+             "'terms' - Terms and conditions\n"))
+
+    elif message.text.lower() == "pay":
+        log_and_send_message(
+            drop_session.customer,
+            message.source,
+            ("1. Select the attachment (+) icon below and then select Pay\n"
+             "2. Enter the amount to send ({} MOB)\n"
+             "3. Tap Pay\n"
+             "4. Tap Confirm Payment").format(price_in_mob.normalize()))
+
+    elif message.text.lower() == "terms":
+        log_and_send_message(
+            drop_session.customer,
+            message.source,       
+            "Visit (terms url) for MOBots terms and conditions")
+    elif message.text.lower() == "info":
+        drop_item = drop_session.drop.item
+    
+        item_description_text = drop_item.name
+
+        if drop_item.description is not None:
+            item_description_text = drop_item.description
+        elif drop_item.short_description is not None:
+            item_description_text = drop_item.short_description
+        
+        if drop_item.image_link is None or drop_item.image_link == "":
+            log_and_send_message(drop_session.customer, message.source,
+                                 item_description_text)
+        else:
+            attachments = ['/signald/attachments/' + attachment.strip() for attachment in drop_item.image_link.split(',')]
+            log_and_send_message(drop_session.customer, message.source,
+                                 item_description_text, attachments=attachments)
+    else:
+        log_and_send_message(drop_session.customer,
+                             message.source,
+                             "Commands are help, info, pay, and terms\n\n")  
+
+    price_in_mob = mc.pmob2mob(drop_session.drop.item.price_in_pmob)
     log_and_send_message(drop_session.customer, message.source, f"Please send {price_in_mob.normalize()} MOB to reserve your item now!")
 
 def handle_item_drop_session_waiting_for_address(message, drop_session):
@@ -721,11 +769,11 @@ def chat_router(message, match):
         print(f"found active drop session in state {active_drop_session.state}")
         if active_drop_session.manual_override:
             return
-
-        handle_active_item_drop_session(message, active_drop_session)
-        return
     except:
         pass
+    else:
+        handle_active_item_drop_session(message, active_drop_session)
+        return
 
     drop_to_advertise = get_advertising_drop()
     if drop_to_advertise is not None:
@@ -750,14 +798,13 @@ def chat_router(message, match):
     if active_drop.drop_type == DROP_TYPE_ITEM:
         handle_no_active_item_drop_session(customer, message, active_drop)
 
-def log_and_send_message(customer, source, text):
+def log_and_send_message(customer, source, text, attachments=[]):
     if isinstance(source, dict):
         source = source['number']
 
     sent_message = Message(customer=customer, store=store, text=text, direction=MESSAGE_DIRECTION_SENT)
     sent_message.save()
-    signal.send_message(source, text)
-
+    signal.send_message(source, text, attachments=attachments)
 
 def get_signal_profile_name(source):
     if isinstance(source, dict):
