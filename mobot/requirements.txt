@@ -3,7 +3,8 @@ attrs
 
 base58==2.1.0
 django==3.0.4
-psycopg2==2.8.6
+#psycopg2==2.8.6
+psycopg2==2.9.1
 uwsgi==2.0.19.1
 pyzt
 googlemaps
