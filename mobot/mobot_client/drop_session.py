@@ -21,6 +21,7 @@ class SessionState(enum.Enum):
 
 
 class ItemSessionState(enum.Enum):
+    IDLE = -3
     REFUNDED = -2
     CANCELLED = -1
     NEW = 0
@@ -31,6 +32,28 @@ class ItemSessionState(enum.Enum):
     SHIPPING_INFO_CONFIRMATION = 5
     ALLOW_CONTACT_REQUESTED = 6
     COMPLETED = 7
+
+    @classmethod
+    def active_states(cls):
+        return {
+                cls.NEW.value,
+                cls.WAITING_FOR_PAYMENT.value,
+                cls.WAITING_FOR_SIZE.value,
+                cls.WAITING_FOR_ADDRESS.value,
+                cls.WAITING_FOR_NAME.value,
+                cls.SHIPPING_INFO_CONFIRMATION.value,
+                cls.ALLOW_CONTACT_REQUESTED.value
+            }
+
+    @classmethod
+    def refundable_states(cls):
+        return {
+            cls.WAITING_FOR_SIZE.value,
+            cls.WAITING_FOR_ADDRESS.value,
+            cls.WAITING_FOR_ADDRESS.value,
+            cls.WAITING_FOR_NAME.value,
+            cls.SHIPPING_INFO_CONFIRMATION.value,
+        }
 
 
 class DropType(enum.Enum):
@@ -54,7 +77,8 @@ class BaseDropSession:
             return drops_to_advertise[0]
         return None
 
-    def under_drop_quota(self, drop):
+    @staticmethod
+    def under_drop_quota(drop):
         number_initial_drops_finished = DropSession.objects.filter(
             drop=drop, state__gt=SessionState.READY_TO_RECEIVE_INITIAL.value
         ).count()
@@ -113,16 +137,6 @@ class BaseDropSession:
             return True
         except (Exception,):
             return False
-
-    @staticmethod
-    def drop_item_has_stock_remaining(drop):
-        skus = Sku.objects.fliter(item=drop.item)
-        for sku in skus:
-            number_ordered = Order.objects.filter(sku=sku).count()
-            if number_ordered < sku.quantity:
-                return True
-
-        return False
 
     def handle_drop_session_allow_contact_requested(self, message, drop_session):
         if message.text.lower() == "y" or message.text.lower() == "yes":

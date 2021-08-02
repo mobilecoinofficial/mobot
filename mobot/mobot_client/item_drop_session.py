@@ -28,6 +28,17 @@ class ItemDropSession(BaseDropSession):
         gmaps_client_key = os.environ["GMAPS_CLIENT_KEY"]
         self.gmaps = googlemaps.Client(key=gmaps_client_key)
 
+    @staticmethod
+    def drop_item_has_stock_remaining(drop):
+        # FIXME: Unused
+        skus = Sku.objects.fliter(item=drop.item)
+        for sku in skus:
+            number_ordered = Order.objects.filter(sku=sku).count()
+            if number_ordered < sku.quantity:
+                return True
+
+        return False
+
     def handle_item_drop_session_waiting_for_size(self, message, drop_session):
         try:
             sku = Sku.objects.get(
