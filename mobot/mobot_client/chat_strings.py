@@ -78,3 +78,5 @@ class ChatStrings:
         return message_to_send
 
     TIMEOUT = "Your session is about to timeout. Send any message to continue."
+    TIMEOUT_CANCELLED = "Your session has expired."
+    TIMEOUT_REFUND = "Your session has expired. We will refund the amount you sent."
