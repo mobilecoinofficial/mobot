@@ -10,12 +10,14 @@ from mobot_client.models import (
 )
 from decimal import Decimal
 
+from mobot_client.chat_strings import ChatStrings
+
 
 class Payments:
     """The Payments class handles the logic relevant to sending MOB and handling receipts."""
 
     def __init__(
-        self, mobilecoin_client, minimum_fee_pmob, account_id, store, messenger, signal
+            self, mobilecoin_client, minimum_fee_pmob, account_id, store, messenger, signal
     ):
         self.mcc = mobilecoin_client
         self.minimum_fee_pmob = minimum_fee_pmob
@@ -32,18 +34,16 @@ class Payments:
         print(customer_signal_profile)
         return customer_signal_profile.get("mobilecoin_address")
 
-    def send_mob_to_customer(self, source, amount_mob, cover_transaction_fee):
+    def send_mob_to_customer(self, customer, source, amount_mob, cover_transaction_fee):
         if isinstance(source, dict):
             source = source["number"]
 
         customer_payments_address = self.get_payments_address(source)
         if customer_payments_address is None:
-            self.signal.send_message(
+            self.messenger.log_and_send_message(
+                customer,
                 source,
-                (
-                    "We have a refund for you, but your payments have been deactivated\n\n"
-                    "Please contact customer service at {}"
-                ).format(self.store.phone_number),
+                ChatStrings.PAYMENTS_DEACTIVATED.format(number=self.store.phone_number),
             )
             return
 
@@ -58,7 +58,7 @@ class Payments:
         )
 
     def send_mob_to_address(
-        self, source, account_id, amount_in_mob, customer_payments_address
+            self, source, account_id, amount_in_mob, customer_payments_address
     ):
         # customer_payments_address is b64 encoded, but full service wants a b58 address
         customer_payments_address = mc.utility.b64_public_address_to_b58_wrapper(
@@ -133,7 +133,7 @@ class Payments:
                     source,
                     f"Not enough MOB, sending back {amount_paid_mob.normalize()} (minus network fees)",
                 )
-                self.send_mob_to_customer(source, amount_paid_mob, False)
+                self.send_mob_to_customer(customer, source, amount_paid_mob, False)
             else:
                 self.messenger.log_and_send_message(
                     customer,
@@ -143,8 +143,8 @@ class Payments:
             return
 
         if (
-            mc.mob2pmob(amount_paid_mob)
-            > mc.mob2pmob(item_cost_mob) + self.minimum_fee_pmob
+                mc.mob2pmob(amount_paid_mob)
+                > mc.mob2pmob(item_cost_mob) + self.minimum_fee_pmob
         ):
             excess = amount_paid_mob - item_cost_mob
             self.messenger.log_and_send_message(
@@ -152,7 +152,7 @@ class Payments:
                 source,
                 f"Sent too much MOB, sending back excess of {excess.normalize()} (minus network fees)",
             )
-            self.send_mob_to_customer(source, excess, False)
+            self.send_mob_to_customer(customer, source, excess, False)
 
         available_options = []
         skus = Sku.objects.filter(item=drop_session.drop.item)
@@ -168,7 +168,7 @@ class Payments:
                 source,
                 "Uh oh! Looks like we're all out of stock, sorry! Refunding your payment now :)",
             )
-            self.send_mob_to_customer(source, item_cost_mob, True)
+            self.send_mob_to_customer(customer, source, item_cost_mob, True)
             drop_session.state = ItemSessionState.REFUNDED.value
             drop_session.save()
             return

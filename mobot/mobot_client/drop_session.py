@@ -6,6 +6,8 @@ import full_service_cli as mc
 from django.utils import timezone
 from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku
 
+from mobot_client.chat_strings import ChatStrings
+
 
 class SessionStateReadyToReceiveInitial(enum.Enum):
     NOT_READY = 0
@@ -147,7 +149,7 @@ class BaseDropSession:
             drop_session.state = SessionState.COMPLETED.value
             drop_session.save()
             self.messenger.log_and_send_message(
-                drop_session.customer, message.source, "Thanks! MOBot OUT. Buh-bye"
+                drop_session.customer, message.source, ChatStrings.BYE
             )
             return
 
@@ -159,7 +161,7 @@ class BaseDropSession:
             drop_session.state = SessionState.COMPLETED.value
             drop_session.save()
             self.messenger.log_and_send_message(
-                drop_session.customer, message.source, "Thanks! MOBot OUT. Buh-bye"
+                drop_session.customer, message.source, ChatStrings.BYE
             )
             return
 
@@ -167,7 +169,7 @@ class BaseDropSession:
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 message.source,
-                f"Our privacy policy is available here: {self.store.privacy_policy_url}\n\nWould you like to receive alerts for future drops?",
+                ChatStrings.PRIVACY_POLICY.format(url=self.store.privacy_policy_url)
             )
             return
 
@@ -175,14 +177,14 @@ class BaseDropSession:
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 message.source,
-                "You can type (y)es, (n)o, or (p)rivacy policy\n\nWould you like to receive alerts for future drops?",
+                ChatStrings.HELP
             )
             return
 
         self.messenger.log_and_send_message(
             drop_session.customer,
             message.source,
-            "You can type (y)es, (n)o, or (p)rivacy policy\n\nWould you like to receive alerts for future drops?",
+            ChatStrings.HELP
         )
 
     def handle_drop_session_ready_to_receive(self, message, drop_session):
@@ -196,7 +198,7 @@ class BaseDropSession:
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 message.source,
-                "session cancelled, message us again when you're ready!",
+                ChatStrings.SESSION_CANCELLED
             )
             return
 
@@ -205,7 +207,7 @@ class BaseDropSession:
                 self.messenger.log_and_send_message(
                     drop_session.customer,
                     message.source,
-                    "Too late! We've distributed all of the MOB allocated to this airdrop.\n\nSorry 😭",
+                    ChatStrings.AIRDROP_OVER
                 )
                 drop_session.state = SessionState.COMPLETED.value
                 drop_session.save()
@@ -215,23 +217,23 @@ class BaseDropSession:
                 self.messenger.log_and_send_message(
                     drop_session.customer,
                     message.source,
-                    "Too late! We've distributed all of the MOB allocated to this airdrop.\n\nSorry 😭",
+                    ChatStrings.AIRDROP_OVER
                 )
                 drop_session.state = SessionState.COMPLETED.value
                 drop_session.save()
                 return
 
             amount_in_mob = mc.pmob2mob(drop_session.drop.initial_coin_amount_pmob)
-            self.payments.send_mob_to_customer(message.source, amount_in_mob, True)
+            self.payments.send_mob_to_customer(drop_session.customer, message.source, amount_in_mob, True)
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 message.source,
-                f"Great! We've just sent you {amount_in_mob.normalize()} MOB (~£3). Send us 0.01 MOB, and we'll send it back, plus more! You could end up with as much as £50 of MOB",
+                ChatStrings.AIRDROP_INITIALIZE.format(amount=amount_in_mob.normalize())
             )
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 message.source,
-                "To see your balance and send a payment:\n\n1. Select the attachment icon and select Pay\n2. Enter the amount you want to send (e.g. 0.01 MOB)\n3. Tap Pay\n4. Tap Confirm Payment",
+                ChatStrings.PAY_HELP
             )
 
             drop_session.state = SessionState.WAITING_FOR_BONUS_TRANSACTION.value
@@ -242,12 +244,12 @@ class BaseDropSession:
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 message.source,
-                "You can type (y)es, or (n)o\n\nReady?",
+                ChatStrings.YES_NO_HELP
             )
             return
 
         self.messenger.log_and_send_message(
             drop_session.customer,
             message.source,
-            "You can type (y)es, or (n)o\n\nReady?",
+            ChatStrings.YES_NO_HELP
         )

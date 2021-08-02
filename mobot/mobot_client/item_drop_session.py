@@ -59,7 +59,7 @@ class ItemDropSession(BaseDropSession):
             )
 
             price_in_mob = mc.pmob2mob(drop_session.drop.item.price_in_pmob)
-            self.payments.send_mob_to_customer(message.source, price_in_mob, True)
+            self.payments.send_mob_to_customer(drop_session.customer, message.source, price_in_mob, True)
             drop_session.state = ItemSessionState.REFUNDED.value
             drop_session.save()
             return
