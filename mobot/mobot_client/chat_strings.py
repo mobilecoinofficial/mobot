@@ -2,9 +2,19 @@
 
 
 class ChatStrings:
-
     # General
     BYE = "Thanks! MOBot OUT. Buh-bye!"
+
+    PRIVACY_POLICY = """Our privacy policy is available here: {url}
+    
+    Would you like to receive alerts for future drops?
+    """
+
+    HELP = """You can type (y)es, (n)o, or (p)rivacy policy
+    
+    Would you like to receive alerts for future drops?
+    """
+
     FUTURE_NOTIFICATIONS = "Can we contact you for future drops?"
     NOTIFICATIONS_HELP = "Valid commands are y(es) and n(o)"
     NOTIFICATIONS_HELP_ALT = """You can type (y)es or (n)o
@@ -33,6 +43,83 @@ class ChatStrings:
     UNSOLICITED_PAYMENT = "MOBot here! You sent us an unsolicited payment. We're returning it minus a network fee to cover our costs. We can't promise to always be paying attention and return unsolicited payments, so we suggest only sending us payments when we request them"
     STORE_CLOSED = "Hi! MOBot here.\n\nWe're currently closed.\n\nCome back on {date} at {time} for {desc}"
     STORE_CLOSED_SHORT = "Hi! MOBot here.\n\nWe're currently closed. Buh-Bye!"
+
+    # Session Strings
+    SESSION_CANCELLED = "Session cancelled, message us again when you're ready!"
+
+    # Payment Strings
+    PAYMENTS_DEACTIVATED = """We have a refund for you, but your payments have been deactivated
+
+    Please contact customer service at {number}
+    """
+
+    # Air Drop Strings
+    AIRDROP_COMMANDS = "Commands available are:\n\n?\tQuick list of commands\nhelp\tList of command and what they do\ndescribe\tDescription of drop\npay\tHow to pay"
+    AIRDROP_RESPONSE = """We've sent you {amount} MOB (~{symbol}{value:.2f}). 
+
+    Send us 0.01 MOB, and we'll send it back, plus more! 
+    You could end up with as much as £50 of MOB
+    """
+    AIRDROP_SUMMARY = (
+        "You've received your initial MOB, tried making a payment, "
+        "and received a bonus! Well done. You've completed the MOB Coin Drop. "
+        "Stay tuned for future drops."
+    )
+    OVER_QUOTA = "over quota for drop!"
+    NO_COIN_LEFT = "no coin left!"
+    AIRDROP_DESCRIPTION = (
+        "Hi! MOBot here.\n\nWe're giving away free "
+        "MOB today so that you can try Signal's new payment feature!!!"
+    )
+    AIRDROP_INSTRUCTIONS = (
+        "Here's how our MOB airdrop works:\n\n"
+        "1. We send you some MOB to fund your wallet. It will be approx £3 worth\n"
+        "2. Give sending MOB a try by giving us back a tiny bit, say 0.01 MOB\n"
+        "3. We'll send you a random BONUS airdrop. You could receive as much as £50 in MOB"
+        "\n\nWhether you get £5 or £50, it’s yours to keep and spend however you like"
+    )
+    READY = "Ready?"
+    AIRDROP_OVER = """Too late! We've distributed all of the MOB allocated to this airdrop.
+
+    Sorry 😭
+    """
+    AIRDROP_SOLD_OUT_REFUND = """Thank you for sending {amount} MOB! 
+
+    Unfortunately, we ran out of MOB to distribute 😭. 
+    We're returning your MOB and the network fee.
+    """
+    BONUS_SOLD_OUT_REFUND = """Thank you for sending {amount} MOB!
+
+    Unfortunately, we ran out of bonuses 😭. 
+    We're returning your MOB and the network fee.
+    """
+    AIRDROP_INITIALIZE = """Great! We've just sent you {amount)} MOB (~£3).
+
+    Send us 0.01 MOB, and we'll send it back, plus more!
+
+    You could end up with as much as £50 of MOB
+    """
+    REFUND_SENT = """We've sent you back {amount} MOB! That brings your total prize to {total_prize} MOB"""
+
+    AIRDROP_COMPLETED = """You've completed the MOB Coin Drop! 
+
+    To give others a chance, we're only allowing one MOB airdrop per person
+    """
+    PRIZE = """Enjoy your {prize} MOB!"""
+    NOTIFICATIONS_ASK = "Would you like to receive alerts for future drops?"
+
+    PAY_HELP = """To see your balance and send a payment:
+
+    1. Select the attachment icon and select Pay
+    2. Enter the amount you want to send (e.g. 0.01 MOB)
+    3. Tap Pay
+    4. Tap Confirm Payment
+    """
+
+    YES_NO_HELP = """You can type (y)es, or (n)o
+
+    Ready?
+    """
 
     # Item Drop Strings
     OUT_OF_STOCK = "Uh oh! Looks like we're all out of stock, sorry!"

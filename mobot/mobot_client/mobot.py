@@ -72,7 +72,7 @@ class MOBot:
 
         self.drop = DropSession(self.store, self.payments, self.messenger)
 
-        self.timeouts = Timeouts(self.messenger,  schedule=3, idle_timeout=10, cancel_timeout=20)
+        self.timeouts = Timeouts(self.messenger,  schedule=30, idle_timeout=60, cancel_timeout=300)
 
         bot_name = ChatbotSettings.load().name
         bot_avatar_filename = ChatbotSettings.load().avatar_filename
@@ -143,7 +143,7 @@ class MOBot:
                 self.messenger.log_and_send_message(
                     customer, source, ChatStrings.UNSOLICITED_PAYMENT
                 )
-                self.payments.send_mob_to_customer(source, amount_paid_mob, False)
+                self.payments.send_mob_to_customer(customer, source, amount_paid_mob, False)
             else:
                 self.payments.handle_item_payment(
                     source, customer, amount_paid_mob, drop_session
