@@ -39,29 +39,65 @@ class ItemDropSession(BaseDropSession):
 
         return False
 
+    def drop_item_get_available(self, drop_item):
+        available_options = []
+        skus = Sku.objects.filter(item=drop_item)
+
+        for sku in skus:
+            number_ordered = Order.objects.filter(sku=sku).count()
+            if number_ordered < sku.quantity:
+                available_options.append(sku)
+
+        return available_options
+
     def handle_item_drop_session_waiting_for_size(self, message, drop_session):
+
+        if message.text.lower() == "cancel" or message.text.lower() == 'refund':
+            self.messenger.log_and_send_message(
+                drop_session.customer, message.source, ChatStrings.ITEM_OPTION_CANCEL
+            )
+            price_in_mob = mc.pmob2mob(drop_session.drop.item.price_in_pmob)
+            self.payments.send_mob_to_customer(drop_session.customer, message.source, price_in_mob, True)
+            drop_session.state = ItemSessionState.REFUNDED.value
+            drop_session.save()
+            return
+        elif message.text.lower() == "help":
+            self.messenger.log_and_send_message(
+                drop_session.customer, message.source, ChatStrings.ITEM_OPTION_HELP
+            )
+            return
+
         try:
             sku = Sku.objects.get(
                 item=drop_session.drop.item, identifier__iexact=message.text
             )
         except (Exception,):
+            message_to_send = f"{message.text} is not an available size"
+            available_options = self.drop_item_get_available(drop_session.drop.item)
+            message_to_send += "\n\n" + ChatStrings.get_options(available_options, capitalize=True)
+            message_to_send += "\n\n" + ChatStrings.ITEM_WHAT_SIZE_OR_CANCEL
+
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 message.source,
-                f"No option found for {message.text}",
+                message_to_send
             )
             return
 
         number_ordered = Order.objects.filter(sku=sku).count()
         if number_ordered >= sku.quantity:
+            message_to_send = ChatStrings.ITEM_SOLD_OUT
+            available_options = self.drop_item_get_available(drop_session.drop.item)
+            message_to_send += "\n\n" + ChatStrings.get_options(available_options)
+            message_to_send += "\n\n" + ChatStrings.ITEM_WHAT_SIZE
             self.messenger.log_and_send_message(
-                drop_session.customer, message.source, ChatStrings.ITEM_SOLD_OUT
+                drop_session.customer, message.source, message_to_send
             )
 
-            price_in_mob = mc.pmob2mob(drop_session.drop.item.price_in_pmob)
-            self.payments.send_mob_to_customer(drop_session.customer, message.source, price_in_mob, True)
-            drop_session.state = ItemSessionState.REFUNDED.value
-            drop_session.save()
+            # price_in_mob = mc.pmob2mob(drop_session.drop.item.price_in_pmob)
+            # self.payments.send_mob_to_customer(drop_session.customer, message.source, price_in_mob, True)
+            # drop_session.state = ItemSessionState.REFUNDED.value
+            # drop_session.save()
             return
 
         new_order = Order(
@@ -137,14 +173,7 @@ class ItemDropSession(BaseDropSession):
 
         # Re-display available sizes and request payment
         drop_item = drop_session.drop.item
-        available_options = []
-        skus = Sku.objects.filter(item=drop_item)
-
-        for sku in skus:
-            number_ordered = Order.objects.filter(sku=sku).count()
-            if number_ordered < sku.quantity:
-                available_options.append(sku)
-
+        available_options = self.drop_item_get_available(drop_item)
         if len(available_options) == 0:
             self.messenger.log_and_send_message(
                 customer, message.source, ChatStrings.OUT_OF_STOCK
@@ -351,22 +380,15 @@ class ItemDropSession(BaseDropSession):
         #     message_to_send
         # )
 
-        available_options = []
-        skus = Sku.objects.filter(item=drop.item)
-
-        for sku in skus:
-            number_ordered = Order.objects.filter(sku=sku).count()
-            if number_ordered < sku.quantity:
-                available_options.append(sku)
-
+        available_options = self.drop_item_get_available(drop.item)
         if len(available_options) == 0:
             self.messenger.log_and_send_message(
                 customer, message.source, ChatStrings.OUT_OF_STOCK
             )
             return
 
-        message_to_send += "\n\n"+ChatStrings.get_options(available_options)
-        
+        message_to_send += "\n\n"+ChatStrings.get_options(available_options, capitalize=True)
+
         price_in_mob = mc.pmob2mob(drop.item.price_in_pmob)
         message_to_send += "\n\n"+ChatStrings.ITEM_DISCOUNT.format(
             price=price_in_mob.normalize()
