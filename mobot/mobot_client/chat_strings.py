@@ -135,7 +135,7 @@ We have {item_description}"""
     ITEM_WHAT_SIZE_OR_CANCEL = "What size would you like? Type an available size or 'cancel' for a refund"
 
     ITEM_OPTION_CANCEL = "Cancelling your purchase and refunding your payment"
-    ITEM_OPTION_HELP = "You can type an available size or 'cancel' for a refund of your payment"
+    ITEM_OPTION_HELP = "Please send an available size or 'cancel' for a refund of your payment"
     OUT_OF_STOCK_REFUND = "Uh oh! Looks like we're all out of stock, sorry! Refunding your payment now :)"
     ADDRESS_HOODIE_REQUEST = "What address should we send the hoodie to?"
     ADDRESS_REQUEST = "What address should we ship to?"
