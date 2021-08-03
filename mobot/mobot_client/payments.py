@@ -133,14 +133,14 @@ class Payments:
                 self.messenger.log_and_send_message(
                     customer,
                     source,
-                    f"Not enough MOB, sending back {amount_paid_mob.normalize()} (minus network fees)",
+                    ChatStrings.NOT_ENOUGH_REFUND.format(amount_paid=amount_paid_mob.normalize())
                 )
                 self.send_mob_to_customer(customer, source, amount_paid_mob, False)
             else:
                 self.messenger.log_and_send_message(
                     customer,
                     source,
-                    "Not enough MOB, unable to refund since it is less than the network fee",
+                    ChatStrings.NOT_ENOUGH
                 )
             return
 
@@ -153,7 +153,7 @@ class Payments:
             self.messenger.log_and_send_message(
                 customer,
                 source,
-                f"You overpaid. Sending back {net_excess.normalize()} MOB",
+                ChatStrings.EXCESS_PAYMENT.format(refund=net_excess.normalize())
             )
             self.send_mob_to_customer(customer, source, excess, False)
         else:
@@ -175,7 +175,7 @@ class Payments:
             self.messenger.log_and_send_message(
                 customer,
                 source,
-                "Uh oh! Looks like we're all out of stock, sorry! Refunding your payment now :)",
+                ChatStrings.OUT_OF_STOCK_REFUND
             )
             self.send_mob_to_customer(customer, source, item_cost_mob, True)
             drop_session.state = ItemSessionState.REFUNDED.value
@@ -183,7 +183,7 @@ class Payments:
             return
 
         message_to_send = (
-            "What size would you like? " + ChatStrings.get_options(available_options, capitalize=True)
+            ChatStrings.WAITING_FOR_SIZE_PREFIX + ChatStrings.get_options(available_options, capitalize=True)
         )
 
         self.messenger.log_and_send_message(customer, source, message_to_send)

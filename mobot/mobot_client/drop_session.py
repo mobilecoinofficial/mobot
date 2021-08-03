@@ -23,6 +23,7 @@ class SessionState(enum.Enum):
 
 
 class ItemSessionState(enum.Enum):
+    IDLE_AND_REFUNDABLE = -4
     IDLE = -3
     REFUNDED = -2
     CANCELLED = -1
@@ -50,6 +51,7 @@ class ItemSessionState(enum.Enum):
     @classmethod
     def refundable_states(cls):
         return {
+            cls.IDLE_AND_REFUNDABLE.value,
             cls.WAITING_FOR_SIZE.value,
             cls.WAITING_FOR_ADDRESS.value,
             cls.WAITING_FOR_ADDRESS.value,
