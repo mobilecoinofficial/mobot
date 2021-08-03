@@ -6,21 +6,19 @@ class ChatStrings:
     BYE = "Thanks! MOBot OUT. Buh-bye!"
 
     PRIVACY_POLICY = """Our privacy policy is available here: {url}
-    
-    Would you like to receive alerts for future drops?
-    """
+
+Would you like to receive alerts for future drops?"""
 
     HELP = """You can type (y)es, (n)o, or (p)rivacy policy
     
-    Would you like to receive alerts for future drops?
-    """
+Would you like to receive alerts for future drops?"""
 
     FUTURE_NOTIFICATIONS = "Can we contact you for future drops?"
     NOTIFICATIONS_HELP = "Valid commands are y(es) and n(o)"
     NOTIFICATIONS_HELP_ALT = """You can type (y)es or (n)o
 
-    Would you like to receive an alert when we are doing future drops?
-    """
+Would you like to receive an alert when we are doing future drops?"""
+
     NOTIFICATIONS_OFF = "You are not currently receiving any notifications"
     DISABLE_NOTIFICATIONS = (
         "You will no longer receive notifications about future drops."
@@ -32,14 +30,14 @@ class ChatStrings:
     )
     PAYMENTS_ENABLED_HELP = """Hi! MOBot here.
 
-    I'm a bot from MobileCoin that assists in making purchases using Signal Messenger and MobileCoin.
+I'm a bot from MobileCoin that assists in making purchases using Signal Messenger and MobileCoin.
 
-    Uh oh! In-app payments are not enabled
+Uh oh! In-app payments are not enabled
 
-    Enable payments to receive {item_desc}
+Enable payments to receive {item_desc}
 
-    More info on enabling payments here: https://support.signal.org/hc/en-us/articles/360057625692-In-app-Payments
-    """
+More info on enabling payments here: https://support.signal.org/hc/en-us/articles/360057625692-In-app-Payments"""
+
     UNSOLICITED_PAYMENT = "MOBot here! You sent us an unsolicited payment. We're returning it minus a network fee to cover our costs. We can't promise to always be paying attention and return unsolicited payments, so we suggest only sending us payments when we request them"
     STORE_CLOSED = "Hi! MOBot here.\n\nWe're currently closed.\n\nCome back on {date} at {time} for {desc}"
     STORE_CLOSED_SHORT = "Hi! MOBot here.\n\nWe're currently closed. Buh-Bye!"
@@ -50,8 +48,7 @@ class ChatStrings:
     # Payment Strings
     PAYMENTS_DEACTIVATED = """We have a refund for you, but your payments have been deactivated
 
-    Please contact customer service at {number}
-    """
+Please contact customer service at {number}"""
 
     # Air Drop Strings
     AIRDROP_COMMANDS = "Commands available are:\n\n?\tQuick list of commands\nhelp\tList of command and what they do\ndescribe\tDescription of drop\npay\tHow to pay"
@@ -81,35 +78,33 @@ class ChatStrings:
     READY = "Ready?"
     AIRDROP_OVER = """Too late! We've distributed all of the MOB allocated to this airdrop.
 
-    Sorry 😭
-    """
+Sorry 😭"""
+
     AIRDROP_SOLD_OUT_REFUND = """Thank you for sending {amount} MOB! 
 
-    Unfortunately, we ran out of MOB to distribute 😭. 
-    We're returning your MOB and the network fee.
-    """
+Unfortunately, we ran out of MOB to distribute 😭. 
+We're returning your MOB and the network fee."""
     BONUS_SOLD_OUT_REFUND = """Thank you for sending {amount} MOB!
 
-    Unfortunately, we ran out of bonuses 😭. 
-    We're returning your MOB and the network fee.
-    """
+Unfortunately, we ran out of bonuses 😭. 
+We're returning your MOB and the network fee."""
+
     AIRDROP_INITIALIZE = """Great! We've just sent you {amount)} MOB (~£3).
 
-    Send us 0.01 MOB, and we'll send it back, plus more!
+Send us 0.01 MOB, and we'll send it back, plus more!
 
-    You could end up with as much as £50 of MOB
-    """
+You could end up with as much as £50 of MOB"""
+
     REFUND_SENT = """We've sent you back {amount} MOB! That brings your total prize to {total_prize} MOB"""
 
     AIRDROP_COMPLETED = """You've completed the MOB Coin Drop! 
 
-    To give others a chance, we're only allowing one MOB airdrop per person
-    """
+To give others a chance, we're only allowing one MOB airdrop per person"""
+
     PRIZE = """Enjoy your {prize} MOB!"""
     NOTIFICATIONS_ASK = "Would you like to receive alerts for future drops?"
 
     PAY_HELP = """To see your balance and send a payment:
-
 1. Select the attachment icon and select Pay
 2. Enter the amount you want to send (e.g. 0.01 MOB)
 3. Tap Pay
@@ -118,8 +113,7 @@ class ChatStrings:
 
     YES_NO_HELP = """You can type (y)es, or (n)o
 
-    Ready?
-    """
+Ready?"""
 
     # Item Drop Strings
     ITEM_DROP_GREETING = """MOBot at your service!
@@ -131,24 +125,30 @@ We have {item_description}"""
     ITEM_DISCOUNT="Normally 6 MOB, you can get yours for the discounted price of {price} MOB, shipped. We accept UK addresses only"
 
     OUT_OF_STOCK = "Uh oh! Looks like we're all out of stock, sorry!"
-    ITEM_SOLD_OUT = (
-        "Sorry, we're all out of that selection! Refunding your MOB, try again :)"
-    )
+    # ITEM_SOLD_OUT = (
+    #     "Sorry, we're all out of that selection! Refunding your MOB, try again :)"
+    # )
+    ITEM_SOLD_OUT = "Sorry, we sold out of that size 😔 Please pick a new size or type 'cancel' for a refund"
+    ITEM_WHAT_SIZE = "What size would you like?"
+    ITEM_WHAT_SIZE_OR_CANCEL = "What size would you like? Type an available size or 'cancel' for a refund"
+
+    ITEM_OPTION_CANCEL = "Cancelling your purchase and refunding your payment"
+    ITEM_OPTION_HELP = "You can type an available size or 'cancel' for a refund of your payment"
     ADDRESS_HOODIE_REQUEST = "What address should we send the hoodie to?"
     ADDRESS_REQUEST = "What address should we ship to?"
     ITEM_HELP = """Commands available are:
 
-    'info' - Item info
-    'pay' - How to pay
-    'terms' - Terms and conditions
-    """
+'info' - Item info
+'pay' - How to pay
+'terms' - Terms and conditions"""
+
     PAYMENT_REQUEST = "Order now by sending {price} MOB using Signal Payments"
     PAY = """1. Select the attachment (+) icon below and then select Pay
 2. Enter the amount to send ({amount} MOB)
 3. Tap Pay
 4. Tap Confirm Payment"""
 
-    TERMS = "Visit (terms url) for MOBots terms and conditions"
+    TERMS = "Visit {terms} for MOBots terms and conditions"
     ITEM_HELP_SHORT = "Commands are help, info, pay, and terms\n\n"
     RESERVE_ITEM = "Please send {amount} MOB to reserve your item now!"
     MISSING_ORDER = "We don't seem to have an order for you... something went wrong! Please try again"
@@ -157,24 +157,23 @@ We have {item_description}"""
     VERIFY_SHIPPING = "Does this look correct?\n{name}\n{address}"
     ORDER_CONFIRMATION = """All set. Your order number is {order_id}
 
-    1x {sku_name}, to be shipped to you
+1x {sku_name}, to be shipped to you
 
-    Please provide your order number ({order_id}) when contacting us
-    if you have any questions or issues
-    """
+Please provide your order number ({order_id}) when contacting us
+if you have any questions or issues"""
 
     @staticmethod
-    def get_options(available_options):
-        # message_to_send = "We have the following available options:\n\n"
-        # for option in available_options:
-        #     message_to_send += f" - {option.identifier}\n"
+    def get_options(available_options, capitalize=False):
+        option_title = "size"
+        if capitalize:
+            option_title = option_title.capitalize()
         option_list = list()
         for option in available_options:
             option_list.append(option.identifier)
         if len(option_list) == 1:
-            message_to_send = f"Size {option_list[0]} remains"
+            message_to_send = f"{option_title} {option_list[0]} remains"
         else:
-            message_to_send = "Sizes " + ", ".join(option_list[:-1]) + " and " + option_list[-1] + " remain"
+            message_to_send = option_title+"s " + ", ".join(option_list[:-1]) + " and " + option_list[-1] + " remain"
         return message_to_send
 
     TIMEOUT = "Your session is about to timeout. Send any message to continue."

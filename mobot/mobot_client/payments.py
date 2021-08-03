@@ -49,6 +49,8 @@ class Payments:
 
         if not cover_transaction_fee:
             amount_mob = amount_mob - Decimal(mc.pmob2mob(self.minimum_fee_pmob))
+        else:
+            amount_mob = amount_mob + Decimal(mc.pmob2mob(self.minimum_fee_pmob))
 
         if amount_mob <= 0:
             return
@@ -147,12 +149,19 @@ class Payments:
                 > mc.mob2pmob(item_cost_mob) + self.minimum_fee_pmob
         ):
             excess = amount_paid_mob - item_cost_mob
+            net_excess = mc.pmob2mob(mc.mob2pmob(excess) - self.minimum_fee_pmob)
             self.messenger.log_and_send_message(
                 customer,
                 source,
-                f"Sent too much MOB, sending back excess of {excess.normalize()} (minus network fees)",
+                f"You overpaid. Sending back {net_excess.normalize()} MOB",
             )
             self.send_mob_to_customer(customer, source, excess, False)
+        else:
+            self.messenger.log_and_send_message(
+                customer,
+                source,
+                f"We received {amount_paid_mob.normalize()} MOB"
+            )
 
         available_options = []
         skus = Sku.objects.filter(item=drop_session.drop.item)
@@ -174,10 +183,8 @@ class Payments:
             return
 
         message_to_send = (
-            "What size would you like? We have the following available options:\n\n"
+            "What size would you like? " + ChatStrings.get_options(available_options, capitalize=True)
         )
-        for option in available_options:
-            message_to_send += f" - {option.identifier}\n"
 
         self.messenger.log_and_send_message(customer, source, message_to_send)
         drop_session.state = ItemSessionState.WAITING_FOR_SIZE.value
