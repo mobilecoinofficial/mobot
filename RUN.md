@@ -27,32 +27,70 @@ However, we include instructions below for running both for completion.
 
 For testing, we build and run locally, using the Signal staging network, and the MobileCoin TestNet. The steps are roughly the following:
 
+1. Clone this repo and update the submodule
 1. Set up and run signald
 1. Set up and run full-service
 1. Run the MOBot
 
+#### Clone MOBot and Update the Submodule
+
+1. ```shell
+   git clone git@github.com:mobilecoinofficial/mobot.git
+   cd mobot
+   git  submodule update --init --recursive
+   ```
+
 #### Set Up and Run Signald
 
-1. Select an avatar for your profile, save it as avatar.png in your home directory.
+1. Select an avatar for your profile, save it as logo.png in a directory where you will store your image attachments,
+   hereafter referred to as `/path/to/attachments`
 
-1. Pull the signald image (for now, we have changes to signald that enable payments, so you can use our test image at 
-   `mobilecoin/signald:0.12.0-mc.0.0.3-staging`. There is an effort underway to incorporate payments [here](https://gitlab.com/signald/signald/-/merge_requests/67).
+1. Clone the signald repository
 
-    ```shell
-    docker login
-    docker pull mobilecoin/signald:0.12.0-mc.0.0.3-staging
+   ```shell
+   git clone https://gitlab.com/signald/signald
+   ```
+   
+    Note: These instructions were written at commit `ce9d8c42eea6f174219a27208087e561eb7e94ff`.
+
+1. Copy the `[signald-tcp.sh](./tools/signald-tcp.sh)` start script from this repository to the `signald/tools` directory.
+
+   This file enables TCP communication over the signald socket using `socat`, so you will need to make sure you have 
+   `socat` installed in the Dockerfile, in the next step. 
+
+1. Modify the Dockerfile to include `socat`. 
+
+    ```diff
+    RUN ln -sf /opt/signald/bin/signald /usr/local/bin/
+   
+    +RUN apt-get update && apt-get -y install socat
+    +COPY ./tools/signald-tcp.sh /usr/local/
+   
+    VOLUME /signald
+
+    -CMD ["/usr/local/bin/signald", "-d", "/signald", "-s", "/signald/signald.sock"]
+    +CMD ["/bin/bash", "/usr/local/signald-tcp.sh"]
     ```
 
-1. Run the docker image, exposing a port for communication, and mounting the avatar.png to be used in the signald profile.
+1. Build the docker container
+
+   ```shell
+   docker build -t signald:mobilecoin .
+   ```
+
+1. Run the docker image, exposing a port for communication, and mounting the attachments with the logo.png for the
+   MOBot's Signal profile, along with any other attachments necessary, e.g. to describe the items for sale.
    
     ```shell
-    docker run --name signald --publish 15432:15432 -v ~/avatar.png:/signald/logo.png -it mobilecoin/signald:0.12.0-mc.0.0.3-staging
+    docker run --name signald --rm --publish 15432:15432 -v /path/to/attachments:/signald/ -it signald:mobilecoin
     ```
    
 1. [Generate the Captcha](https://signalcaptchas.org/registration/generate.html), click "Open in Signal," inspect the page, 
    and click the "Launched external handler for ..." link. Then copy the contents of that link.
    
-1. Open netcat to communicate with the signald instance running locally, and register with the Captcha (having stripped the `signalcaptcha://` schema)
+1. Open netcat to communicate with the signald instance running locally, and register with the Captcha (having stripped
+   the `signalcaptcha://` schema), as well as with the server ID (see [signald/servers](https://signald.org/articles/servers/)
+   for values.) 
 
    ```shell
    nc 0.0.0.0 15432 # (or on MacOS, nc localhost 15432)
@@ -61,7 +99,7 @@ For testing, we build and run locally, using the Signal staging network, and the
    {"type":"version","data":{"name":"signald","version":"+git2021-06-04rc42d686d.0","branch":"","commit":""}}
    
    # Register a phone number (with area code) with the valid Captcha obtained in the previous step.
-   {"type": "register", "username":"+15555555555", "captcha": "VALIDCAPTCHA"}
+   {"type": "register", "version": "v1", "account":"+15555555555", "captcha": "VALIDCAPTCHA", "server": "97c17f0c-e53b-426f-8ffa-c052d4183f83"}
    
    # Response:
    {"type":"verification_required","data":{"deviceId":1,"username":"+15555555555","filename":"/signald/data/+15555555555","registered":false,"has_keys":true,"subscribed":false}}
@@ -95,8 +133,6 @@ For testing, we build and run locally, using the Signal staging network, and the
 1. Create a virtual environment and install the requirements.
 
     ```shell
-    git clone git@github.com:mobilecoinofficial/mobot.git
-    git submodule update --init --recursive
     cd mobot/mobot
     python3 -m venv venv
     source venv/bin/activate
@@ -105,11 +141,12 @@ For testing, we build and run locally, using the Signal staging network, and the
    
     Note: If you are having issues with psycopg2, you may want to make sure that Python 3.9.5 is installed and postgresql is installed.
    
-1. Prepare the environment for Django
+1. Prepare the environment for Django. (Make sure you have obtained a [Google Maps Client Key](https://developers.google.com/maps/documentation/maps-static/get-api-key))
 
     ```shell
     export SECRET_KEY=123
     export DEBUG=TRUE
+    export GMAPS_CLIENT_KEY=...
     ```
 
 1. Run the database migrations
