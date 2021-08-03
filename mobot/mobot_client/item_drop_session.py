@@ -96,10 +96,6 @@ class ItemDropSession(BaseDropSession):
                 drop_session.customer, message.source, message_to_send
             )
 
-            # price_in_mob = mc.pmob2mob(drop_session.drop.item.price_in_pmob)
-            # self.payments.send_mob_to_customer(drop_session.customer, message.source, price_in_mob, True)
-            # drop_session.state = ItemSessionState.REFUNDED.value
-            # drop_session.save()
             return
 
         new_order = Order(
@@ -107,12 +103,12 @@ class ItemDropSession(BaseDropSession):
         )
         new_order.save()
 
-        self.messenger.log_and_send_message(
-            drop_session.customer, message.source, ChatStrings.ADDRESS_HOODIE_REQUEST
-        )
-
-        drop_session.state = ItemSessionState.WAITING_FOR_ADDRESS.value
+        drop_session.state = ItemSessionState.WAITING_FOR_NAME.value
         drop_session.save()
+
+        self.messenger.log_and_send_message(
+            drop_session.customer, message.source, ChatStrings.NAME_REQUEST
+        )
 
     def handle_item_drop_session_waiting_for_payment(self, message, drop_session):
         price_in_mob = mc.pmob2mob(drop_session.drop.item.price_in_pmob)
@@ -213,27 +209,16 @@ class ItemDropSession(BaseDropSession):
 
             return
 
-        order.shipping_address = address[0]["formatted_address"]
-        order.save()
-
-        drop_session.state = ItemSessionState.WAITING_FOR_NAME.value
-        drop_session.save()
-
-        self.messenger.log_and_send_message(
-            drop_session.customer, message.source, ChatStrings.NAME_REQUEST
-        )
-
-    def handle_item_drop_session_waiting_for_name(self, message, drop_session):
-        order = None
-        try:
-            order = Order.objects.get(drop_session=drop_session)
-        except (Exception,):
+        if message.text == "?" or message.text.lower() == 'help':
             self.messenger.log_and_send_message(
-                drop_session.customer, message.source, ChatStrings.MISSING_ORDER
+                drop_session.customer, message.source,
+                ChatStrings.ADDRESS_HELP.format(item=drop_session.drop.item.name)
             )
             return
 
-        order.shipping_name = message.text
+        ### TODO: deal with a cancel command by deleting the order, returning funds, and setting the state to cancalled
+
+        order.shipping_address = address[0]["formatted_address"]
         order.save()
 
         drop_session.state = ItemSessionState.SHIPPING_INFO_CONFIRMATION.value
@@ -247,6 +232,35 @@ class ItemDropSession(BaseDropSession):
             ),
         )
 
+    def handle_item_drop_session_waiting_for_name(self, message, drop_session):
+        order = None
+        try:
+            order = Order.objects.get(drop_session=drop_session)
+        except (Exception,):
+            self.messenger.log_and_send_message(
+                drop_session.customer, message.source, ChatStrings.MISSING_ORDER
+            )
+            return
+
+        if message.text == "?" or message.text.lower() == 'help':
+            self.messenger.log_and_send_message(
+                drop_session.customer, message.source,
+                ChatStrings.NAME_HELP
+            )
+            return
+
+        ### TODO: deal with a cancel command by deleting the order, returning funds, and setting the state to cancalled
+
+        order.shipping_name = message.text
+        order.save()
+
+        drop_session.state = ItemSessionState.WAITING_FOR_ADDRESS.value
+        drop_session.save()
+        
+        self.messenger.log_and_send_message(
+            drop_session.customer, message.source, ChatStrings.ADDRESS_REQUEST
+        )
+
     def handle_item_drop_session_shipping_confirmation(self, message, drop_session):
         order = None
         try:
@@ -258,12 +272,17 @@ class ItemDropSession(BaseDropSession):
             return
 
         if message.text.lower() == "no" or message.text.lower() == "n":
-            drop_session.state = ItemSessionState.WAITING_FOR_ADDRESS.value
+            drop_session.state = ItemSessionState.WAITING_FOR_NAME.value
             drop_session.save()
             self.messenger.log_and_send_message(
-                drop_session.customer, message.source, ChatStrings.ADDRESS_REQUEST
+                drop_session.customer, message.source, ChatStrings.NAME_REQUEST
             )
+            return
 
+        if message.text.lower() != "yes" and message.text.lower() != "y":
+            self.messenger.log_and_send_message(
+                drop_session.customer, message.source, ChatStrings.NOTIFICATIONS_HELP
+            )
             return
 
         order.status = OrderStatus.CONFIRMED.value
@@ -277,24 +296,18 @@ class ItemDropSession(BaseDropSession):
             ),
         )
 
-        if message.text.lower() == "yes" or message.text.lower() == "y":
-            if self.customer_has_store_preferences(drop_session.customer):
-                drop_session.state = ItemSessionState.COMPLETED.value
-                drop_session.save()
-                self.messenger.log_and_send_message(
-                    drop_session.customer, message.source, ChatStrings.BYE
-                )
-
-                return
-
-            drop_session.state = ItemSessionState.ALLOW_CONTACT_REQUESTED.value
+        if self.customer_has_store_preferences(drop_session.customer):
+            drop_session.state = ItemSessionState.COMPLETED.value
             drop_session.save()
             self.messenger.log_and_send_message(
-                drop_session.customer, message.source, ChatStrings.FUTURE_NOTIFICATIONS
+                drop_session.customer, message.source, ChatStrings.BYE
             )
+            return
 
+        drop_session.state = ItemSessionState.ALLOW_CONTACT_REQUESTED.value
+        drop_session.save()
         self.messenger.log_and_send_message(
-            drop_session.customer, message.source, ChatStrings.NOTIFICATIONS_HELP
+            drop_session.customer, message.source, ChatStrings.FUTURE_NOTIFICATIONS
         )
 
     def handle_item_drop_session_allow_contact_requested(self, message, drop_session):
@@ -376,11 +389,6 @@ class ItemDropSession(BaseDropSession):
             store_description=drop.store.description,
             item_description=drop.item.description
         )
-        # self.messenger.log_and_send_message(
-        #     customer,
-        #     message.source,
-        #     message_to_send
-        # )
 
         available_options = self.drop_item_get_available(drop.item)
         if len(available_options) == 0:

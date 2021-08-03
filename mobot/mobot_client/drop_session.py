@@ -30,8 +30,8 @@ class ItemSessionState(enum.Enum):
     NEW = 0
     WAITING_FOR_PAYMENT = 1
     WAITING_FOR_SIZE = 2
-    WAITING_FOR_ADDRESS = 3
-    WAITING_FOR_NAME = 4
+    WAITING_FOR_NAME = 3
+    WAITING_FOR_ADDRESS = 4
     SHIPPING_INFO_CONFIRMATION = 5
     ALLOW_CONTACT_REQUESTED = 6
     COMPLETED = 7
@@ -42,8 +42,8 @@ class ItemSessionState(enum.Enum):
                 cls.NEW.value,
                 cls.WAITING_FOR_PAYMENT.value,
                 cls.WAITING_FOR_SIZE.value,
-                cls.WAITING_FOR_ADDRESS.value,
                 cls.WAITING_FOR_NAME.value,
+                cls.WAITING_FOR_ADDRESS.value,
                 cls.SHIPPING_INFO_CONFIRMATION.value,
                 cls.ALLOW_CONTACT_REQUESTED.value
             }

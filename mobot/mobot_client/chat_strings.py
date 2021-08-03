@@ -139,6 +139,7 @@ We have {item_description}"""
     OUT_OF_STOCK_REFUND = "Uh oh! Looks like we're all out of stock, sorry! Refunding your payment now :)"
     ADDRESS_HOODIE_REQUEST = "What address should we send the hoodie to?"
     ADDRESS_REQUEST = "What address should we ship to?"
+    ADDRESS_HELP = "Please provide a destination address for shipping the {item}"
     ITEM_HELP = """Commands available are:
 
 'info' - Item info
@@ -157,7 +158,8 @@ We have {item_description}"""
     RESERVE_ITEM = "Please send {amount} MOB to reserve your item now!"
     MISSING_ORDER = "We don't seem to have an order for you... something went wrong! Please try again"
     ADDRESS_NOT_FOUND = "We couldn't seem to find that address. Please try again!"
-    NAME_REQUEST = "What name should we use to send the order to?"
+    NAME_REQUEST = "For shipping, what name should we use?"
+    NAME_HELP = "Please provide the name of the recipient for use on the shipping label"
     VERIFY_SHIPPING = "Does this look correct?\n{name}\n{address}"
     ORDER_CONFIRMATION = """All set. Your order number is {order_id}
 
