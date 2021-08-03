@@ -128,9 +128,12 @@ Today's drop is from {store_name}. {store_description}
 
 We have {item_description}"""
     # Item Discount String (used in greeting)
-    ITEM_DISCOUNT="Normally 6 MOB, you can get yours for the discounted price of {price} MOB, shipped. We accept UK addresses only"
-
+    ITEM_DISCOUNT = "Normally 6 MOB, you can get yours for the discounted price of {price} MOB, shipped. We accept UK addresses only"
+    NOT_ENOUGH_REFUND = "Not enough MOB, sending back {amount_paid} (minus network fees)"
+    NOT_ENOUGH = "Not enough MOB, unable to refund since it is less than the network fee"
+    EXCESS_PAYMENT = "Sent too much MOB, sending back excess of {excess} (minus network fees)"
     OUT_OF_STOCK = "Uh oh! Looks like we're all out of stock, sorry!"
+    OUT_OF_STOCK_REFUND = "Uh oh! Looks like we're all out of stock, sorry! Refunding your payment now :)"
     ITEM_SOLD_OUT = (
         "Sorry, we're all out of that selection! Refunding your MOB, try again :)"
     )
@@ -148,6 +151,7 @@ We have {item_description}"""
 3. Tap Pay
 4. Tap Confirm Payment"""
 
+    WAITING_FOR_SIZE_PREFIX = "What size would you like? We have the following available options:\n\n"
     TERMS = "Visit (terms url) for MOBots terms and conditions"
     ITEM_HELP_SHORT = "Commands are help, info, pay, and terms\n\n"
     RESERVE_ITEM = "Please send {amount} MOB to reserve your item now!"

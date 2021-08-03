@@ -72,7 +72,7 @@ class MOBot:
 
         self.drop = DropSession(self.store, self.payments, self.messenger)
 
-        self.timeouts = Timeouts(self.messenger,  schedule=30, idle_timeout=60, cancel_timeout=300)
+        self.timeouts = Timeouts(self.messenger, self.payments, schedule=30, idle_timeout=60, cancel_timeout=300)
 
         bot_name = ChatbotSettings.load().name
         bot_avatar_filename = ChatbotSettings.load().avatar_filename

@@ -49,6 +49,8 @@ class Payments:
 
         if not cover_transaction_fee:
             amount_mob = amount_mob - Decimal(mc.pmob2mob(self.minimum_fee_pmob))
+        else:
+            amount_mob = amount_mob + Decimal(mc.pmob2mob(self.minimum_fee_pmob))
 
         if amount_mob <= 0:
             return
@@ -131,14 +133,14 @@ class Payments:
                 self.messenger.log_and_send_message(
                     customer,
                     source,
-                    f"Not enough MOB, sending back {amount_paid_mob.normalize()} (minus network fees)",
+                    ChatStrings.NOT_ENOUGH_REFUND.format(amount_paid=amount_paid_mob.normalize())
                 )
                 self.send_mob_to_customer(customer, source, amount_paid_mob, False)
             else:
                 self.messenger.log_and_send_message(
                     customer,
                     source,
-                    "Not enough MOB, unable to refund since it is less than the network fee",
+                    ChatStrings.NOT_ENOUGH
                 )
             return
 
@@ -150,7 +152,7 @@ class Payments:
             self.messenger.log_and_send_message(
                 customer,
                 source,
-                f"Sent too much MOB, sending back excess of {excess.normalize()} (minus network fees)",
+                ChatStrings.EXCESS_PAYMENT.format(excess=excess.normalize())
             )
             self.send_mob_to_customer(customer, source, excess, False)
 
@@ -166,16 +168,14 @@ class Payments:
             self.messenger.log_and_send_message(
                 customer,
                 source,
-                "Uh oh! Looks like we're all out of stock, sorry! Refunding your payment now :)",
+                ChatStrings.OUT_OF_STOCK_REFUND
             )
             self.send_mob_to_customer(customer, source, item_cost_mob, True)
             drop_session.state = ItemSessionState.REFUNDED.value
             drop_session.save()
             return
 
-        message_to_send = (
-            "What size would you like? We have the following available options:\n\n"
-        )
+        message_to_send = ChatStrings.WAITING_FOR_SIZE_PREFIX
         for option in available_options:
             message_to_send += f" - {option.identifier}\n"
 
