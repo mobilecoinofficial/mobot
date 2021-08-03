@@ -61,9 +61,11 @@ class ItemDropSession(BaseDropSession):
             drop_session.state = ItemSessionState.REFUNDED.value
             drop_session.save()
             return
-        elif message.text.lower() == "help":
+        elif message.text.lower() == "help" or message.text == '?':
+            available_options = self.drop_item_get_available(drop_session.drop.item)
             self.messenger.log_and_send_message(
-                drop_session.customer, message.source, ChatStrings.ITEM_OPTION_HELP
+                drop_session.customer, message.source,
+                ChatStrings.ITEM_OPTION_HELP + "\n\n" + ChatStrings.get_options(available_options,capitalize=True) 
             )
             return
 
