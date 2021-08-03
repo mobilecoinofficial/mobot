@@ -81,6 +81,10 @@ class Timeouts:
                     direction=0,
                     customer=customer.phone_number
                 ).values('customer', 'date').order_by('-date').first()
+
+                if last_message is None:
+                    return
+
                 time_delta = (utc.localize(datetime.datetime.now()) - last_message['date']).seconds
 
                 if time_delta > self.cancel_timeout and self.customer_is_idle(customer):
