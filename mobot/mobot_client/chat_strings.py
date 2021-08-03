@@ -122,8 +122,10 @@ Today's drop is from {store_name}. {store_description}
 
 We have {item_description}"""
     # Item Discount String (used in greeting)
-    ITEM_DISCOUNT="Normally 6 MOB, you can get yours for the discounted price of {price} MOB, shipped. We accept UK addresses only"
-
+    ITEM_DISCOUNT = "Normally 6 MOB, you can get yours for the discounted price of {price} MOB, shipped. We accept UK addresses only"
+    NOT_ENOUGH_REFUND = "Not enough MOB, sending back {amount_paid} (minus network fees)"
+    NOT_ENOUGH = "Not enough MOB, unable to refund since it is less than the network fee"
+    EXCESS_PAYMENT = "You overpaid. Sending back {refund} MOB"
     OUT_OF_STOCK = "Uh oh! Looks like we're all out of stock, sorry!"
     # ITEM_SOLD_OUT = (
     #     "Sorry, we're all out of that selection! Refunding your MOB, try again :)"
@@ -134,6 +136,7 @@ We have {item_description}"""
 
     ITEM_OPTION_CANCEL = "Cancelling your purchase and refunding your payment"
     ITEM_OPTION_HELP = "You can type an available size or 'cancel' for a refund of your payment"
+    OUT_OF_STOCK_REFUND = "Uh oh! Looks like we're all out of stock, sorry! Refunding your payment now :)"
     ADDRESS_HOODIE_REQUEST = "What address should we send the hoodie to?"
     ADDRESS_REQUEST = "What address should we ship to?"
     ITEM_HELP = """Commands available are:
@@ -149,6 +152,7 @@ We have {item_description}"""
 4. Tap Confirm Payment"""
 
     TERMS = "Visit {terms} for MOBots terms and conditions"
+    WAITING_FOR_SIZE_PREFIX = "What size would you like? "
     ITEM_HELP_SHORT = "Commands are help, info, pay, and terms\n\n"
     RESERVE_ITEM = "Please send {amount} MOB to reserve your item now!"
     MISSING_ORDER = "We don't seem to have an order for you... something went wrong! Please try again"
