@@ -84,6 +84,16 @@ class ItemDropSession(BaseDropSession):
                 drop_session.customer, message.source, ChatStrings.ITEM_HELP
             )
 
+        elif message.text.lower() == "cancel":
+            drop_session.state = ItemSessionState.CANCELLED.value
+            drop_session.save()
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                ChatStrings.SESSION_CANCELLED
+            )
+            return
+
         elif message.text.lower() == "pay":
             self.messenger.log_and_send_message(
                 drop_session.customer,
@@ -125,11 +135,31 @@ class ItemDropSession(BaseDropSession):
                 drop_session.customer, message.source, ChatStrings.ITEM_HELP_SHORT
             )
 
-        price_in_mob = mc.pmob2mob(drop_session.drop.item.price_in_pmob)
+        # Re-display available sizes and request payment
+        drop_item = drop_session.drop.item
+        available_options = []
+        skus = Sku.objects.filter(item=drop_item)
+
+        for sku in skus:
+            number_ordered = Order.objects.filter(sku=sku).count()
+            if number_ordered < sku.quantity:
+                available_options.append(sku)
+
+        if len(available_options) == 0:
+            self.messenger.log_and_send_message(
+                customer, message.source, ChatStrings.OUT_OF_STOCK
+            )
+            drop_session.state = ItemSessionState.CANCELLED.value
+            drop_session.save()
+            return
+
+        message_to_send = f"{drop_item.name} in " + ChatStrings.get_options(available_options)        
+        price_in_mob = mc.pmob2mob(drop_item.price_in_pmob)
+        message_to_send += "\n\n" + ChatStrings.PAYMENT_REQUEST.format(price=price_in_mob.normalize())
         self.messenger.log_and_send_message(
             drop_session.customer,
             message.source,
-            ChatStrings.RESERVE_ITEM.format(amount=price_in_mob.normalize()),
+            message_to_send
         )
 
     def handle_item_drop_session_waiting_for_address(self, message, drop_session):
@@ -309,6 +339,18 @@ class ItemDropSession(BaseDropSession):
             )
             return
 
+        # Greet the user
+        message_to_send = ChatStrings.ITEM_DROP_GREETING.format(
+            store_name=drop.store.name,
+            store_description=drop.store.description,
+            item_description=drop.item.description
+        )
+        # self.messenger.log_and_send_message(
+        #     customer,
+        #     message.source,
+        #     message_to_send
+        # )
+
         available_options = []
         skus = Sku.objects.filter(item=drop.item)
 
@@ -323,10 +365,14 @@ class ItemDropSession(BaseDropSession):
             )
             return
 
-        message_to_send = ChatStrings.get_options(available_options)
+        message_to_send += "\n\n"+ChatStrings.get_options(available_options)
+        
+        price_in_mob = mc.pmob2mob(drop.item.price_in_pmob)
+        message_to_send += "\n\n"+ChatStrings.ITEM_DISCOUNT.format(
+            price=price_in_mob.normalize()
+        )
 
         self.messenger.log_and_send_message(customer, message.source, message_to_send)
-        price_in_mob = mc.pmob2mob(drop.item.price_in_pmob)
         self.messenger.log_and_send_message(
             customer,
             message.source,

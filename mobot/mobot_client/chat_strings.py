@@ -110,11 +110,11 @@ class ChatStrings:
 
     PAY_HELP = """To see your balance and send a payment:
 
-    1. Select the attachment icon and select Pay
-    2. Enter the amount you want to send (e.g. 0.01 MOB)
-    3. Tap Pay
-    4. Tap Confirm Payment
-    """
+1. Select the attachment icon and select Pay
+2. Enter the amount you want to send (e.g. 0.01 MOB)
+3. Tap Pay
+4. Tap Confirm Payment
+"""
 
     YES_NO_HELP = """You can type (y)es, or (n)o
 
@@ -122,6 +122,14 @@ class ChatStrings:
     """
 
     # Item Drop Strings
+    ITEM_DROP_GREETING = """MOBot at your service!
+
+Today's drop is from {store_name}. {store_description}
+
+We have {item_description}"""
+    # Item Discount String (used in greeting)
+    ITEM_DISCOUNT="Normally 6 MOB, you can get yours for the discounted price of {price} MOB, shipped. We accept UK addresses only"
+
     OUT_OF_STOCK = "Uh oh! Looks like we're all out of stock, sorry!"
     ITEM_SOLD_OUT = (
         "Sorry, we're all out of that selection! Refunding your MOB, try again :)"
@@ -134,13 +142,12 @@ class ChatStrings:
     'pay' - How to pay
     'terms' - Terms and conditions
     """
-    PAYMENT_REQUEST = "Send {price} MOB to reserve your item now!"
+    PAYMENT_REQUEST = "Order now by sending {price} MOB using Signal Payments"
     PAY = """1. Select the attachment (+) icon below and then select Pay
+2. Enter the amount to send ({amount} MOB)
+3. Tap Pay
+4. Tap Confirm Payment"""
 
-    2. Enter the amount to send ({amount} MOB)
-    3. Tap Pay
-    4. Tap Confirm Payment
-    """
     TERMS = "Visit (terms url) for MOBots terms and conditions"
     ITEM_HELP_SHORT = "Commands are help, info, pay, and terms\n\n"
     RESERVE_ITEM = "Please send {amount} MOB to reserve your item now!"
@@ -158,10 +165,16 @@ class ChatStrings:
 
     @staticmethod
     def get_options(available_options):
-        message_to_send = "We have the following available options:\n\n"
+        # message_to_send = "We have the following available options:\n\n"
+        # for option in available_options:
+        #     message_to_send += f" - {option.identifier}\n"
+        option_list = list()
         for option in available_options:
-            message_to_send += f" - {option.identifier}\n"
-
+            option_list.append(option.identifier)
+        if len(option_list) == 1:
+            message_to_send = f"Size {option_list[0]} remains"
+        else:
+            message_to_send = "Sizes " + ", ".join(option_list[:-1]) + " and " + option_list[-1] + " remain"
         return message_to_send
 
     TIMEOUT = "Your session is about to timeout. Send any message to continue."
