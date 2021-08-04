@@ -50,7 +50,7 @@ class Payments:
         if not cover_transaction_fee:
             amount_mob = amount_mob - Decimal(mc.pmob2mob(self.minimum_fee_pmob))
         else:
-            amount_mob = amount_mob + Decimal(mc.pmob2mob(self.minimum_fee_pmob))
+            amount_mob = amount_mob + (2 * Decimal(mc.pmob2mob(self.minimum_fee_pmob)))
 
         if amount_mob <= 0:
             return
