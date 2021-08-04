@@ -41,7 +41,7 @@ class ItemDropSession(BaseDropSession):
 
     def drop_item_get_available(self, drop_item):
         available_options = []
-        skus = Sku.objects.filter(item=drop_item)
+        skus = Sku.objects.filter(item=drop_item).order_by("sort_order")
 
         for sku in skus:
             number_ordered = Order.objects.filter(sku=sku).count()
