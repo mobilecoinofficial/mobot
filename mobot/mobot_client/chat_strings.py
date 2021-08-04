@@ -161,11 +161,17 @@ We have {item_description}"""
     NAME_REQUEST = "For shipping, what name should we use?"
     NAME_HELP = "Please provide the name of the recipient for use on the shipping label"
     VERIFY_SHIPPING = "Does this look correct?\n{name}\n{address}"
-    ORDER_CONFIRMATION = """All set. Your order number is {order_id}
+    ORDER_CONFIRMATION = """All set. Here is your receipt:
+Your order number is {order_id}, order date: {today}
 
-1x {sku_name}, to be shipped to you
+1x {item_name}({sku_name}), {price} MOB, to be shipped to you at
 
-Please provide your order number ({order_id}) when contacting us
+{ship_name}
+{ship_address}
+
+Your payment included £{vat}, collected by MOBot Ltd for VAT, VAT ID: {vat_id}
+
+Please provide your order number ({order_id}) when contacting {store_name} at {store_contact} \
 if you have any questions or issues"""
 
     @staticmethod
