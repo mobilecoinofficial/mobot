@@ -72,7 +72,7 @@ class MOBot:
 
         self.drop = DropSession(self.store, self.payments, self.messenger)
 
-        self.timeouts = Timeouts(self.messenger, self.payments, schedule=30, idle_timeout=60, cancel_timeout=300)
+        # self.timeouts = Timeouts(self.messenger, self.payments, schedule=30, idle_timeout=60, cancel_timeout=300)
 
         bot_name = ChatbotSettings.load().name
         bot_avatar_filename = ChatbotSettings.load().avatar_filename
@@ -315,10 +315,10 @@ class MOBot:
     # FIXME: Handler for cancel/help?
 
     def run_chat(self):
-        print("Starting timeouts thread")
-        t = threading.Thread(target=self.timeouts.process_timeouts, args=(), kwargs={})
-        t.setDaemon(True)
-        t.start()
+        # print("Starting timeouts thread")
+        # t = threading.Thread(target=self.timeouts.process_timeouts, args=(), kwargs={})
+        # t.setDaemon(True)
+        # t.start()
 
         print("Now running MOBot chat")
         self.signal.run_chat(True)
