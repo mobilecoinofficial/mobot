@@ -50,7 +50,7 @@ class Payments:
         if not cover_transaction_fee:
             amount_mob = amount_mob - Decimal(mc.pmob2mob(self.minimum_fee_pmob))
         else:
-            amount_mob = amount_mob + (2 * Decimal(mc.pmob2mob(self.minimum_fee_pmob)))
+            amount_mob = amount_mob + Decimal(mc.pmob2mob(self.minimum_fee_pmob))
 
         if amount_mob <= 0:
             return
@@ -129,11 +129,14 @@ class Payments:
         item_cost_mob = mc.pmob2mob(drop_session.drop.item.price_in_pmob)
 
         if amount_paid_mob < item_cost_mob:
-            if mc.mob2pmob(amount_paid_mob) > self.minimum_fee_pmob:
+            refund_amount = mc.pmob2mob(
+                mc.mob2pmob(amount_paid_mob) - self.minimum_fee_pmob
+            )
+            if refund_amount > 0:
                 self.messenger.log_and_send_message(
                     customer,
                     source,
-                    ChatStrings.NOT_ENOUGH_REFUND.format(amount_paid=amount_paid_mob.normalize())
+                    ChatStrings.NOT_ENOUGH_REFUND.format(amount_paid=refund_amount.normalize())
                 )
                 self.send_mob_to_customer(customer, source, amount_paid_mob, False)
             else:
@@ -164,7 +167,7 @@ class Payments:
             )
 
         available_options = []
-        skus = Sku.objects.filter(item=drop_session.drop.item)
+        skus = Sku.objects.filter(item=drop_session.drop.item).order_by("sort_order")
 
         for sku in skus:
             number_ordered = Order.objects.filter(sku=sku).count()

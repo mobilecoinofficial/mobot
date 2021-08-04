@@ -68,6 +68,41 @@ class ItemDropSession(BaseDropSession):
                 ChatStrings.ITEM_OPTION_HELP + "\n\n" + ChatStrings.get_options(available_options,capitalize=True) 
             )
             return
+        elif message.text.lower() == "chart" or message.text.lower() == 'info':
+            drop_item = drop_session.drop.item
+
+            item_description_text = drop_item.name
+
+            if drop_item.short_description is not None:
+                item_description_text = drop_item.short_description
+
+            if drop_item.image_link is None or drop_item.image_link == "":
+                self.messenger.log_and_send_message(
+                    drop_session.customer, message.source,
+                    ChatStrings.ITEM_OPTION_NO_CHART.format(description=drop_item.short_description)
+                )
+            else:
+                attachments = [
+                    "/signald/attachments/" + attachment.strip()
+                    for attachment in drop_item.image_link.split(",")
+                ]
+                self.messenger.log_and_send_message(
+                    drop_session.customer,
+                    message.source,
+                    item_description_text,
+                    attachments=attachments,
+                )
+
+            available_options = self.drop_item_get_available(drop_session.drop.item)
+            message_to_send = "\n\n" + ChatStrings.get_options(available_options, capitalize=True)
+            message_to_send += "\n\n" + ChatStrings.ITEM_WHAT_SIZE_OR_CANCEL
+
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                message_to_send
+            )
+            return
 
         try:
             sku = Sku.objects.get(
@@ -90,7 +125,7 @@ class ItemDropSession(BaseDropSession):
         if number_ordered >= sku.quantity:
             message_to_send = ChatStrings.ITEM_SOLD_OUT
             available_options = self.drop_item_get_available(drop_session.drop.item)
-            message_to_send += "\n\n" + ChatStrings.get_options(available_options)
+            message_to_send += "\n\n" + ChatStrings.get_options(available_options, capitalize=True)
             message_to_send += "\n\n" + ChatStrings.ITEM_WHAT_SIZE
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source, message_to_send
@@ -291,18 +326,21 @@ class ItemDropSession(BaseDropSession):
         order.save()
 
         item = drop_session.drop.item
+        price_in_mob = mc.pmob2mob(item.price_in_pmob)
+        price_local_fiat = float(price_in_mob) * drop_session.drop.conversion_rate_mob_to_currency
+        vat = price_local_fiat * 1/6
         self.messenger.log_and_send_message(
             drop_session.customer,
             message.source,
             ChatStrings.ORDER_CONFIRMATION.format(
                 order_id=order.id,
-                today="right now",
+                today="August 3, 2021",
                 item_name = item.name,
-                sku_name=order.sku.item.name,
-                price=mc.pmob2mob(item.price_in_pmob).normalize(),
+                sku_name=order.sku.identifier,
+                price=price_in_mob.normalize(),
                 ship_name=order.shipping_name,
                 ship_address=order.shipping_address,
-                vat=.2,
+                vat=vat,
                 vat_id="69VM1DLV4DRIKSI",
                 store_name=drop_session.drop.store.name,
                 store_contact="hello@mobilecoin.com"
@@ -391,7 +429,7 @@ class ItemDropSession(BaseDropSession):
                 customer,
                 message.source,
                 ChatStrings.PAYMENTS_ENABLED_HELP.format(
-                    item_desc=drop.item.description
+                    item_desc=drop.item.short_description
                 ),
             )
             return
@@ -400,7 +438,7 @@ class ItemDropSession(BaseDropSession):
         message_to_send = ChatStrings.ITEM_DROP_GREETING.format(
             store_name=drop.store.name,
             store_description=drop.store.description,
-            item_description=drop.item.description
+            item_description=drop.item.short_description
         )
 
         available_options = self.drop_item_get_available(drop.item)
