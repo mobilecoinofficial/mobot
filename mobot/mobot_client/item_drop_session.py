@@ -216,7 +216,7 @@ class ItemDropSession(BaseDropSession):
             )
             return
 
-        ### TODO: deal with a cancel command by deleting the order, returning funds, and setting the state to cancalled
+        ### TODO: deal with a cancel command by deleting/invalidating the order, returning funds, and setting the state to cancalled
 
         order.shipping_address = address[0]["formatted_address"]
         order.save()
@@ -249,7 +249,7 @@ class ItemDropSession(BaseDropSession):
             )
             return
 
-        ### TODO: deal with a cancel command by deleting the order, returning funds, and setting the state to cancalled
+        ### TODO: deal with a cancel command by deleting/invalidating the order, returning funds, and setting the state to cancalled
 
         order.shipping_name = message.text
         order.save()
@@ -279,6 +279,8 @@ class ItemDropSession(BaseDropSession):
             )
             return
 
+        ### TODO: deal with a cancel command by deleting/invalidating the order, returning funds, and setting the state to cancalled
+
         if message.text.lower() != "yes" and message.text.lower() != "y":
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source, ChatStrings.NOTIFICATIONS_HELP
@@ -288,11 +290,22 @@ class ItemDropSession(BaseDropSession):
         order.status = OrderStatus.CONFIRMED.value
         order.save()
 
+        item = drop_session.drop.item
         self.messenger.log_and_send_message(
             drop_session.customer,
             message.source,
             ChatStrings.ORDER_CONFIRMATION.format(
-                order_id=order.id, sku_name=order.sku.item.name
+                order_id=order.id,
+                today="right now",
+                item_name = item.name,
+                sku_name=order.sku.item.name,
+                price=mc.pmob2mob(item.price_in_pmob).normalize(),
+                ship_name=order.shipping_name,
+                ship_address=order.shipping_address,
+                vat=.2,
+                vat_id="69VM1DLV4DRIKSI",
+                store_name=drop_session.drop.store.name,
+                store_contact="hello@mobilecoin.com"
             ),
         )
 
