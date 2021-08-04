@@ -43,7 +43,9 @@ More info on enabling payments here: https://support.signal.org/hc/en-us/article
     STORE_CLOSED_SHORT = "Hi! MOBot here.\n\nWe're currently closed. Buh-Bye!"
 
     # Session Strings
-    SESSION_CANCELLED = "Session cancelled, message us again when you're ready!"
+    SESSION_CANCELLED = """Session cancelled, message us again when you're ready!
+
+MOBot OUT. Buh-bye!"""
 
     # Payment Strings
     PAYMENTS_DEACTIVATED = """We have a refund for you, but your payments have been deactivated
@@ -122,20 +124,36 @@ Today's drop is from {store_name}. {store_description}
 
 We have {item_description}"""
     # Item Discount String (used in greeting)
-    ITEM_DISCOUNT = "Normally 6 MOB, you can get yours for the discounted price of {price} MOB, shipped. We accept UK addresses only"
-    NOT_ENOUGH_REFUND = "Not enough MOB, sending back {amount_paid} (minus network fees)"
+    ITEM_DISCOUNT = """Normally 6 MOB, you can get yours for the discounted price of {price} MOB, shipped. We accept UK addresses only
+
+For pictures, a sizing chart, and more info, type 'info'"""
+
+    NOT_ENOUGH_REFUND = "Not enough MOB, sending back {amount_paid} MOB"
     NOT_ENOUGH = "Not enough MOB, unable to refund since it is less than the network fee"
     EXCESS_PAYMENT = "You overpaid. Sending back {refund} MOB"
     OUT_OF_STOCK = "Uh oh! Looks like we're all out of stock, sorry!"
     # ITEM_SOLD_OUT = (
     #     "Sorry, we're all out of that selection! Refunding your MOB, try again :)"
     # )
-    ITEM_SOLD_OUT = "Sorry, we sold out of that size 😔 Please pick a new size or type 'cancel' for a refund"
+    ITEM_SOLD_OUT = """Sorry, we sold out of that size 😔 Please type
+- an available size,
+- chart for a size chart, or
+- cancel for a refund of your payment"""
     ITEM_WHAT_SIZE = "What size would you like?"
-    ITEM_WHAT_SIZE_OR_CANCEL = "What size would you like? Type an available size or 'cancel' for a refund"
+    ITEM_WHAT_SIZE_OR_CANCEL = """What size would you like? Type:
+- an available size,
+- chart for a size chart, or
+- cancel for a refund"""
 
-    ITEM_OPTION_CANCEL = "Cancelling your purchase and refunding your payment"
-    ITEM_OPTION_HELP = "Please send an available size or 'cancel' for a refund of your payment"
+    ITEM_OPTION_CANCEL = """Cancelling your purchase and refunding your payment
+
+MOBot OUT. Buh-bye!"""
+
+    ITEM_OPTION_HELP = """Please type
+- an available size,
+- chart for a size chart, or
+- cancel for a refund of your payment"""
+    ITEM_OPTION_NO_CHART = "Sorry. We don't have a picture of the {description}"
     OUT_OF_STOCK_REFUND = "Uh oh! Looks like we're all out of stock, sorry! Refunding your payment now :)"
     ADDRESS_HOODIE_REQUEST = "What address should we send the hoodie to?"
     ADDRESS_REQUEST = "What address should we ship to?"
@@ -153,7 +171,11 @@ We have {item_description}"""
 4. Tap Confirm Payment"""
 
     TERMS = "Visit {terms} for MOBots terms and conditions"
-    WAITING_FOR_SIZE_PREFIX = "What size would you like? "
+    WAITING_FOR_SIZE_PREFIX = """What size would you like? Type:
+- an available size, or
+- chart for a sizing chart.
+
+"""
     ITEM_HELP_SHORT = "Commands are help, info, pay, and terms\n\n"
     RESERVE_ITEM = "Please send {amount} MOB to reserve your item now!"
     MISSING_ORDER = "We don't seem to have an order for you... something went wrong! Please try again"
@@ -164,12 +186,12 @@ We have {item_description}"""
     ORDER_CONFIRMATION = """All set. Here is your receipt:
 Your order number is {order_id}, order date: {today}
 
-1x {item_name}({sku_name}), {price} MOB, to be shipped to you at
+1x {item_name}({sku_name}) for {price} MOB (including item, shipping, and VAT), to be shipped to:
 
 {ship_name}
 {ship_address}
 
-Your payment included £{vat}, collected by MOBot Ltd for VAT, VAT ID: {vat_id}
+Your payment included £{vat:.2f} VAT, collected by MOBot Ltd, VAT ID: {vat_id}
 
 Please provide your order number ({order_id}) when contacting {store_name} at {store_contact} \
 if you have any questions or issues"""
@@ -183,9 +205,9 @@ if you have any questions or issues"""
         for option in available_options:
             option_list.append(option.identifier)
         if len(option_list) == 1:
-            message_to_send = f"{option_title} {option_list[0]} remains"
+            message_to_send = f"{option_title} {option_list[0]} are available"
         else:
-            message_to_send = option_title+"s " + ", ".join(option_list[:-1]) + " and " + option_list[-1] + " remain"
+            message_to_send = option_title+"s " + ", ".join(option_list[:-1]) + " and " + option_list[-1] + " are availabe"
         return message_to_send
 
     TIMEOUT = "Your session is about to timeout. Send any message to continue."
