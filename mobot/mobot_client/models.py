@@ -29,6 +29,7 @@ class Sku(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
     identifier = models.TextField()
     quantity = models.PositiveIntegerField(default=0)
+    sort_order = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return f"{self.item.name} - {self.identifier}"

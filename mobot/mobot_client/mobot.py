@@ -151,15 +151,21 @@ class MOBot:
 
         @self.signal.chat_handler("coins")
         def chat_router_coins(message, match):
-            bonus_coins = BonusCoin.objects.all()
+            active_drop = BaseDropSession.get_active_drop()
+            if active_drop is None:
+                return "No active drop to check on coins"
+            
+            bonus_coins = BonusCoin.objects.filter(drop=active_drop)
+            message_to_send = ""
             for bonus_coin in bonus_coins:
                 number_claimed = DropSession.objects.filter(
                     bonus_coin_claimed=bonus_coin
                 ).count()
-                self.signal.send_message(
-                    message.source,
-                    f"{number_claimed} out of {bonus_coin.number_available} {mc.pmob2mob(bonus_coin.amount_pmob).normalize()}MOB Bonus Coins claimed ",
+                message_to_send += (
+                    f"{number_claimed} / {bonus_coin.number_available} - {mc.pmob2mob(bonus_coin.amount_pmob).normalize()} claimed\n"
                 )
+            return message_to_send
+                
 
         @self.signal.chat_handler("items")
         def chat_router_items(message, match):
@@ -167,14 +173,14 @@ class MOBot:
             if active_drop is None:
                 return "No active drop to check on items"
 
-            skus = Sku.objects.filter(item=active_drop.item)
+            skus = Sku.objects.filter(item=active_drop.item).order_by("sort_order")
             message_to_send = ""
             for sku in skus:
                 number_ordered = Order.objects.filter(sku=sku).count()
                 message_to_send += (
                     f"{sku.identifier} - {number_ordered} / {sku.quantity} ordered\n"
                 )
-            self.signal.send_message(message.source, message_to_send)
+            return message_to_send
 
         @self.signal.chat_handler("unsubscribe")
         def unsubscribe_handler(message, _match):
