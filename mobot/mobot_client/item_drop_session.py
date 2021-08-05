@@ -30,7 +30,7 @@ class ItemDropSession(BaseDropSession):
 
         gmaps_client_key = os.environ["GMAPS_CLIENT_KEY"]
         self.gmaps = googlemaps.Client(key=gmaps_client_key)
-
+        
         self.vat_id = os.environ["VAT_ID"]
 
     @staticmethod
@@ -316,7 +316,7 @@ class ItemDropSession(BaseDropSession):
             for type in types:
                 if type == "country" and component["short_name"] != drop_session.drop.country_code_restriction:
                     self.messenger.log_and_send_message(
-                        drop_session.customer, message.source, ChatStrings.ADDRESS_RESTRICTION.format(country_code=drop_session.drop.country_code_restriction)
+                        drop_session.customer, message.source, ChatStrings.ADDRESS_RESTRICTION.format(country=drop_session.drop.country_long_name_restriction)
                     )
                     return
 
@@ -541,7 +541,8 @@ class ItemDropSession(BaseDropSession):
 
         price_in_mob = mc.pmob2mob(drop.item.price_in_pmob)
         message_to_send += "\n\n"+ChatStrings.ITEM_DISCOUNT.format(
-            price=price_in_mob.normalize()
+            price=price_in_mob.normalize(),
+            country=drop.country_long_name_restriction
         )
 
         self.messenger.log_and_send_message(customer, message.source, message_to_send)

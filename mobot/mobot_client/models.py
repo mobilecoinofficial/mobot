@@ -50,6 +50,7 @@ class Drop(models.Model):
     conversion_rate_mob_to_currency = models.FloatField(default=1.0)
     currency_symbol = models.TextField(default="$")
     country_code_restriction = models.TextField(default="GB")
+    country_long_name_restriction = models.TextField(default="United Kingdom")
     max_refund_transaction_fees_covered = models.PositiveIntegerField(default=0)
 
     def value_in_currency(self, amount):

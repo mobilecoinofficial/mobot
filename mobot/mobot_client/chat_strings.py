@@ -126,7 +126,7 @@ Today's drop is from {store_name}. {store_description}
 
 We have {item_description}"""
     # Item Discount String (used in greeting)
-    ITEM_DISCOUNT = """Normally 6 MOB, you can get yours for the discounted price of {price} MOB, shipped. We accept UK addresses only
+    ITEM_DISCOUNT = """Normally 6 MOB, you can get yours for the discounted price of {price} MOB, shipped. We accept {country} addresses only
 
 For pictures, a sizing chart, and more info, type 'info'"""
 
@@ -160,7 +160,7 @@ MOBot OUT. Buh-bye!"""
     ADDRESS_HOODIE_REQUEST = "What address should we send the hoodie to?"
     ADDRESS_REQUEST = "What address should we ship to?"
     ADDRESS_HELP = "Please provide a destination address for shipping the {item}"
-    ADDRESS_RESTRICTION = "Sorry, we can only ship to an address with the country code {country_code}, please enter a different address!"
+    ADDRESS_RESTRICTION = "Sorry, we can only ship to an address in the {country}, please enter a different address!"
     ITEM_HELP = """Commands available are:
 
 'info' - Item info
