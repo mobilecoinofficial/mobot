@@ -391,13 +391,17 @@ class ItemDropSession(BaseDropSession):
                 ChatStrings.PRIVACY_POLICY.format(url=privacy_policy_url),
             )
 
-        if message.text.lower() == "cancel":
+        if message.text.lower() == "c" or message.text.lower() == "cancel" or message.text.lower() == "refund":
             self.handle_cancel_and_refund(message, drop_session, order)
             return
 
         if message.text.lower() != "yes" and message.text.lower() != "y":
             self.messenger.log_and_send_message(
-                drop_session.customer, message.source, ChatStrings.NOTIFICATIONS_HELP
+                drop_session.customer,
+                message.source,
+                ChatStrings.SHIPPING_CONFIRMATION_HELP.format(
+                    name=order.shipping_name, address=order.shipping_address
+                )
             )
             return
 
