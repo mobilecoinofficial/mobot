@@ -387,7 +387,6 @@ class ItemDropSession(BaseDropSession):
                 store_contact="hello@mobilecoin.com"
             ),
         )
-        return
 
         if self.customer_has_store_preferences(drop_session.customer):
             drop_session.state = ItemSessionState.COMPLETED.value
