@@ -26,8 +26,9 @@ from mobot_client.drop_session import (
     DropType,
     ItemSessionState,
 )
+
 from mobot_client.air_drop_session import AirDropSession
-from mobot_client.item_drop_session import ItemDropSession
+from mobot_client.item_drop_session import ItemDropSession, OrderStatus
 from mobot_client.payments import Payments
 from mobot_client.chat_strings import ChatStrings
 from mobot_client.timeouts import Timeouts
@@ -176,7 +177,7 @@ class MOBot:
             skus = Sku.objects.filter(item=active_drop.item).order_by("sort_order")
             message_to_send = ""
             for sku in skus:
-                number_ordered = Order.objects.filter(sku=sku).count()
+                number_ordered = Order.objects.filter(sku=sku).exclude(status=OrderStatus.CANCELLED.value).count()
                 message_to_send += (
                     f"{sku.identifier} - {number_ordered} / {sku.quantity} ordered\n"
                 )

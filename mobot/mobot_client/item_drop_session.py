@@ -12,6 +12,7 @@ from mobot_client.models import (
     CustomerStorePreferences,
     Order,
     Sku,
+    CustomerDropRefunds,
 )
 from mobot_client.chat_strings import ChatStrings
 
@@ -20,6 +21,7 @@ class OrderStatus(enum.Enum):
     STARTED = 0
     CONFIRMED = 1
     SHIPPED = 2
+    CANCELLED = 3
 
 
 class ItemDropSession(BaseDropSession):
@@ -36,7 +38,7 @@ class ItemDropSession(BaseDropSession):
         # FIXME: Unused
         skus = Sku.objects.fliter(item=drop.item)
         for sku in skus:
-            number_ordered = Order.objects.filter(sku=sku).count()
+            number_ordered = Order.objects.filter(sku=sku).exclude(status=OrderStatus.CANCELLED.value).count()
             if number_ordered < sku.quantity:
                 return True
 
@@ -47,7 +49,7 @@ class ItemDropSession(BaseDropSession):
         skus = Sku.objects.filter(item=drop_item).order_by("sort_order")
 
         for sku in skus:
-            number_ordered = Order.objects.filter(sku=sku).count()
+            number_ordered = Order.objects.filter(sku=sku).exclude(status=OrderStatus.CANCELLED.value).count()
             if number_ordered < sku.quantity:
                 available_options.append(sku)
 
@@ -56,13 +58,7 @@ class ItemDropSession(BaseDropSession):
     def handle_item_drop_session_waiting_for_size(self, message, drop_session):
 
         if message.text.lower() == "cancel" or message.text.lower() == 'refund':
-            self.messenger.log_and_send_message(
-                drop_session.customer, message.source, ChatStrings.ITEM_OPTION_CANCEL
-            )
-            price_in_mob = mc.pmob2mob(drop_session.drop.item.price_in_pmob)
-            self.payments.send_mob_to_customer(drop_session.customer, message.source, price_in_mob, True)
-            drop_session.state = ItemSessionState.REFUNDED.value
-            drop_session.save()
+            self.handle_cancel_and_refund(message, drop_session, None)
             return
         elif message.text.lower() == "help" or message.text == '?':
             available_options = self.drop_item_get_available(drop_session.drop.item)
@@ -144,7 +140,7 @@ class ItemDropSession(BaseDropSession):
             )
             return
 
-        number_ordered = Order.objects.filter(sku=sku).count()
+        number_ordered = Order.objects.filter(sku=sku).exclude(status=OrderStatus.CANCELLED.value).count()
         if number_ordered >= sku.quantity:
             message_to_send = ChatStrings.ITEM_SOLD_OUT
             available_options = self.drop_item_get_available(drop_session.drop.item)
@@ -157,7 +153,10 @@ class ItemDropSession(BaseDropSession):
             return
 
         new_order = Order(
-            customer=drop_session.customer, drop_session=drop_session, sku=sku
+            customer=drop_session.customer,
+            drop_session=drop_session,
+            sku=sku,
+            conversion_rate_mob_to_currency=drop_session.drop.conversion_rate_mob_to_currency
         )
         new_order.save()
 
@@ -241,7 +240,7 @@ class ItemDropSession(BaseDropSession):
         available_options = self.drop_item_get_available(drop_item)
         if len(available_options) == 0:
             self.messenger.log_and_send_message(
-                customer, message.source, ChatStrings.OUT_OF_STOCK
+                drop_session.customer, message.source, ChatStrings.OUT_OF_STOCK
             )
             drop_session.state = ItemSessionState.CANCELLED.value
             drop_session.save()
@@ -255,6 +254,30 @@ class ItemDropSession(BaseDropSession):
             message.source,
             message_to_send
         )
+
+    def handle_cancel_and_refund(self, message, drop_session, order):
+        self.messenger.log_and_send_message(
+            drop_session.customer, message.source, ChatStrings.ITEM_OPTION_CANCEL
+        )
+        price_in_mob = mc.pmob2mob(drop_session.drop.item.price_in_pmob)
+
+        customer_drop_refunds, _ = CustomerDropRefunds.objects.get_or_create(customer=drop_session.customer, drop=drop_session.drop)
+        
+        should_refund_transaction_fee = False
+
+        if customer_drop_refunds.number_of_times_refunded < drop_session.drop.max_refund_transaction_fees_covered:
+            should_refund_transaction_fee = True
+            customer_drop_refunds.number_of_times_refunded = customer_drop_refunds.number_of_times_refunded + 1
+            customer_drop_refunds.save()
+
+        self.payments.send_mob_to_customer(drop_session.customer, message.source, price_in_mob, should_refund_transaction_fee)
+        
+        if order is not None:
+            order.status = OrderStatus.CANCELLED.value
+            order.save()
+
+        drop_session.state = ItemSessionState.REFUNDED.value
+        drop_session.save()
 
     def handle_item_drop_session_waiting_for_address(self, message, drop_session):
         order = None
@@ -283,7 +306,19 @@ class ItemDropSession(BaseDropSession):
             )
             return
 
-        ### TODO: deal with a cancel command by deleting/invalidating the order, returning funds, and setting the state to cancalled
+        if message.text.lower() == "cancel":
+            self.handle_cancel_and_refund(message, drop_session, order)
+            return
+
+        address_components = address[0]["address_components"]
+        for component in address_components:
+            types = component["types"]
+            for type in types:
+                if type == "country" and component["short_name"] != drop_session.drop.country_code_restriction:
+                    self.messenger.log_and_send_message(
+                        drop_session.customer, message.source, ChatStrings.ADDRESS_RESTRICTION.format(country_code=drop_session.drop.country_code_restriction)
+                    )
+                    return
 
         order.shipping_address = address[0]["formatted_address"]
         order.save()
@@ -316,7 +351,9 @@ class ItemDropSession(BaseDropSession):
             )
             return
 
-        ### TODO: deal with a cancel command by deleting/invalidating the order, returning funds, and setting the state to cancalled
+        if message.text.lower() == "cancel":
+            self.handle_cancel_and_refund(message, drop_session, order)
+            return
 
         order.shipping_name = message.text
         order.save()
@@ -354,7 +391,9 @@ class ItemDropSession(BaseDropSession):
                 ChatStrings.PRIVACY_POLICY.format(url=privacy_policy_url),
             )
 
-        ### TODO: deal with a cancel command by deleting/invalidating the order, returning funds, and setting the state to cancalled
+        if message.text.lower() == "cancel":
+            self.handle_cancel_and_refund(message, drop_session, order)
+            return
 
         if message.text.lower() != "yes" and message.text.lower() != "y":
             self.messenger.log_and_send_message(
