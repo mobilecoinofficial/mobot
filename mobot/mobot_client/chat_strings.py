@@ -5,7 +5,8 @@ class ChatStrings:
     # General
     BYE = "Thanks! MOBot OUT. Buh-bye!"
 
-    PRIVACY_POLICY = """Our privacy policy is available here: {url}
+    PRIVACY_POLICY = "Our privacy policy is available here: {url}"
+    PRIVACY_POLICY_REPROMPT = """Our privacy policy is available here: {url}
 
 Would you like to receive alerts for future drops?"""
 
@@ -13,6 +14,7 @@ Would you like to receive alerts for future drops?"""
     
 Would you like to receive alerts for future drops?"""
 
+    FUTURE_ALERTS = "Would you like to receive alerts for future drops?"
     FUTURE_NOTIFICATIONS = "Can we contact you for future drops?"
     NOTIFICATIONS_HELP = "Valid commands are y(es) and n(o)"
     NOTIFICATIONS_HELP_ALT = """You can type (y)es or (n)o
@@ -161,8 +163,9 @@ MOBot OUT. Buh-bye!"""
     ITEM_HELP = """Commands available are:
 
 'info' - Item info
-'pay' - How to pay
-'terms' - Terms and conditions"""
+'privacy' - Privacy policy
+'pay' - How to pay"""
+# 'terms' - Terms and conditions
 
     PAYMENT_REQUEST = "Order now by sending {price} MOB using Signal Payments"
     PAY = """1. Select the attachment (+) icon below and then select Pay
@@ -176,7 +179,7 @@ MOBot OUT. Buh-bye!"""
 - chart for a sizing chart.
 
 """
-    ITEM_HELP_SHORT = "Commands are help, info, pay, and terms\n\n"
+    ITEM_HELP_SHORT = "Commands are help, info, privacy, and pay\n\n" # removed terms
     RESERVE_ITEM = "Please send {amount} MOB to reserve your item now!"
     MISSING_ORDER = "We don't seem to have an order for you... something went wrong! Please try again"
     ADDRESS_NOT_FOUND = "We couldn't seem to find that address. Please try again!"

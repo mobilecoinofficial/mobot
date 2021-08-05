@@ -68,6 +68,26 @@ class ItemDropSession(BaseDropSession):
                 ChatStrings.ITEM_OPTION_HELP + "\n\n" + ChatStrings.get_options(available_options,capitalize=True) 
             )
             return
+
+        elif message.text.lower() == "privacy":
+            privacy_policy_url = drop_session.drop.store.privacy_policy_url
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                ChatStrings.PRIVACY_POLICY.format(url=privacy_policy_url),
+            )
+
+            available_options = self.drop_item_get_available(drop_session.drop.item)
+            message_to_send = "\n\n" + ChatStrings.get_options(available_options, capitalize=True)
+            message_to_send += "\n\n" + ChatStrings.ITEM_WHAT_SIZE_OR_CANCEL
+
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                message_to_send
+            )
+            return
+
         elif message.text.lower() == "chart" or message.text.lower() == 'info':
             drop_item = drop_session.drop.item
 
@@ -170,10 +190,19 @@ class ItemDropSession(BaseDropSession):
                 ChatStrings.PAY.format(amount=price_in_mob.normalize()),
             )
 
-        elif message.text.lower() == "terms":
+        # elif message.text.lower() == "terms":
+        #     self.messenger.log_and_send_message(
+        #         drop_session.customer, message.source, ChatStrings.TERMS
+        #     )
+
+        elif message.text.lower() == "privacy":
+            privacy_policy_url = drop_session.drop.store.privacy_policy_url
             self.messenger.log_and_send_message(
-                drop_session.customer, message.source, ChatStrings.TERMS
+                drop_session.customer,
+                message.source,
+                ChatStrings.PRIVACY_POLICY.format(url=privacy_policy_url),
             )
+
         elif message.text.lower() == "info":
             drop_item = drop_session.drop.item
 
@@ -314,6 +343,14 @@ class ItemDropSession(BaseDropSession):
             )
             return
 
+        if message.text.lower() == "privacy":
+            privacy_policy_url = drop_session.drop.store.privacy_policy_url
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                ChatStrings.PRIVACY_POLICY.format(url=privacy_policy_url),
+            )
+
         ### TODO: deal with a cancel command by deleting/invalidating the order, returning funds, and setting the state to cancalled
 
         if message.text.lower() != "yes" and message.text.lower() != "y":
@@ -386,8 +423,17 @@ class ItemDropSession(BaseDropSession):
             drop_session.save()
             return
 
+        if message.text.lower() == 'p' or message.text.lower() == "privacy" or message.text.lower() == "privacy policy":
+            privacy_policy_url = drop_session.drop.store.privacy_policy_url
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                ChatStrings.PRIVACY_POLICY_REPROMPT.format(url=privacy_policy_url),
+            )
+            return
+
         self.messenger.log_and_send_message(
-            drop_session.customer, message.source, ChatStrings.NOTIFICATIONS_HELP_ALT
+            drop_session.customer, message.source, ChatStrings.HELP
         )
 
     def handle_active_item_drop_session(self, message, drop_session):

@@ -171,7 +171,7 @@ class BaseDropSession:
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 message.source,
-                ChatStrings.PRIVACY_POLICY.format(url=self.store.privacy_policy_url)
+                ChatStrings.PRIVACY_POLICY_REPROMPT.format(url=self.store.privacy_policy_url)
             )
             return
 
