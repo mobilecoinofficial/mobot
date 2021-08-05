@@ -7,6 +7,7 @@ from .models import (
     Drop,
     Item,
     CustomerStorePreferences,
+    CustomerDropRefunds,
     DropSession,
     Message,
     BonusCoin,
@@ -33,6 +34,10 @@ class ItemAdmin(admin.ModelAdmin):
 
 
 class CustomerStorePreferencesAdmin(admin.ModelAdmin):
+    pass
+
+
+class CustomerDropRefundsAdmin(admin.ModelAdmin):
     pass
 
 
@@ -67,6 +72,7 @@ admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Drop, DropAdmin)
 admin.site.register(Item, ItemAdmin)
 admin.site.register(CustomerStorePreferences, CustomerStorePreferencesAdmin)
+admin.site.register(CustomerDropRefunds, CustomerDropRefundsAdmin)
 admin.site.register(DropSession, DropSessionAdmin)
 admin.site.register(Message, MessageAdmin)
 admin.site.register(BonusCoin, BonusCoinAdmin)
