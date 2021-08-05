@@ -160,6 +160,7 @@ MOBot OUT. Buh-bye!"""
     ADDRESS_HOODIE_REQUEST = "What address should we send the hoodie to?"
     ADDRESS_REQUEST = "What address should we ship to?"
     ADDRESS_HELP = "Please provide a destination address for shipping the {item}"
+    ADDRESS_RESTRICTION = "Sorry, we can only ship to an address with the country code {country_code}, please enter a different address!"
     ITEM_HELP = """Commands available are:
 
 'info' - Item info

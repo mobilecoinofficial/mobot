@@ -49,6 +49,8 @@ class Drop(models.Model):
     initial_coin_limit = models.PositiveIntegerField(default=0)
     conversion_rate_mob_to_currency = models.FloatField(default=1.0)
     currency_symbol = models.TextField(default="$")
+    country_code_restriction = models.TextField(default="GB")
+    max_refund_transaction_fees_covered = models.PositiveIntegerField(default=0)
 
     def value_in_currency(self, amount):
         return amount * self.conversion_rate_mob_to_currency
@@ -76,6 +78,10 @@ class CustomerStorePreferences(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     allows_contact = models.BooleanField()
 
+class CustomerDropRefunds(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    drop = models.ForeignKey(Drop, on_delete=models.CASCADE)
+    number_of_times_refunded = models.PositiveIntegerField(default=0)
 
 class DropSession(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
@@ -103,6 +109,7 @@ class Order(models.Model):
     shipping_address = models.TextField(default=None, blank=True, null=True)
     shipping_name = models.TextField(default=None, blank=True, null=True)
     status = models.IntegerField(default=0)
+    conversion_rate_mob_to_currency = models.FloatField(default=0.0)
 
 
 # ------------------------------------------------------------------------------------------
