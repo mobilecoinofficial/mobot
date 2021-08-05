@@ -96,7 +96,7 @@ For testing, we build and run locally, using the Signal staging network, and the
    nc 0.0.0.0 15432 # (or on MacOS, nc localhost 15432)
    
    # Response:
-   {"type":"version","data":{"name":"signald","version":"+git2021-06-04rc42d686d.0","branch":"","commit":""}}
+   {"type":"version","data":{"name":"signald","version":"0.14.0+git2021-08-03r9da1afeb.8","branch":"","commit":""}}
    
    # Register a phone number (with area code) with the valid Captcha obtained in the previous step.
    {"type": "register", "version": "v1", "account":"+15555555555", "captcha": "VALIDCAPTCHA", "server": "97c17f0c-e53b-426f-8ffa-c052d4183f83"}
@@ -108,16 +108,16 @@ For testing, we build and run locally, using the Signal staging network, and the
 1. You will receive a text message to verify the phone number with a 6-digit code. You will provide the code in the netcat session:
 
     ```shell
-    {"type": "verify", "username":"+15555555555", "code": "101010"}
+    {"type": "verify", "version": "v1", "account":"+15555555555", "code": "101010"}
    
     # Response
-    {"type":"verification_succeeded","data":{"deviceId":1,"username":"+15555555555","filename":"/signald/data/+15555555555","uuid":"55555555-5555-5555-5555-555555555555","registered":true,"has_keys":true,"subscribed":false}}
+    {"type":"verify","data":{"address":{"number":"+15555555555","uuid":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},"device_id":1,"account_id":"+15555555555"}}
     ```
    
 1. (Optional) Subscribe to the phone number in the netcat session so that you can monitor activity when you text the MOBot.
    
     ```shell
-    {"type": "subscribe", "username":"+15555555555"}
+    {"type": "subscribe", "version": "v1", "account":"+15555555555"}
     ```
    
 ### Set Up and Run Full-Service
