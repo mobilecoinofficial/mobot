@@ -290,7 +290,7 @@ class ItemDropSession(BaseDropSession):
 
             return
 
-        address = self.gmaps.geocode(message.text)
+        address = self.gmaps.geocode(message.text, region=drop_session.drop.country_code_restriction)
 
         if len(address) == 0:
             self.messenger.log_and_send_message(
