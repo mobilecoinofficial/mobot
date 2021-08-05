@@ -4,6 +4,7 @@ import os
 import full_service_cli as mc
 import googlemaps
 import enum
+import pytz
 
 from mobot_client.drop_session import BaseDropSession, ItemSessionState
 from mobot_client.models import (
@@ -27,6 +28,8 @@ class ItemDropSession(BaseDropSession):
 
         gmaps_client_key = os.environ["GMAPS_CLIENT_KEY"]
         self.gmaps = googlemaps.Client(key=gmaps_client_key)
+
+        self.vat_id = os.environ["VAT_ID"]
 
     @staticmethod
     def drop_item_has_stock_remaining(drop):
@@ -366,23 +369,25 @@ class ItemDropSession(BaseDropSession):
         price_in_mob = mc.pmob2mob(item.price_in_pmob)
         price_local_fiat = float(price_in_mob) * drop_session.drop.conversion_rate_mob_to_currency
         vat = price_local_fiat * 1/6
+        tz = pytz.timezone(drop_session.drop.timezone)
         self.messenger.log_and_send_message(
             drop_session.customer,
             message.source,
             ChatStrings.ORDER_CONFIRMATION.format(
                 order_id=order.id,
-                today="August 3, 2021",
+                today=order.date.astimezone(tz).strftime("%b %d, %Y %I:%M %p %Z"),
                 item_name = item.name,
                 sku_name=order.sku.identifier,
                 price=price_in_mob.normalize(),
                 ship_name=order.shipping_name,
                 ship_address=order.shipping_address,
                 vat=vat,
-                vat_id="69VM1DLV4DRIKSI",
+                vat_id=self.vat_id,
                 store_name=drop_session.drop.store.name,
                 store_contact="hello@mobilecoin.com"
             ),
         )
+        return
 
         if self.customer_has_store_preferences(drop_session.customer):
             drop_session.state = ItemSessionState.COMPLETED.value
