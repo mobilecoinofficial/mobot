@@ -16,10 +16,16 @@ Would you like to receive alerts for future drops?"""
 
     FUTURE_ALERTS = "Would you like to receive alerts for future drops?"
     FUTURE_NOTIFICATIONS = "Can we contact you for future drops?"
-    NOTIFICATIONS_HELP = "Valid commands are y(es) and n(o)"
+    NOTIFICATIONS_HELP = "Valid commands are (y)es and (n)o"
     NOTIFICATIONS_HELP_ALT = """You can type (y)es or (n)o
 
 Would you like to receive an alert when we are doing future drops?"""
+
+    SHIPPING_CONFIRMATION_HELP = """You can type (y)es, (n)o, or (c)ancel
+
+Does this look correct?
+{name}
+{address}"""
 
     NOTIFICATIONS_OFF = "You are not currently receiving any notifications"
     DISABLE_NOTIFICATIONS = (
@@ -126,7 +132,7 @@ Today's drop is from {store_name}. {store_description}
 
 We have {item_description}"""
     # Item Discount String (used in greeting)
-    ITEM_DISCOUNT = """Normally 6 MOB, you can get yours for the discounted price of {price} MOB, shipped. We accept {country} addresses only
+    ITEM_DISCOUNT = """Normally 6 MOB, you can get yours for the discounted price of {price} MOB, shipped. We only ship to the {country}
 
 For pictures, a sizing chart, and more info, type 'info'"""
 
