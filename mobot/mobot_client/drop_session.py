@@ -143,7 +143,7 @@ class BaseDropSession:
             return False
 
     def handle_drop_session_allow_contact_requested(self, message, drop_session):
-        if message.text.lower() == "y" or message.text.lower() == "yes":
+        if message.text.lower() in ("y", "yes"):
             customer_prefs = CustomerStorePreferences(
                 customer=drop_session.customer, store=self.store, allows_contact=True
             )
