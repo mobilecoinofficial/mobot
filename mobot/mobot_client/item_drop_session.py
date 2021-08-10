@@ -208,12 +208,7 @@ class ItemDropSession(BaseDropSession):
         elif message.text.lower() == "info":
             drop_item = drop_session.drop.item
 
-            item_description_text = drop_item.name
-
-            if drop_item.description is not None:
-                item_description_text = drop_item.description
-            elif drop_item.short_description is not None:
-                item_description_text = drop_item.short_description
+            item_description_text = drop_item.description or drop_item.short_description or drop_item.name
 
             if drop_item.image_link is None or drop_item.image_link == "":
                 self.messenger.log_and_send_message(
