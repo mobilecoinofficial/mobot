@@ -144,10 +144,9 @@ class BaseDropSession:
 
     def handle_drop_session_allow_contact_requested(self, message, drop_session):
         if message.text.lower() in ("y", "yes"):
-            customer_prefs = CustomerStorePreferences(
+            customer_prefs = CustomerStorePreferences.objects.create(
                 customer=drop_session.customer, store=self.store, allows_contact=True
             )
-            customer_prefs.save()
             drop_session.state = SessionState.COMPLETED.value
             drop_session.save()
             self.messenger.log_and_send_message(
