@@ -99,9 +99,7 @@ class BaseDropSession:
         active_drops = Drop.objects.filter(start_time__lte=timezone.now()).filter(
             end_time__gte=timezone.now()
         )
-        if len(active_drops) == 0:
-            return None
-        return active_drops[0]
+        return active_drops.first()
 
     @staticmethod
     def get_customer_store_preferences(customer, store_to_check):
