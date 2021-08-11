@@ -1,6 +1,6 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
-import full_service_cli as mc
+import mobilecoin as mc
 import time
 
 from mobot_client.drop_session import ItemSessionState
