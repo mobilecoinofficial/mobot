@@ -1,7 +1,6 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
 import random
-import full_service_cli as mc
 
 from decimal import Decimal
 from mobot_client.drop_session import BaseDropSession, SessionState

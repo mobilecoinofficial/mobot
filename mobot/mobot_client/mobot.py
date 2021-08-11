@@ -2,7 +2,7 @@
 
 
 import os
-import full_service_cli as mc
+import mobilecoin as mc
 import pytz
 import threading
 

@@ -2,7 +2,7 @@
 
 import enum
 
-import full_service_cli as mc
+import mobilecoin as mc
 from django.utils import timezone
 from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku
 
