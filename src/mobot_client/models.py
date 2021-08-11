@@ -85,7 +85,7 @@ class CustomerDropRefunds(models.Model):
     number_of_times_refunded = models.PositiveIntegerField(default=0)
 
 class DropSession(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="drop_sessions")
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     drop = models.ForeignKey(Drop, on_delete=models.CASCADE)
     state = models.IntegerField(default=0)
     manual_override = models.BooleanField(default=False)
