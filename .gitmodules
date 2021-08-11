@@ -1,3 +1,0 @@
-[submodule "mobot/full-service"]
-	path = mobot/full-service
-	url = git@github.com:mobilecoinofficial/full-service.git

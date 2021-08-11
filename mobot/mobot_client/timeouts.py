@@ -4,7 +4,7 @@ import datetime
 import pytz
 import time
 
-import full_service_cli as mc
+import mobilecoin as mc
 
 from mobot_client.models import DropSession, Customer, Message
 from mobot_client.drop_session import ItemSessionState

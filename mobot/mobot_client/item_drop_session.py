@@ -1,7 +1,7 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
 import os
-import full_service_cli as mc
+import mobilecoin as mc
 import googlemaps
 import enum
 import pytz
