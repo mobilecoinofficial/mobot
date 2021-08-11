@@ -32,12 +32,10 @@ For testing, we build and run locally, using the Signal staging network, and the
 1. Set up and run full-service
 1. Run the MOBot
 
-#### Clone MOBot and Update the Submodule
+#### Clone MOBot
 
 1. ```shell
    git clone git@github.com:mobilecoinofficial/mobot.git
-   cd mobot
-   git  submodule update --init --recursive
    ```
 
 #### Set Up and Run Signald
