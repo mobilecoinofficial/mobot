@@ -101,6 +101,12 @@ class AirDropSession(BaseDropSession):
                 message.source,
                 ChatStrings.PAY_HELP
             )
+        elif message.text.lower() == 'describe':
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                ChatStrings.AIRDROP_INSTRUCTIONS
+            )
         else:
             self.messenger.log_and_send_message(
                 drop_session.customer,
