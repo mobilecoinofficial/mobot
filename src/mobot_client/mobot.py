@@ -288,7 +288,7 @@ class MOBot:
                 response_message = ChatStrings.STORE_CLOSED.format(
                     date=bst_time.strftime("%A, %b %d"),
                     time=bst_time.strftime("%-I:%M %p %Z"),
-                    desc=drop_to_advertise.item.description,
+                    desc=drop_to_advertise.pre_drop_description
                 )
                 self.messenger.log_and_send_message(
                     customer, message.source, response_message
