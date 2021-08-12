@@ -242,7 +242,10 @@ class MOBot:
                     state__gte=SessionState.READY_TO_RECEIVE_INITIAL.value,
                     state__lt=SessionState.COMPLETED.value,
                 )
-
+            except (Exception,):
+                pass
+            else:
+                print(f"found active drop session in state {active_drop_session.state}")
                 if active_drop_session.manual_override:
                     return
 
@@ -252,8 +255,6 @@ class MOBot:
                     message, active_drop_session
                 )
                 return
-            except (Exception,):
-                pass
 
             try:
                 active_drop_session = DropSession.objects.get(
