@@ -1,6 +1,7 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
 import random
+import mobilecoin as mc
 
 from decimal import Decimal
 from mobot_client.drop_session import BaseDropSession, SessionState
@@ -55,7 +56,7 @@ class AirDropSession(BaseDropSession):
                 + amount_paid_mob
                 + mc.pmob2mob(self.payments.get_minimum_fee_pmob())
         )
-        self.send_mob_to_customer(customer, source, amount_to_send_mob, True)
+        self.payments.send_mob_to_customer(customer, source, amount_to_send_mob, True)
         drop_session.bonus_coin_claimed = bonus_coins[random_index]
         drop_session.save()
         total_prize = Decimal(initial_coin_amount_mob + amount_in_mob)
@@ -176,12 +177,11 @@ class AirDropSession(BaseDropSession):
             )
             return
 
-        new_drop_session = DropSession(
+        new_drop_session, _ = DropSession.objects.get_or_create(
             customer=customer,
             drop=drop,
             state=SessionState.READY_TO_RECEIVE_INITIAL.value,
         )
-        new_drop_session.save()
 
         self.messenger.log_and_send_message(
             customer,
