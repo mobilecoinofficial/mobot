@@ -99,7 +99,7 @@ We're returning your MOB and the network fee."""
 Unfortunately, we ran out of bonuses 😭. 
 We're returning your MOB and the network fee."""
 
-    AIRDROP_INITIALIZE = """Great! We've just sent you {amount)} MOB (~£3).
+    AIRDROP_INITIALIZE = """Great! We've just sent you {amount} MOB (~£3).
 
 Send us 0.01 MOB, and we'll send it back, plus more!
 
