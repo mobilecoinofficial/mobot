@@ -9,6 +9,7 @@ from mobot_client.models import (
     BonusCoin,
 )
 
+import mobilecoin as mc
 from mobot_client.chat_strings import ChatStrings
 
 

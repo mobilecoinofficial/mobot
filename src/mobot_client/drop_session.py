@@ -4,17 +4,19 @@ import enum
 
 import mobilecoin as mc
 from django.utils import timezone
-from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku
+from django.db import models
+
+from mobot_client.models import DropSession, Drop, CustomerStorePreferences
 
 from mobot_client.chat_strings import ChatStrings
 
 
-class SessionStateReadyToReceiveInitial(enum.Enum):
+class SessionStateReadyToReceiveInitial(models.IntegerChoices):
     NOT_READY = 0
     READY = 1
 
 
-class SessionState(enum.Enum):
+class SessionState(models.IntegerChoices):
     CANCELLED = -1
     READY_TO_RECEIVE_INITIAL = 0
     WAITING_FOR_BONUS_TRANSACTION = 1
@@ -22,7 +24,7 @@ class SessionState(enum.Enum):
     COMPLETED = 3
 
 
-class ItemSessionState(enum.Enum):
+class ItemSessionState(models.IntegerChoices):
     IDLE_AND_REFUNDABLE = -4
     IDLE = -3
     REFUNDED = -2
@@ -39,24 +41,24 @@ class ItemSessionState(enum.Enum):
     @classmethod
     def active_states(cls):
         return {
-                cls.NEW.value,
-                cls.WAITING_FOR_PAYMENT.value,
-                cls.WAITING_FOR_SIZE.value,
-                cls.WAITING_FOR_NAME.value,
-                cls.WAITING_FOR_ADDRESS.value,
-                cls.SHIPPING_INFO_CONFIRMATION.value,
-                cls.ALLOW_CONTACT_REQUESTED.value
-            }
+            cls.NEW,
+            cls.WAITING_FOR_PAYMENT,
+            cls.WAITING_FOR_SIZE,
+            cls.WAITING_FOR_NAME,
+            cls.WAITING_FOR_ADDRESS,
+            cls.SHIPPING_INFO_CONFIRMATION,
+            cls.ALLOW_CONTACT_REQUESTED
+        }
 
     @classmethod
-    def refundable_states(cls):
+    def active_states(cls):
         return {
-            cls.IDLE_AND_REFUNDABLE.value,
-            cls.WAITING_FOR_SIZE.value,
-            cls.WAITING_FOR_ADDRESS.value,
-            cls.WAITING_FOR_ADDRESS.value,
-            cls.WAITING_FOR_NAME.value,
-            cls.SHIPPING_INFO_CONFIRMATION.value,
+            cls.IDLE_AND_REFUNDABLE,
+            cls.WAITING_FOR_SIZE,
+            cls.WAITING_FOR_ADDRESS,
+            cls.WAITING_FOR_ADDRESS,
+            cls.WAITING_FOR_NAME,
+            cls.SHIPPING_INFO_CONFIRMATION
         }
 
 
@@ -84,14 +86,14 @@ class BaseDropSession:
     @staticmethod
     def under_drop_quota(drop):
         number_initial_drops_finished = DropSession.objects.filter(
-            drop=drop, state__gt=SessionState.READY_TO_RECEIVE_INITIAL.value
+            drop=drop, state__gt=SessionState.READY_TO_RECEIVE_INITIAL
         ).count()
         return number_initial_drops_finished < drop.initial_coin_limit
 
     def minimum_coin_available(self, drop):
         unspent_pmob = self.payments.get_unspent_pmob()
         return unspent_pmob >= (
-            drop.initial_coin_amount_pmob + int(self.payments.get_minimum_fee_pmob())
+                drop.initial_coin_amount_pmob + int(self.payments.get_minimum_fee_pmob())
         )
 
     @staticmethod
@@ -124,7 +126,7 @@ class BaseDropSession:
     def customer_has_completed_airdrop(customer, drop):
         try:
             _completed_drop_session = DropSession.objects.get(
-                customer=customer, drop=drop, state=SessionState.COMPLETED.value
+                customer=customer, drop=drop, state=SessionState.COMPLETED
             )
             return True
         except (Exception,):
@@ -134,7 +136,7 @@ class BaseDropSession:
     def customer_has_completed_item_drop(customer, drop):
         try:
             DropSession.objects.get(
-                customer=customer, drop=drop, state=ItemSessionState.COMPLETED.value
+                customer=customer, drop=drop, state=ItemSessionState.COMPLETED
             )
             return True
         except (Exception,):
@@ -145,7 +147,7 @@ class BaseDropSession:
             customer_prefs = CustomerStorePreferences.objects.create(
                 customer=drop_session.customer, store=self.store, allows_contact=True
             )
-            drop_session.state = SessionState.COMPLETED.value
+            drop_session.state = SessionState.COMPLETED
             drop_session.save()
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source, ChatStrings.BYE
@@ -157,7 +159,7 @@ class BaseDropSession:
                 customer=drop_session.customer, store=self.store, allows_contact=False
             )
             customer_prefs.save()
-            drop_session.state = SessionState.COMPLETED.value
+            drop_session.state = SessionState.COMPLETED
             drop_session.save()
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source, ChatStrings.BYE
@@ -188,11 +190,11 @@ class BaseDropSession:
 
     def handle_drop_session_ready_to_receive(self, message, drop_session):
         if (
-            message.text.lower() == "n"
-            or message.text.lower() == "no"
-            or message.text.lower() == "cancel"
+                message.text.lower() == "n"
+                or message.text.lower() == "no"
+                or message.text.lower() == "cancel"
         ):
-            drop_session.state = SessionState.CANCELLED.value
+            drop_session.state = SessionState.CANCELLED
             drop_session.save()
             self.messenger.log_and_send_message(
                 drop_session.customer,
@@ -208,7 +210,7 @@ class BaseDropSession:
                     message.source,
                     ChatStrings.AIRDROP_OVER
                 )
-                drop_session.state = SessionState.COMPLETED.value
+                drop_session.state = SessionState.COMPLETED
                 drop_session.save()
                 return
 
@@ -218,7 +220,7 @@ class BaseDropSession:
                     message.source,
                     ChatStrings.AIRDROP_OVER
                 )
-                drop_session.state = SessionState.COMPLETED.value
+                drop_session.state = SessionState.COMPLETED
                 drop_session.save()
                 return
 
@@ -235,7 +237,7 @@ class BaseDropSession:
                 ChatStrings.PAY_HELP
             )
 
-            drop_session.state = SessionState.WAITING_FOR_BONUS_TRANSACTION.value
+            drop_session.state = SessionState.WAITING_FOR_BONUS_TRANSACTION
             drop_session.save()
             return
 
