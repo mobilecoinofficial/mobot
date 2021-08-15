@@ -1,1 +1,2 @@
-print("I don't have a copyright string")
+# Copyright (c) 2021 MobileCoin. All rights reserved.
+blah
