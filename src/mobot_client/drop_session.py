@@ -1,70 +1,11 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
-import enum
-
 import mobilecoin as mc
 from django.utils import timezone
-from django.db import models
 
-from mobot_client.models import DropSession, Drop, CustomerStorePreferences
+from mobot_client.models import DropSession, Drop, CustomerStorePreferences, ItemSessionState, SessionState
 
 from mobot_client.chat_strings import ChatStrings
-
-
-class SessionStateReadyToReceiveInitial(models.IntegerChoices):
-    NOT_READY = 0
-    READY = 1
-
-
-class SessionState(models.IntegerChoices):
-    CANCELLED = -1
-    READY_TO_RECEIVE_INITIAL = 0
-    WAITING_FOR_BONUS_TRANSACTION = 1
-    ALLOW_CONTACT_REQUESTED = 2
-    COMPLETED = 3
-
-
-class ItemSessionState(models.IntegerChoices):
-    IDLE_AND_REFUNDABLE = -4
-    IDLE = -3
-    REFUNDED = -2
-    CANCELLED = -1
-    NEW = 0
-    WAITING_FOR_PAYMENT = 1
-    WAITING_FOR_SIZE = 2
-    WAITING_FOR_NAME = 3
-    WAITING_FOR_ADDRESS = 4
-    SHIPPING_INFO_CONFIRMATION = 5
-    ALLOW_CONTACT_REQUESTED = 6
-    COMPLETED = 7
-
-    @classmethod
-    def active_states(cls):
-        return {
-            cls.NEW,
-            cls.WAITING_FOR_PAYMENT,
-            cls.WAITING_FOR_SIZE,
-            cls.WAITING_FOR_NAME,
-            cls.WAITING_FOR_ADDRESS,
-            cls.SHIPPING_INFO_CONFIRMATION,
-            cls.ALLOW_CONTACT_REQUESTED
-        }
-
-    @classmethod
-    def active_states(cls):
-        return {
-            cls.IDLE_AND_REFUNDABLE,
-            cls.WAITING_FOR_SIZE,
-            cls.WAITING_FOR_ADDRESS,
-            cls.WAITING_FOR_ADDRESS,
-            cls.WAITING_FOR_NAME,
-            cls.SHIPPING_INFO_CONFIRMATION
-        }
-
-
-class DropType(enum.Enum):
-    AIRDROP = 0
-    ITEM = 1
 
 
 class BaseDropSession:

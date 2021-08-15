@@ -1,6 +1,15 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
+import enum
 
 from django.db import models
+
+
+class SessionState(models.IntegerChoices):
+    CANCELLED = -1
+    READY_TO_RECEIVE_INITIAL = 0
+    WAITING_FOR_BONUS_TRANSACTION = 1
+    ALLOW_CONTACT_REQUESTED = 2
+    COMPLETED = 3
 
 
 class Store(models.Model):
@@ -35,9 +44,14 @@ class Sku(models.Model):
         return f"{self.item.name} - {self.identifier}"
 
 
+class DropType(models.IntegerChoices):
+    AIRDROP = 0, 'airdrop'
+    ITEM = 1, 'item'
+
+
 class Drop(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    drop_type = models.PositiveIntegerField(default=0)
+    drop_type = models.IntegerField(choices=DropType.choices, default=DropType.AIRDROP)
     pre_drop_description = models.TextField()
     advertisment_start_time = models.DateTimeField()
     start_time = models.DateTimeField()
@@ -79,19 +93,26 @@ class CustomerStorePreferences(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     allows_contact = models.BooleanField()
 
+
 class CustomerDropRefunds(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     drop = models.ForeignKey(Drop, on_delete=models.CASCADE)
     number_of_times_refunded = models.PositiveIntegerField(default=0)
 
+
 class DropSession(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     drop = models.ForeignKey(Drop, on_delete=models.CASCADE)
-    state = models.IntegerField(default=0)
+    state = models.IntegerField(choices=SessionState.choices, default=SessionState.READY_TO_RECEIVE_INITIAL)
     manual_override = models.BooleanField(default=False)
     bonus_coin_claimed = models.ForeignKey(
         BonusCoin, on_delete=models.CASCADE, default=None, blank=True, null=True
     )
+
+
+class MessageDirection(models.IntegerChoices):
+    RECEIVED = 0, 'received'
+    SENT = 1, 'sent'
 
 
 class Message(models.Model):
@@ -99,7 +120,7 @@ class Message(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     text = models.TextField()
     date = models.DateTimeField(auto_now_add=True)
-    direction = models.PositiveIntegerField()
+    direction = models.PositiveIntegerField(choices=MessageDirection.choices)
 
 
 class Order(models.Model):
@@ -140,3 +161,51 @@ class ChatbotSettings(SingletonModel):
 
     def __str__(self):
         return "Global settings"
+
+
+class ItemSessionState(models.IntegerChoices):
+    IDLE_AND_REFUNDABLE = -4
+    IDLE = -3
+    REFUNDED = -2
+    CANCELLED = -1
+    NEW = 0
+    WAITING_FOR_PAYMENT = 1
+    WAITING_FOR_SIZE = 2
+    WAITING_FOR_NAME = 3
+    WAITING_FOR_ADDRESS = 4
+    SHIPPING_INFO_CONFIRMATION = 5
+    ALLOW_CONTACT_REQUESTED = 6
+    COMPLETED = 7
+
+
+    @classmethod
+    def active_states(cls):
+        return {
+            cls.NEW,
+            cls.WAITING_FOR_PAYMENT,
+            cls.WAITING_FOR_SIZE,
+            cls.WAITING_FOR_NAME,
+            cls.WAITING_FOR_ADDRESS,
+            cls.SHIPPING_INFO_CONFIRMATION,
+            cls.ALLOW_CONTACT_REQUESTED
+        }
+
+    @classmethod
+    def refundable_states(cls):
+        return {
+            cls.IDLE_AND_REFUNDABLE,
+            cls.WAITING_FOR_SIZE,
+            cls.WAITING_FOR_ADDRESS,
+            cls.WAITING_FOR_ADDRESS,
+            cls.WAITING_FOR_NAME,
+            cls.SHIPPING_INFO_CONFIRMATION
+        }
+
+
+
+
+class OrderStatus(models.IntegerChoices):
+    STARTED = 0, 'started'
+    CONFIRMED = 1, 'confirmed'
+    SHIPPED = 2, 'shipped'
+    CANCELLED = 3, 'cancelled'

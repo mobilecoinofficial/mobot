@@ -3,10 +3,10 @@
 import random
 
 from decimal import Decimal
-from mobot_client.drop_session import BaseDropSession, SessionState
+from mobot_client.drop_session import BaseDropSession
 from mobot_client.models import (
     DropSession,
-    BonusCoin,
+    BonusCoin, SessionState,
 )
 
 import mobilecoin as mc
@@ -78,13 +78,13 @@ class AirDropSession(BaseDropSession):
             self.messenger.log_and_send_message(
                 customer, source, ChatStrings.BYE
             )
-            drop_session.state = SessionState.COMPLETED.value
+            drop_session.state = SessionState.COMPLETED
             drop_session.save()
         else:
             self.messenger.log_and_send_message(
                 customer, source, ChatStrings.NOTIFICATIONS_ASK
             )
-            drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED.value
+            drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED
             drop_session.save()
 
     def handle_drop_session_waiting_for_bonus_transaction(self, message, drop_session):
@@ -125,17 +125,17 @@ class AirDropSession(BaseDropSession):
         )
 
     def handle_active_airdrop_drop_session(self, message, drop_session):
-        if drop_session.state == SessionState.READY_TO_RECEIVE_INITIAL.value:
+        if drop_session.state == SessionState.READY_TO_RECEIVE_INITIAL:
             self.handle_drop_session_ready_to_receive(message, drop_session)
             return
 
-        if drop_session.state == SessionState.WAITING_FOR_BONUS_TRANSACTION.value:
+        if drop_session.state == SessionState.WAITING_FOR_BONUS_TRANSACTION:
             self.handle_drop_session_waiting_for_bonus_transaction(
                 message, drop_session
             )
             return
 
-        if drop_session.state == SessionState.ALLOW_CONTACT_REQUESTED.value:
+        if drop_session.state == SessionState.ALLOW_CONTACT_REQUESTED:
             self.handle_drop_session_allow_contact_requested(message, drop_session)
             return
 
@@ -180,7 +180,7 @@ class AirDropSession(BaseDropSession):
         new_drop_session = DropSession(
             customer=customer,
             drop=drop,
-            state=SessionState.READY_TO_RECEIVE_INITIAL.value,
+            state=SessionState.READY_TO_RECEIVE_INITIAL,
         )
         new_drop_session.save()
 

@@ -17,18 +17,15 @@ from mobot_client.models import (
     ChatbotSettings,
     Message,
     Order,
-    Sku,
+    Sku, SessionState, ItemSessionState, DropType, OrderStatus,
 )
 
 from mobot_client.drop_session import (
     BaseDropSession,
-    SessionState,
-    DropType,
-    ItemSessionState,
 )
 
 from mobot_client.air_drop_session import AirDropSession
-from mobot_client.item_drop_session import ItemDropSession, OrderStatus
+from mobot_client.item_drop_session import ItemDropSession
 from mobot_client.payments import Payments
 from mobot_client.chat_strings import ChatStrings
 from mobot_client.timeouts import Timeouts
@@ -122,8 +119,8 @@ class MOBot:
 
                 drop_session = DropSession.objects.get(
                     customer=customer,
-                    drop__drop_type=DropType.AIRDROP.value,
-                    state=SessionState.WAITING_FOR_BONUS_TRANSACTION.value,
+                    drop__drop_type=DropType.AIRDROP,
+                    state=SessionState.WAITING_FOR_BONUS_TRANSACTION,
                 )
             except DropSession.DoesNotExist:
                 pass
@@ -137,8 +134,8 @@ class MOBot:
             try:
                 drop_session = DropSession.objects.get(
                     customer=customer,
-                    drop__drop_type=DropType.ITEM.value,
-                    state=ItemSessionState.WAITING_FOR_PAYMENT.value,
+                    drop__drop_type=DropType.ITEM,
+                    state=ItemSessionState.WAITING_FOR_PAYMENT,
                 )
             except DropSession.DoesNotExist:
                 self.messenger.log_and_send_message(
@@ -177,7 +174,7 @@ class MOBot:
             skus = Sku.objects.filter(item=active_drop.item).order_by("sort_order")
             message_to_send = ""
             for sku in skus:
-                number_ordered = Order.objects.filter(sku=sku).exclude(status=OrderStatus.CANCELLED.value).count()
+                number_ordered = Order.objects.filter(sku=sku).exclude(status=OrderStatus.CANCELLED).count()
                 message_to_send += (
                     f"{sku.identifier} - {number_ordered} / {sku.quantity} ordered\n"
                 )
@@ -238,9 +235,9 @@ class MOBot:
             try:
                 active_drop_session = DropSession.objects.get(
                     customer=customer,
-                    drop__drop_type=DropType.AIRDROP.value,
-                    state__gte=SessionState.READY_TO_RECEIVE_INITIAL.value,
-                    state__lt=SessionState.COMPLETED.value,
+                    drop__drop_type=DropType.AIRDROP,
+                    state__gte=SessionState.READY_TO_RECEIVE_INITIAL,
+                    state__lt=SessionState.COMPLETED,
                 )
 
                 if active_drop_session.manual_override:
@@ -258,9 +255,9 @@ class MOBot:
             try:
                 active_drop_session = DropSession.objects.get(
                     customer=customer,
-                    drop__drop_type=DropType.ITEM.value,
-                    state__gte=ItemSessionState.WAITING_FOR_PAYMENT.value,
-                    state__lt=ItemSessionState.COMPLETED.value,
+                    drop__drop_type=DropType.ITEM,
+                    state__gte=ItemSessionState.WAITING_FOR_PAYMENT,
+                    state__lt=ItemSessionState.COMPLETED,
                 )
                 print(f"found active drop session in state {active_drop_session.state}")
                 if active_drop_session.manual_override:
@@ -301,13 +298,13 @@ class MOBot:
                 )
                 return
 
-            if active_drop.drop_type == DropType.AIRDROP.value:
+            if active_drop.drop_type == DropType.AIRDROP:
                 air_drop = AirDropSession(self.store, self.payments, self.messenger)
                 air_drop.handle_no_active_airdrop_drop_session(
                     customer, message, active_drop
                 )
 
-            if active_drop.drop_type == DropType.ITEM.value:
+            if active_drop.drop_type == DropType.ITEM:
                 item_drop = ItemDropSession(self.store, self.payments, self.messenger)
                 item_drop.handle_no_active_item_drop_session(
                     customer, message, active_drop
