@@ -239,7 +239,10 @@ class MOBot:
                     state__gte=SessionState.READY_TO_RECEIVE_INITIAL,
                     state__lt=SessionState.COMPLETED,
                 )
-
+            except (Exception,):
+                pass
+            else:
+                print(f"found active drop session in state {active_drop_session.state}")
                 if active_drop_session.manual_override:
                     return
 
@@ -249,8 +252,6 @@ class MOBot:
                     message, active_drop_session
                 )
                 return
-            except (Exception,):
-                pass
 
             try:
                 active_drop_session = DropSession.objects.get(
@@ -284,7 +285,7 @@ class MOBot:
                 response_message = ChatStrings.STORE_CLOSED.format(
                     date=bst_time.strftime("%A, %b %d"),
                     time=bst_time.strftime("%-I:%M %p %Z"),
-                    desc=drop_to_advertise.item.description,
+                    desc=drop_to_advertise.pre_drop_description
                 )
                 self.messenger.log_and_send_message(
                     customer, message.source, response_message

@@ -1,9 +1,11 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
-import mobilecoin as mc
-from django.utils import timezone
 
-from mobot_client.models import DropSession, Drop, CustomerStorePreferences, ItemSessionState, SessionState
+import mobilecoin as mc
+
+from decimal import Decimal
+from django.utils import timezone
+from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku, ItemSessionState, SessionState
 
 from mobot_client.chat_strings import ChatStrings
 
@@ -166,11 +168,18 @@ class BaseDropSession:
                 return
 
             amount_in_mob = mc.pmob2mob(drop_session.drop.initial_coin_amount_pmob)
+            value_in_currency = amount_in_mob * Decimal(
+                drop_session.drop.conversion_rate_mob_to_currency
+            )
             self.payments.send_mob_to_customer(drop_session.customer, message.source, amount_in_mob, True)
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 message.source,
-                ChatStrings.AIRDROP_INITIALIZE.format(amount=amount_in_mob.normalize())
+                ChatStrings.AIRDROP_INITIALIZE.format(
+                    amount=amount_in_mob.normalize(),
+                    symbol=drop_session.drop.currency_symbol,
+                    value=value_in_currency
+                )
             )
             self.messenger.log_and_send_message(
                 drop_session.customer,

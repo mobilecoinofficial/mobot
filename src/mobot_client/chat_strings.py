@@ -61,12 +61,15 @@ MOBot OUT. Buh-bye!"""
 Please contact customer service at {number}"""
 
     # Air Drop Strings
-    AIRDROP_COMMANDS = "Commands available are:\n\n?\tQuick list of commands\nhelp\tList of command and what they do\ndescribe\tDescription of drop\npay\tHow to pay"
+    AIRDROP_COMMANDS = """Commands available are:
+
+'describe' - Description of drop
+'pay' - How to pay"""
+
     AIRDROP_RESPONSE = """We've sent you {amount} MOB (~{symbol}{value:.2f}). 
 
-    Send us 0.01 MOB, and we'll send it back, plus more! 
-    You could end up with as much as £50 of MOB
-    """
+Send us 0.01 MOB, and we'll send it back, plus more! 
+You could end up with as much as £50 of MOB"""
     AIRDROP_SUMMARY = (
         "You've received your initial MOB, tried making a payment, "
         "and received a bonus! Well done. You've completed the MOB Coin Drop. "
@@ -99,7 +102,7 @@ We're returning your MOB and the network fee."""
 Unfortunately, we ran out of bonuses 😭. 
 We're returning your MOB and the network fee."""
 
-    AIRDROP_INITIALIZE = """Great! We've just sent you {amount)} MOB (~£3).
+    AIRDROP_INITIALIZE = """Great! We've just sent you {amount} MOB (~{symbol}{value:.2f})
 
 Send us 0.01 MOB, and we'll send it back, plus more!
 
