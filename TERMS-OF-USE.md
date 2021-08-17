@@ -8,9 +8,9 @@ These Terms of Use for MobileCoins and MobileCoin Wallets (Terms) govern:
 - MobileCoins and their use and transfer; and
 - MobileCoin Wallets and their access and use.
 
-Please read these Terms carefully before you start to use any MobileCoins and any MobileCoin Wallet. By acquiring or otherwise obtaining MobileCoins, using or transferring MobileCoins or obtaining, accessing or using a MobileCoin Wallet, you acknowledge that you have read, understand, and completely agree to be bound by these Terms. You also agree to require any transferee of your MobileCoins and any holder of a MobileCoin Wallet facilitated by you to be subject to these Terms. These Terms may be enforced against you by MobileCoin TS Ltd. or other authorized entities (which are collectively referred to in these Terms as the Compliance Entities). These Terms may be amended, changed, or updated by the Compliance Entities at any time and without prior notice to you by posting at the MobileCoin TS Ltd. Website at http://www.buymobilecoin.com/. Your continued use of any MobileCoins and any MobileCoin Wallets following the posting of any amendment, change, or update means that you accept and agree to the amended, changed, or updated Terms. These Terms are first effective as of November 23, 2020.  
+Please read these Terms carefully before you start to use any MobileCoins and any MobileCoin Wallet. By acquiring or otherwise obtaining MobileCoins, using or transferring MobileCoins or obtaining, accessing or using a MobileCoin Wallet, you acknowledge that you have read, understand, and completely agree to be bound by these Terms. You also agree to require any transferee of your MobileCoins and any holder of a MobileCoin Wallet facilitated by you to be subject to these Terms. These Terms may be enforced against you by MobileCoin TS Ltd. or other authorized entities (which are collectively referred to in these Terms as the Compliance Entities). These Terms may be amended, changed, or updated by the Compliance Entities at any time and without prior notice to you by posting at the MobileCoin TS Ltd. Website at https://www.buymobilecoin.com/. Your continued use of any MobileCoins and any MobileCoin Wallets following the posting of any amendment, change, or update means that you accept and agree to the amended, changed, or updated Terms. These Terms are first effective as of August 17th, 2021.  
 
-Access or use of any MobileCoin Wallets or use or transfer of any MobileCoins is void where such access, use or transfer is prohibited by, would constitute a violation of, or would be subject to penalties under applicable laws, and will not be the basis for the assertion or recognition of any interest, right, remedy, power, or privilege. Please also consult the Terms of Sale and Access and Use of the Site, available at the MobileCoin TS Ltd. website at http://www.buymobilecoin.com/. Information on the way personal information is handled is included in the Privacy Policy, available at http://www.buymobilecoin.com/.
+Access or use of any MobileCoin Wallets or use or transfer of any MobileCoins is void where such access, use or transfer is prohibited by, would constitute a violation of, or would be subject to penalties under applicable laws, and will not be the basis for the assertion or recognition of any interest, right, remedy, power, or privilege. Please also consult the Terms of Sale and Access and Use of the Site, available at the MobileCoin TS Ltd. website at https://www.buymobilecoin.com/. Information on the way personal information is handled is included in the Privacy Policy, available at https://www.buymobilecoin.com/.
 
 ## Limitations on Access or Use of MobileCoin Wallets and Use and Transfer of MobileCoins 
 
@@ -36,9 +36,9 @@ You are a **“U.S. Person”** if you are:
 
 3. a corporation, partnership, or other entity formed by a U.S. Person principally for the purpose of investing in securities, unless it is organized or incorporated, and owned, by accredited investors who are not natural persons, estates or trusts;
 
-4. an estate of which any executor or administrator is a U.S. Person (unless this executor or administrator is a professional fiduciary and shares with a non-U.S. Person investment discretion with respect to the assets of an estate that is governed by foreign law);
+4. an estate of which any executor or administrator is a U.S. Person (unless this executor or administrator is a professional fiduciary and shares with a non-U.S. Person investment discretion with respect to the assets of an estate that is governed by foreign law);
 
-5. a trust if the trustee is a U.S. Person (unless this trustee is a professional fiduciary and shares with a non-U.S. Person investment discretion with respect to the trust assets and no beneficiary of the trust (and no settlor if the trust is revocable) is a U.S. Person);
+5. a trust if the trustee is a U.S. Person (unless this trustee is a professional fiduciary and shares with a non-U.S. Person investment discretion with respect to the trust assets and no beneficiary of the trust (and no settlor if the trust is revocable) is a U.S. Person);
 
 6. an agency or branch of a non-U.S. entity located in the U.S.;
 
@@ -64,7 +64,7 @@ In addition to these Terms, you may be bound by any additional terms required by
 
 MobileCoins are digital tokens. Digital tokens such as MobileCoins are not legal tender, are not backed by any government, and are not insured. MobileCoins do not provide you with any ownership of any physical asset or ownership or other interest or rights of any form with respect to the Compliance Entities or any affiliate or its revenue or assets, including any voting, distribution, redemption, liquidation, proprietary (including all forms of intellectual property), or other financial or legal rights. MobileCoins are distributed and offered on an as-is, where-is basis and, without limiting the generality of the foregoing, are offered without any representation as to merchantability or fitness for any particular purpose. 
 
-You accept that the Compliance Entities may be required to share your user information with other contractual third parties, including financial institutions, or as required under applicable laws or demanded upon a lawful request by any government. When information includes personal data under European Union law, the terms of the Privacy Policy will apply. Please consult the Privacy Policy available at the MobileCoin TS Ltd. website at http://www.buymobilecoin.com/.
+You accept that the Compliance Entities may be required to share your user information with other contractual third parties, including financial institutions, or as required under applicable laws or demanded upon a lawful request by any government. When information includes personal data under European Union law, the terms of the Privacy Policy will apply. Please consult the Privacy Policy available at the MobileCoin TS Ltd. website at https://www.buymobilecoin.com/.
 
 You accept all consequences of sending MobileCoins. MobileCoin transactions are not reversible. Once you send MobileCoins to an address, whether intentionally or by a fraudulent or accidental transaction, you accept the risk that you may lose access to, and any claim on, those MobileCoins indefinitely or permanently. 
 
@@ -167,7 +167,7 @@ The Compliance Entities make no representations, warranties, covenants or guaran
 
 ## Electronic Communications 
 
-You agree and consent to receive electronically all communications, agreements, documents, receipts, notices and disclosures that the Compliance Entities may provide in connection with these Terms. Information in relation to how we may communicate with you and your rights in that respect can be found in the Privacy Policy at http://www.buymobilecoin.com/. 
+You agree and consent to receive electronically all communications, agreements, documents, receipts, notices and disclosures that the Compliance Entities may provide in connection with these Terms. Information in relation to how we may communicate with you and your rights in that respect can be found in the Privacy Policy at https://www.buymobilecoin.com/. 
 
 ## Miscellaneous 
 
@@ -187,4 +187,4 @@ JURY TRIAL WAIVER: TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, THE PARTIE
 
 These Terms and any information or notifications that are provided under these Terms shall be in English. 
 
-If you have any questions relating to these Terms, your rights and obligations arising from these Terms and/or your use of any MobileCoins and any MobileCoin Wallets or any other matter, please utilize the question form on the MobileCoin TS Ltd. website at http://www.buymobilecoin.com/.
+If you have any questions relating to these Terms, your rights and obligations arising from these Terms and/or your use of any MobileCoins and any MobileCoin Wallets or any other matter, please utilize the question form on the MobileCoin TS Ltd. website at https://www.buymobilecoin.com/.
