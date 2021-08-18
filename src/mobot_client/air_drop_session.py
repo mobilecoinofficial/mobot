@@ -172,7 +172,7 @@ class AirDropSession(BaseDropSession):
             return
 
         if not self.under_drop_quota(drop):
-            self.messenge.log_and_send_message(
+            self.messenger.log_and_send_message(
                 customer, message.source, ChatStrings.OVER_QUOTA
             )
             return
