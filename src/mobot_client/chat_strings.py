@@ -75,8 +75,21 @@ You could end up with as much as £50 of MOB"""
         "and received a bonus! Well done. You've completed the MOB Coin Drop. "
         "Stay tuned for future drops."
     )
-    OVER_QUOTA = "over quota for drop!"
-    NO_COIN_LEFT = "no coin left!"
+    AIRDROP_INCOMPLETE_SUMMARY = (
+        "You've received your MOB but were too late to participate in the bonus round. "
+        "You've completed the MOB Coin Drop. "
+        "Stay tuned for future drops."
+    )
+    OVER_QUOTA = (
+        "Hi! MOBot here\n\n"
+        "It's too late! We've distributed all of the MOB allocated to this airdrop\n\n"
+        "Sorry 😭"
+    )
+    NO_COIN_LEFT = (
+       "Hi! MOBot here\n\n"
+        "It's too late! We've run out of MOB for this airdrop\n\n"
+        "Sorry 😭"
+    )
     AIRDROP_DESCRIPTION = (
         "Hi! MOBot here.\n\nWe're giving away free "
         "MOB today so that you can try Signal's new payment feature!!!"
