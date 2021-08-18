@@ -15,6 +15,7 @@ class SessionStateReadyToReceiveInitial(enum.Enum):
 
 
 class SessionState(enum.Enum):
+    OUT_OF_MOB = -2
     CANCELLED = -1
     READY_TO_RECEIVE_INITIAL = 0
     WAITING_FOR_BONUS_TRANSACTION = 1
@@ -125,6 +126,16 @@ class BaseDropSession:
         try:
             _completed_drop_session = DropSession.objects.get(
                 customer=customer, drop=drop, state=SessionState.COMPLETED.value
+            )
+            return True
+        except (Exception,):
+            return False
+
+    @staticmethod
+    def customer_has_completed_airdrop_with_error(customer, drop):
+        try:
+            _completed_drop_session = DropSession.objects.get(
+                customer=customer, drop=drop, state=SessionState.OUT_OF_MOB.value
             )
             return True
         except (Exception,):
