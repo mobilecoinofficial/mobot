@@ -5,6 +5,7 @@ from django.db import models
 
 
 class SessionState(models.IntegerChoices):
+    OUT_OF_MOB = -2
     CANCELLED = -1
     READY_TO_RECEIVE_INITIAL = 0
     WAITING_FOR_BONUS_TRANSACTION = 1
@@ -161,51 +162,3 @@ class ChatbotSettings(SingletonModel):
 
     def __str__(self):
         return "Global settings"
-
-
-class ItemSessionState(models.IntegerChoices):
-    IDLE_AND_REFUNDABLE = -4
-    IDLE = -3
-    REFUNDED = -2
-    CANCELLED = -1
-    NEW = 0
-    WAITING_FOR_PAYMENT = 1
-    WAITING_FOR_SIZE = 2
-    WAITING_FOR_NAME = 3
-    WAITING_FOR_ADDRESS = 4
-    SHIPPING_INFO_CONFIRMATION = 5
-    ALLOW_CONTACT_REQUESTED = 6
-    COMPLETED = 7
-
-
-    @classmethod
-    def active_states(cls):
-        return {
-            cls.NEW,
-            cls.WAITING_FOR_PAYMENT,
-            cls.WAITING_FOR_SIZE,
-            cls.WAITING_FOR_NAME,
-            cls.WAITING_FOR_ADDRESS,
-            cls.SHIPPING_INFO_CONFIRMATION,
-            cls.ALLOW_CONTACT_REQUESTED
-        }
-
-    @classmethod
-    def refundable_states(cls):
-        return {
-            cls.IDLE_AND_REFUNDABLE,
-            cls.WAITING_FOR_SIZE,
-            cls.WAITING_FOR_ADDRESS,
-            cls.WAITING_FOR_ADDRESS,
-            cls.WAITING_FOR_NAME,
-            cls.SHIPPING_INFO_CONFIRMATION
-        }
-
-
-
-
-class OrderStatus(models.IntegerChoices):
-    STARTED = 0, 'started'
-    CONFIRMED = 1, 'confirmed'
-    SHIPPED = 2, 'shipped'
-    CANCELLED = 3, 'cancelled'
