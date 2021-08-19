@@ -7,6 +7,7 @@ from decimal import Decimal
 from django.utils import timezone
 from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku, ItemSessionState, SessionState
 
+
 from mobot_client.chat_strings import ChatStrings
 
 
@@ -70,6 +71,16 @@ class BaseDropSession:
         try:
             _completed_drop_session = DropSession.objects.get(
                 customer=customer, drop=drop, state=SessionState.COMPLETED
+            )
+            return True
+        except (Exception,):
+            return False
+
+    @staticmethod
+    def customer_has_completed_airdrop_with_error(customer, drop):
+        try:
+            _completed_drop_session = DropSession.objects.get(
+                customer=customer, drop=drop, state=SessionState.OUT_OF_MOB.value
             )
             return True
         except (Exception,):
