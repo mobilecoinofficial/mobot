@@ -25,7 +25,9 @@ class AirDropSession(BaseDropSession):
                 source,
                 ChatStrings.AIRDROP_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
             )
-            self.send_mob_to_customer(customer, source, amount_paid_mob, True)
+            self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
+            drop_session.state = SessionState.OUT_OF_MOB.value
+            drop_session.save()
             return
 
         bonus_coin_objects_for_drop = BonusCoin.objects.filter(drop=drop_session.drop)
@@ -44,7 +46,9 @@ class AirDropSession(BaseDropSession):
                 source,
                 ChatStrings.BONUS_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
             )
-            self.send_mob_to_customer(customer, source, amount_paid_mob, True)
+            self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
+            drop_session.state = SessionState.OUT_OF_MOB.value
+            drop_session.save()
             return
 
         initial_coin_amount_mob = mc.pmob2mob(
@@ -155,6 +159,14 @@ class AirDropSession(BaseDropSession):
             )
             return
 
+        if self.customer_has_completed_airdrop_with_error(customer, drop):
+            self.messenger.log_and_send_message(
+                customer,
+                message.source,
+                ChatStrings.AIRDROP_INCOMPLETE_SUMMARY
+            )
+            return
+
         if not customer.phone_number.startswith(drop.number_restriction):
             self.messenger.log_and_send_message(
                 customer,
@@ -173,7 +185,7 @@ class AirDropSession(BaseDropSession):
             return
 
         if not self.under_drop_quota(drop):
-            self.messenge.log_and_send_message(
+            self.messenger.log_and_send_message(
                 customer, message.source, ChatStrings.OVER_QUOTA
             )
             return

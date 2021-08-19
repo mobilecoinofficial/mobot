@@ -232,6 +232,8 @@ class MOBot:
                 phone_number=message.source["number"]
             )
             self.messenger.log_received(message, customer, self.store)
+
+            # see if there is an active airdrop session
             try:
                 active_drop_session = DropSession.objects.get(
                     customer=customer,
@@ -240,19 +242,25 @@ class MOBot:
                     state__lt=SessionState.COMPLETED,
                 )
             except (Exception,):
+                #  there is *not* an active airdop session; continue exploring what to do
                 pass
             else:
+                # there *is* an active airdrop session.
                 print(f"found active drop session in state {active_drop_session.state}")
+                # manual_override means that a human is monitoring the chat via a linked
+                # device and wants to respond rather than having MOBot respond, so do
+                # nothing.
                 if active_drop_session.manual_override:
                     return
 
+                # Dispatch to the active_airdrop session handler
                 air_drop = AirDropSession(self.store, self.payments, self.messenger)
-
                 air_drop.handle_active_airdrop_drop_session(
                     message, active_drop_session
                 )
                 return
 
+            # see if there's an active item drop session
             try:
                 active_drop_session = DropSession.objects.get(
                     customer=customer,
@@ -260,16 +268,26 @@ class MOBot:
                     state__gte=ItemSessionState.WAITING_FOR_PAYMENT,
                     state__lt=ItemSessionState.COMPLETED,
                 )
-                print(f"found active drop session in state {active_drop_session.state}")
-                if active_drop_session.manual_override:
-                    return
             except (Exception,):
+                #  there is not an active item dop sesssion; continue to exploring what to do
                 pass
             else:
+                # there *is* an active item drop session.
+                print(f"found active drop session in state {active_drop_session.state}")
+                # manual_override means that a human is monitoring the chat via a linked
+                # device and wants to respond rather than having MOBot respond, so do
+                # nothing.
+                if active_drop_session.manual_override:
+                    return
+
+                # dispatch to active_item_drop session handler
                 item_drop = ItemDropSession(self.store, self.payments, self.messenger)
                 item_drop.handle_active_item_drop_session(message, active_drop_session)
                 return
 
+            # no active drop sessions.
+
+            # should we advertise a future drop?
             drop_to_advertise = BaseDropSession.get_advertising_drop()
             if drop_to_advertise is not None:
                 if not customer.phone_number.startswith(
@@ -292,6 +310,7 @@ class MOBot:
                 )
                 return
 
+            # is there no drop going or to advertise?
             active_drop = BaseDropSession.get_active_drop()
             if active_drop is None:
                 self.messenger.log_and_send_message(
@@ -300,16 +319,24 @@ class MOBot:
                 return
 
             if active_drop.drop_type == DropType.AIRDROP:
+            # if this is an airdrop session, dispatch to the
+            # no_active_airdrop session handler to initiate a session
                 air_drop = AirDropSession(self.store, self.payments, self.messenger)
                 air_drop.handle_no_active_airdrop_drop_session(
                     customer, message, active_drop
                 )
 
-            if active_drop.drop_type == DropType.ITEM:
+
+            elif active_drop.drop_type == DropType.ITEM:
+            # if this is an item drop session, dispacth to the
+            # no_active_item_drop session handler to initiate a session
+            if active_drop.drop_type == DropType.ITEM.value:
                 item_drop = ItemDropSession(self.store, self.payments, self.messenger)
                 item_drop.handle_no_active_item_drop_session(
                     customer, message, active_drop
                 )
+
+            # all done!
 
     # FIXME: Handler for cancel/help?
 
