@@ -1,13 +1,8 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
-import enum
+from django.db.models import IntegerChoices
 
-from mobot_client.models import Message
-
-
-class MessageDirection(enum.Enum):
-    RECEIVED = 0
-    SENT = 1
+from mobot_client.models import Message, MessageDirection
 
 
 class SignalMessenger:
@@ -23,7 +18,7 @@ class SignalMessenger:
             customer=customer,
             store=self.store,
             text=text,
-            direction=MessageDirection.SENT.value,
+            direction=MessageDirection.SENT,
         )
         sent_message.save()
         self.signal.send_message(source, text, attachments=attachments)
@@ -31,5 +26,5 @@ class SignalMessenger:
     @staticmethod
     def log_received(message, customer, store):
         incoming = Message(customer=customer, store=store, text=message.text,
-                           direction=MessageDirection.RECEIVED.value)
+                           direction=MessageDirection.RECEIVED)
         incoming.save()

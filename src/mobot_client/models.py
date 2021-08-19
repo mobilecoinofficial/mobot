@@ -1,6 +1,16 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
+import enum
 
 from django.db import models
+
+
+class SessionState(models.IntegerChoices):
+    OUT_OF_MOB = -2
+    CANCELLED = -1
+    READY_TO_RECEIVE_INITIAL = 0
+    WAITING_FOR_BONUS_TRANSACTION = 1
+    ALLOW_CONTACT_REQUESTED = 2
+    COMPLETED = 3
 
 
 class Store(models.Model):
@@ -35,9 +45,14 @@ class Sku(models.Model):
         return f"{self.item.name} - {self.identifier}"
 
 
+class DropType(models.IntegerChoices):
+    AIRDROP = 0, 'airdrop'
+    ITEM = 1, 'item'
+
+
 class Drop(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    drop_type = models.PositiveIntegerField(default=0)
+    drop_type = models.IntegerField(choices=DropType.choices, default=DropType.AIRDROP)
     pre_drop_description = models.TextField()
     advertisment_start_time = models.DateTimeField()
     start_time = models.DateTimeField()
@@ -79,19 +94,26 @@ class CustomerStorePreferences(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     allows_contact = models.BooleanField()
 
+
 class CustomerDropRefunds(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     drop = models.ForeignKey(Drop, on_delete=models.CASCADE)
     number_of_times_refunded = models.PositiveIntegerField(default=0)
 
+
 class DropSession(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="drop_sessions")
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     drop = models.ForeignKey(Drop, on_delete=models.CASCADE)
-    state = models.IntegerField(default=0)
+    state = models.IntegerField(choices=SessionState.choices, default=SessionState.READY_TO_RECEIVE_INITIAL)
     manual_override = models.BooleanField(default=False)
     bonus_coin_claimed = models.ForeignKey(
         BonusCoin, on_delete=models.CASCADE, default=None, blank=True, null=True
     )
+
+
+class MessageDirection(models.IntegerChoices):
+    RECEIVED = 0, 'received'
+    SENT = 1, 'sent'
 
 
 class Message(models.Model):
@@ -99,7 +121,7 @@ class Message(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     text = models.TextField()
     date = models.DateTimeField(auto_now_add=True)
-    direction = models.PositiveIntegerField()
+    direction = models.PositiveIntegerField(choices=MessageDirection.choices)
 
 
 class Order(models.Model):

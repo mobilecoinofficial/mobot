@@ -22,7 +22,7 @@ COPY requirements.txt /app/
 
 RUN pip install -r requirements.txt
 
-COPY ./mobot /app/
+COPY src /app/
 COPY ./privacy /privacy/
 COPY ./docker/admin_start.sh /usr/local/bin/admin_start.sh
 COPY ./docker/mobot_client_start.sh /usr/local/bin/mobot_client_start.sh

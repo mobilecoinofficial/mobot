@@ -6,8 +6,7 @@ import time
 
 import mobilecoin as mc
 
-from mobot_client.models import DropSession, Customer, Message
-from mobot_client.drop_session import ItemSessionState
+from mobot_client.models import DropSession, Customer, Message, ItemSessionState
 from mobot_client.chat_strings import ChatStrings
 
 utc = pytz.UTC
@@ -29,21 +28,21 @@ class Timeouts:
     @staticmethod
     def customer_is_active(customer):
         session = DropSession.objects.filter(customer=customer).values('state').last()
-        if session is not None and session['state'] in ItemSessionState.active_states():
+        if session is not None and session.state in ItemSessionState.active_states():
             return True
         return False
 
     @staticmethod
     def customer_is_idle(customer):
         session = DropSession.objects.filter(customer=customer).values('state').last()
-        if session is not None and (session['state'] == ItemSessionState.IDLE.value or session['state'] == ItemSessionState.IDLE_AND_REFUNDABLE.value):
+        if session is not None and (session.state == ItemSessionState.IDLE or session.state == ItemSessionState.IDLE_AND_REFUNDABLE):
             return True
         return False
 
     @staticmethod
     def customer_needs_refund(customer):
         session = DropSession.objects.filter(customer=customer).values('state').last()
-        if session is not None and session['state'] in ItemSessionState.refundable_states():
+        if session is not None and session.state in ItemSessionState.refundable_states():
             return True
         return False
 
@@ -51,7 +50,7 @@ class Timeouts:
     def set_customer_idle(customer):
         session = DropSession.objects.filter(customer=customer).last()
         if session is not None and session.state in ItemSessionState.active_states():
-            session.state = ItemSessionState.IDLE.value
+            session.state = ItemSessionState.IDLE
             session.save()
 
     @staticmethod
@@ -59,23 +58,23 @@ class Timeouts:
         session = DropSession.objects.filter(customer=customer).last()
         if session is not None and session.state in ItemSessionState.active_states():
             if session.state in ItemSessionState.refundable_states():
-                session.state = ItemSessionState.IDLE_AND_REFUNDABLE.value
+                session.state = ItemSessionState.IDLE_AND_REFUNDABLE
             else:
-                session.state = ItemSessionState.IDLE.value
+                session.state = ItemSessionState.IDLE
             session.save()
 
     @staticmethod
     def set_customer_refunded(customer):
         session = DropSession.objects.filter(customer=customer).last()
-        if session is not None and (session.state in ItemSessionState.active_states() or session.state == ItemSessionState.IDLE.value):
-            session.state = ItemSessionState.REFUNDED.value
+        if session is not None and (session.state in ItemSessionState.active_states() or session.state == ItemSessionState.IDLE):
+            session.state = ItemSessionState.REFUNDED
             session.save()
 
     @staticmethod
     def set_customer_cancelled(customer):
         session = DropSession.objects.filter(customer=customer).last()
-        if session is not None and (session.state in ItemSessionState.active_states() or session.state == ItemSessionState.IDLE.value):
-            session.state = ItemSessionState.CANCELLED.value
+        if session is not None and (session.state in ItemSessionState.active_states() or session.state == ItemSessionState.IDLE):
+            session.state = ItemSessionState.CANCELLED
             session.save()
 
     def do_refund(self, customer):
