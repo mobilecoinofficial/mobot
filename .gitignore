@@ -136,4 +136,5 @@ dmypy.json
 .stage.dns.json
 .prod.dns.json
 
-.idea/
+manage.py
+src/migrations/**
