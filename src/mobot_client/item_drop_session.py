@@ -11,7 +11,7 @@ from mobot_client.models import (
     CustomerStorePreferences,
     Order,
     Sku,
-    CustomerDropRefunds, ItemSessionState, OrderStatus,
+    CustomerDropRefunds, SessionState, OrderStatus,
 )
 from mobot_client.chat_strings import ChatStrings
 
@@ -152,7 +152,7 @@ class ItemDropSession(BaseDropSession):
         )
         new_order.save()
 
-        drop_session.state = ItemSessionState.WAITING_FOR_NAME
+        drop_session.state = SessionState.WAITING_FOR_NAME
         drop_session.save()
 
         self.messenger.log_and_send_message(
@@ -168,7 +168,7 @@ class ItemDropSession(BaseDropSession):
             )
 
         elif message.text.lower() == "cancel":
-            drop_session.state = ItemSessionState.CANCELLED
+            drop_session.state = SessionState.CANCELLED
             drop_session.save()
             self.messenger.log_and_send_message(
                 drop_session.customer,
@@ -229,7 +229,7 @@ class ItemDropSession(BaseDropSession):
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source, ChatStrings.OUT_OF_STOCK
             )
-            drop_session.state = ItemSessionState.CANCELLED
+            drop_session.state = SessionState.CANCELLED
             drop_session.save()
             return
 
@@ -263,7 +263,7 @@ class ItemDropSession(BaseDropSession):
             order.status = OrderStatus.CANCELLED
             order.save()
 
-        drop_session.state = ItemSessionState.REFUNDED
+        drop_session.state = SessionState.REFUNDED
         drop_session.save()
 
     def handle_item_drop_session_waiting_for_address(self, message, drop_session):
@@ -310,7 +310,7 @@ class ItemDropSession(BaseDropSession):
         order.shipping_address = address[0]["formatted_address"]
         order.save()
 
-        drop_session.state = ItemSessionState.SHIPPING_INFO_CONFIRMATION
+        drop_session.state = SessionState.SHIPPING_INFO_CONFIRMATION
         drop_session.save()
 
         self.messenger.log_and_send_message(
@@ -345,7 +345,7 @@ class ItemDropSession(BaseDropSession):
         order.shipping_name = message.text
         order.save()
 
-        drop_session.state = ItemSessionState.WAITING_FOR_ADDRESS
+        drop_session.state = SessionState.WAITING_FOR_ADDRESS
         drop_session.save()
         
         self.messenger.log_and_send_message(
@@ -363,7 +363,7 @@ class ItemDropSession(BaseDropSession):
             return
 
         if message.text.lower() == "no" or message.text.lower() == "n":
-            drop_session.state = ItemSessionState.WAITING_FOR_NAME
+            drop_session.state = SessionState.WAITING_FOR_NAME
             drop_session.save()
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source, ChatStrings.NAME_REQUEST
@@ -419,14 +419,14 @@ class ItemDropSession(BaseDropSession):
         )
 
         if self.customer_has_store_preferences(drop_session.customer):
-            drop_session.state = ItemSessionState.COMPLETED
+            drop_session.state = SessionState.COMPLETED
             drop_session.save()
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source, ChatStrings.BYE
             )
             return
 
-        drop_session.state = ItemSessionState.ALLOW_CONTACT_REQUESTED
+        drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED
         drop_session.save()
         self.messenger.log_and_send_message(
             drop_session.customer, message.source, ChatStrings.FUTURE_NOTIFICATIONS
@@ -441,7 +441,7 @@ class ItemDropSession(BaseDropSession):
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source, ChatStrings.BYE
             )
-            drop_session.state = ItemSessionState.COMPLETED
+            drop_session.state = SessionState.COMPLETED
             drop_session.save()
             return
 
@@ -453,7 +453,7 @@ class ItemDropSession(BaseDropSession):
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source, ChatStrings.BYE
             )
-            drop_session.state = ItemSessionState.COMPLETED
+            drop_session.state = SessionState.COMPLETED
             drop_session.save()
             return
 
@@ -471,28 +471,27 @@ class ItemDropSession(BaseDropSession):
         )
 
     def handle_active_item_drop_session(self, message, drop_session):
-        print(drop_session.state)
-        if drop_session.state == ItemSessionState.WAITING_FOR_PAYMENT:
+        if drop_session.state == SessionState.WAITING_FOR_PAYMENT:
             self.handle_item_drop_session_waiting_for_payment(message, drop_session)
             return
 
-        if drop_session.state == ItemSessionState.WAITING_FOR_SIZE:
+        if drop_session.state == SessionState.WAITING_FOR_SIZE:
             self.handle_item_drop_session_waiting_for_size(message, drop_session)
             return
 
-        if drop_session.state == ItemSessionState.WAITING_FOR_ADDRESS:
+        if drop_session.state == SessionState.WAITING_FOR_ADDRESS:
             self.handle_item_drop_session_waiting_for_address(message, drop_session)
             return
 
-        if drop_session.state == ItemSessionState.WAITING_FOR_NAME:
+        if drop_session.state == SessionState.WAITING_FOR_NAME:
             self.handle_item_drop_session_waiting_for_name(message, drop_session)
             return
 
-        if drop_session.state == ItemSessionState.SHIPPING_INFO_CONFIRMATION:
+        if drop_session.state == SessionState.SHIPPING_INFO_CONFIRMATION:
             self.handle_item_drop_session_shipping_confirmation(message, drop_session)
             return
 
-        if drop_session.state == ItemSessionState.ALLOW_CONTACT_REQUESTED:
+        if drop_session.state == SessionState.ALLOW_CONTACT_REQUESTED:
             self.handle_item_drop_session_allow_contact_requested(message, drop_session)
             return
 
@@ -546,5 +545,5 @@ class ItemDropSession(BaseDropSession):
         new_drop_session, _ = DropSession.objects.get_or_create(
             customer=customer,
             drop=drop,
-            state=ItemSessionState.WAITING_FOR_PAYMENT,
+            state=SessionState.WAITING_FOR_PAYMENT,
         )

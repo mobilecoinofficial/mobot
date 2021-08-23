@@ -5,10 +5,11 @@ import mobilecoin as mc
 
 from decimal import Decimal
 from django.utils import timezone
-from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku, ItemSessionState, SessionState
+from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku, SessionState
 
 
 from mobot_client.chat_strings import ChatStrings
+
 
 
 class BaseDropSession:
@@ -90,7 +91,7 @@ class BaseDropSession:
     def customer_has_completed_item_drop(customer, drop):
         try:
             DropSession.objects.get(
-                customer=customer, drop=drop, state=ItemSessionState.COMPLETED
+                customer=customer, drop=drop, state=SessionState.COMPLETED
             )
             return True
         except (Exception,):
@@ -198,7 +199,7 @@ class BaseDropSession:
                 ChatStrings.PAY_HELP
             )
 
-            drop_session.state = SessionState.WAITING_FOR_BONUS_TRANSACTION
+            drop_session.state = SessionState.WAITING_FOR_PAYMENT
             drop_session.save()
             return
 

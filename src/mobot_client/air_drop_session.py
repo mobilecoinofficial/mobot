@@ -140,7 +140,7 @@ class AirDropSession(BaseDropSession):
             self.handle_drop_session_ready_to_receive(message, drop_session)
             return
 
-        if drop_session.state == SessionState.WAITING_FOR_BONUS_TRANSACTION:
+        if drop_session.state == SessionState.WAITING_FOR_PAYMENT:
             self.handle_drop_session_waiting_for_bonus_transaction(
                 message, drop_session
             )
@@ -199,7 +199,7 @@ class AirDropSession(BaseDropSession):
         new_drop_session, _ = DropSession.objects.get_or_create(
             customer=customer,
             drop=drop,
-            state=SessionState.READY_TO_RECEIVE_INITIAL,
+            state=SessionState.READY,
         )
 
         self.messenger.log_and_send_message(
