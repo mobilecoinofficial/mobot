@@ -17,6 +17,8 @@ django-phonenumber-field[phonenumberslite]==2.1.0
 
 # Make manage.py shell use an iPython session
 ipython
+
+# For tests
 factory_boy==3.2.0
 faker==8.11.0
 
