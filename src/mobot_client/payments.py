@@ -5,7 +5,7 @@ import time
 
 from mobot_client.models import (
     Order,
-    Sku, ItemSessionState,
+    Sku, SessionState,
 )
 from decimal import Decimal
 
@@ -180,7 +180,7 @@ class Payments:
                 ChatStrings.OUT_OF_STOCK_REFUND
             )
             self.send_mob_to_customer(customer, source, item_cost_mob, True)
-            drop_session.state = ItemSessionState.REFUNDED
+            drop_session.state = SessionState.REFUNDED
             drop_session.save()
             return
 
@@ -189,7 +189,7 @@ class Payments:
         )
 
         self.messenger.log_and_send_message(customer, source, message_to_send)
-        drop_session.state = ItemSessionState.WAITING_FOR_SIZE
+        drop_session.state = SessionState.WAITING_FOR_SIZE
         drop_session.save()
 
         return
