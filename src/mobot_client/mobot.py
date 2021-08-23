@@ -17,7 +17,7 @@ from mobot_client.models import (
     ChatbotSettings,
     Message,
     Order,
-    Sku, SessionState, ItemSessionState, DropType, OrderStatus,
+    Sku, SessionState, SessionState, DropType, OrderStatus,
 )
 
 from mobot_client.drop_session import (
@@ -120,7 +120,7 @@ class MOBot:
                 drop_session = DropSession.objects.get(
                     customer=customer,
                     drop__drop_type=DropType.AIRDROP,
-                    state=SessionState.WAITING_FOR_BONUS_TRANSACTION,
+                    state=SessionState.WAITING_FOR_PAYMENT,
                 )
             except DropSession.DoesNotExist:
                 pass
@@ -135,7 +135,7 @@ class MOBot:
                 drop_session = DropSession.objects.get(
                     customer=customer,
                     drop__drop_type=DropType.ITEM,
-                    state=ItemSessionState.WAITING_FOR_PAYMENT,
+                    state=SessionState.WAITING_FOR_PAYMENT,
                 )
             except DropSession.DoesNotExist:
                 self.messenger.log_and_send_message(
@@ -265,11 +265,11 @@ class MOBot:
                 active_drop_session = DropSession.objects.get(
                     customer=customer,
                     drop__drop_type=DropType.ITEM,
-                    state__gte=ItemSessionState.WAITING_FOR_PAYMENT,
-                    state__lt=ItemSessionState.COMPLETED,
+                    state__gte=SessionState.WAITING_FOR_PAYMENT,
+                    state__lt=SessionState.COMPLETED,
                 )
             except (Exception,):
-                #  there is not an active item dop sesssion; continue to exploring what to do
+                #  there is not an active item drop session; continue to exploring what to do
                 pass
             else:
                 # there *is* an active item drop session.
@@ -328,13 +328,13 @@ class MOBot:
 
 
             elif active_drop.drop_type == DropType.ITEM:
-            # if this is an item drop session, dispacth to the
-            # no_active_item_drop session handler to initiate a session
-            if active_drop.drop_type == DropType.ITEM.value:
-                item_drop = ItemDropSession(self.store, self.payments, self.messenger)
-                item_drop.handle_no_active_item_drop_session(
-                    customer, message, active_drop
-                )
+                # if this is an item drop session, dispacth to the
+                # no_active_item_drop session handler to initiate a session
+                if active_drop.drop_type == DropType.ITEM.value:
+                    item_drop = ItemDropSession(self.store, self.payments, self.messenger)
+                    item_drop.handle_no_active_item_drop_session(
+                        customer, message, active_drop
+                    )
 
             # all done!
 
