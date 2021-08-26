@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from django.db import models
 import mobilecoin as mc
+from django.utils import timezone
 
 from mobot_client.models.states import SessionState
 
@@ -97,14 +98,28 @@ class CustomerDropRefunds(models.Model):
     number_of_times_refunded = models.PositiveIntegerField(default=0)
 
 
+class ActiveDropSessionsManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(drop__start_time__gte=timezone.now(),
+                                             drop__end_time__lte=timezone.now(),
+                                             state__gte=SessionState.WAITING_FOR_PAYMENT,
+                                             state__lt=SessionState.COMPLETED)
+
+
 class DropSession(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="drop_sessions")
-    drop = models.ForeignKey(Drop, on_delete=models.CASCADE, related_name="drop_sessions")
-    state = models.IntegerField(choices=SessionState.choices, default=SessionState.READY)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="drop_sessions", db_index=True)
+    drop = models.ForeignKey(Drop, on_delete=models.CASCADE, related_name="drop_sessions", db_index=True)
+    state = models.IntegerField(choices=SessionState.choices, default=SessionState.READY, db_index=True)
     manual_override = models.BooleanField(default=False)
     bonus_coin_claimed = models.ForeignKey(
         BonusCoin, on_delete=models.CASCADE, default=None, blank=True, null=True, related_name="drop_sessions"
     )
+
+    active = ActiveDropSessionsManager()
+    objects = models.Manager()
+
+    class Meta:
+        unique_together = ('customer', 'drop')
 
 
 class MessageDirection(models.IntegerChoices):

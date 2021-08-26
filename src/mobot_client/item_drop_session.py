@@ -496,54 +496,57 @@ class ItemDropSession(BaseDropSession):
             return
 
     def handle_no_active_item_drop_session(self, customer, message, drop):
+        new_drop_session, _ = DropSession.objects.get_or_create(
+            customer=customer,
+            drop=drop,
+            state=SessionState.READY,
+        )
+
         if not customer.phone_number.startswith(drop.number_restriction):
             self.messenger.log_and_send_message(
                 customer, message.source, ChatStrings.COUNTRY_RESTRICTED
             )
-            return
+            new_drop_session.state = SessionState.CUSTOMER_DOES_NOT_MEET_RESTRICTIONS
 
-        customer_payments_address = self.payments.get_payments_address(message.source)
-        if customer_payments_address is None:
-            self.messenger.log_and_send_message(
-                customer,
-                message.source,
-                ChatStrings.PAYMENTS_ENABLED_HELP.format(
-                    item_desc=drop.item.short_description
-                ),
-            )
-            return
+        else:
+            customer_payments_address = self.payments.get_payments_address(message.source)
+            if customer_payments_address is None:
+                self.messenger.log_and_send_message(
+                    customer,
+                    message.source,
+                    ChatStrings.PAYMENTS_ENABLED_HELP.format(
+                        item_desc=drop.item.short_description
+                    ),
+                )
+            else:
+                # Greet the user
+                message_to_send = ChatStrings.ITEM_DROP_GREETING.format(
+                    store_name=drop.store.name,
+                    store_description=drop.store.description,
+                    item_description=drop.item.short_description
+                )
 
-        # Greet the user
-        message_to_send = ChatStrings.ITEM_DROP_GREETING.format(
-            store_name=drop.store.name,
-            store_description=drop.store.description,
-            item_description=drop.item.short_description
-        )
+                available_options = self.drop_item_get_available(drop.item)
+                if len(available_options) == 0:
+                    self.messenger.log_and_send_message(
+                        customer, message.source, ChatStrings.OUT_OF_STOCK
+                    )
+                    new_drop_session.state = SessionState.OUT_OF_STOCK
 
-        available_options = self.drop_item_get_available(drop.item)
-        if len(available_options) == 0:
-            self.messenger.log_and_send_message(
-                customer, message.source, ChatStrings.OUT_OF_STOCK
-            )
-            return
+                else:
+                    message_to_send += "\n\n"+ChatStrings.get_options(available_options, capitalize=True)
 
-        message_to_send += "\n\n"+ChatStrings.get_options(available_options, capitalize=True)
+                    price_in_mob = mc.pmob2mob(drop.item.price_in_pmob)
+                    message_to_send += "\n\n"+ChatStrings.ITEM_DISCOUNT.format(
+                        price=price_in_mob.normalize(),
+                        country=drop.country_long_name_restriction
+                    )
 
-        price_in_mob = mc.pmob2mob(drop.item.price_in_pmob)
-        message_to_send += "\n\n"+ChatStrings.ITEM_DISCOUNT.format(
-            price=price_in_mob.normalize(),
-            country=drop.country_long_name_restriction
-        )
-
-        self.messenger.log_and_send_message(customer, message.source, message_to_send)
-        self.messenger.log_and_send_message(
-            customer,
-            message.source,
-            ChatStrings.PAYMENT_REQUEST.format(price=price_in_mob.normalize()),
-        )
-
-        new_drop_session, _ = DropSession.objects.get_or_create(
-            customer=customer,
-            drop=drop,
-            state=SessionState.WAITING_FOR_PAYMENT,
-        )
+                    self.messenger.log_and_send_message(customer, message.source, message_to_send)
+                    self.messenger.log_and_send_message(
+                        customer,
+                        message.source,
+                        ChatStrings.PAYMENT_REQUEST.format(price=price_in_mob.normalize()),
+                    )
+                    new_drop_session.state=SessionState.WAITING_FOR_PAYMENT
+        new_drop_session.save()

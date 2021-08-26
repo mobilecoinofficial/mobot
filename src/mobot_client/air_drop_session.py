@@ -136,7 +136,7 @@ class AirDropSession(BaseDropSession):
         )
 
     def handle_active_airdrop_drop_session(self, message, drop_session):
-        if drop_session.state == SessionState.READY_TO_RECEIVE_INITIAL:
+        if drop_session.state == SessionState.READY:
             self.handle_drop_session_ready_to_receive(message, drop_session)
             return
 
