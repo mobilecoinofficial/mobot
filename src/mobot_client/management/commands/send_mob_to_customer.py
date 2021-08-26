@@ -4,6 +4,7 @@
 A command to send funds to customers, with a friendly apology if necessary
 """
 import decimal
+from logging import getLogger
 from argparse import ArgumentParser
 
 from django.core.management.base import BaseCommand
@@ -26,6 +27,7 @@ class Command(BaseCommand):
         signal = Signal(
             store.phone_number, socket_path=(settings.SIGNALD_ADDRESS, int(settings.SIGNALD_PORT))
         )
+        self.logger = getLogger("SendMobToCustomer")
         self.messenger = SignalMessenger(signal, store)
         mcc = MCClient()
         self.payments = Payments(
@@ -59,23 +61,26 @@ class Command(BaseCommand):
             help='Text to send customers'
         )
         parser.add_argument(
-            ''
+            '--memo',
+            default='BonusCoin',
+            help='Memo to add to signal payment receipt'
         )
 
     def handle(self, *args, **kwargs):
         mob = kwargs['mob']
-        print(kwargs)
+        memo = kwargs['memo']
         customers = Customer.objects.filter(phone_number__in=kwargs['customer_phone_numbers'])
         message_text = kwargs['text'].format(mob=mob)
         for customer in customers:
-            print(f"Sending message {message_text} to customer {customer.phone_number}")
+            self.logger.info(f"Sending message {message_text} to customer {customer.phone_number}")
             self.messenger.log_and_send_message(customer, str(customer.phone_number), message_text)
-            print(f"Sending payment of {mob} to customer {customer.phone_number}")
+            self.logger.info(f"Sending payment of {mob} to customer {customer.phone_number}")
             try:
                 self.payments.send_mob_to_customer(customer=customer,
                                                    source=str(customer.phone_number),
                                                    amount_mob=mob,
-                                                   cover_transaction_fee=False)
+                                                   cover_transaction_fee=False,
+                                                   memo=memo)
             except Exception as e:
-                print(f"Payment to Customer {customer.phone_number} of {mob} MOB failed!")
-            print(f"Payment to customer {customer.phone_number} succeeded!")
+                self.logger.exception(f"Payment to Customer {customer.phone_number} of {mob} MOB failed!")
+            self.logger.info(f"Payment to customer {customer.phone_number} succeeded!")

@@ -37,7 +37,7 @@ class Payments:
         print(customer_signal_profile)
         return customer_signal_profile.get("mobilecoin_address")
 
-    def send_mob_to_customer(self, customer, source, amount_mob, cover_transaction_fee):
+    def send_mob_to_customer(self, customer, source, amount_mob, cover_transaction_fee, memo="Refund"):
         if isinstance(source, dict):
             source = source["number"]
 
@@ -59,11 +59,11 @@ class Payments:
             return
 
         self.send_mob_to_address(
-            source, self.account_id, amount_mob, customer_payments_address
+            source, self.account_id, amount_mob, customer_payments_address, memo
         )
 
     def send_mob_to_address(
-            self, source, account_id, amount_in_mob, customer_payments_address
+            self, source, account_id, amount_in_mob, customer_payments_address, memo
     ):
         # customer_payments_address is b64 encoded, but full service wants a b58 address
         customer_payments_address = mc.utility.b64_public_address_to_b58_wrapper(
@@ -89,7 +89,7 @@ class Payments:
             )
             return
 
-        self.send_payment_receipt(source, tx_proposal)
+        self.send_payment_receipt(source, tx_proposal, memo)
 
     def submit_transaction(self, tx_proposal, account_id):
         # retry up to 10 times in case there's some failure with a 1 sec timeout in between each
@@ -103,12 +103,12 @@ class Payments:
 
         return list_of_txos[0]["txo_id_hex"]
 
-    def send_payment_receipt(self, source, tx_proposal):
+    def send_payment_receipt(self, source, tx_proposal, memo):
         receiver_receipt = self.create_receiver_receipt(tx_proposal)
         receiver_receipt = mc.utility.full_service_receipt_to_b64_receipt(
             receiver_receipt
         )
-        resp = self.signal.send_payment_receipt(source, receiver_receipt, "Refund")
+        resp = self.signal.send_payment_receipt(source, receiver_receipt, memo)
         print("Send receipt", receiver_receipt, "to", source, ":", resp)
 
     def create_receiver_receipt(self, tx_proposal):
