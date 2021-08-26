@@ -31,7 +31,7 @@ class BaseDropSession:
     @staticmethod
     def under_drop_quota(drop):
         number_initial_drops_finished = DropSession.objects.filter(
-            drop=drop, state__gt=SessionState.READY_TO_RECEIVE_INITIAL
+            drop=drop, state__gt=SessionState.READY
         ).count()
         return number_initial_drops_finished < drop.initial_coin_limit
 

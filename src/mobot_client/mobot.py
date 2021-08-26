@@ -6,6 +6,8 @@ import mobilecoin as mc
 import pytz
 import threading
 
+from django.utils import timezone
+
 from signald_client import Signal
 
 from mobot_client.logger import SignalMessenger
@@ -234,41 +236,31 @@ class MOBot:
             self.messenger.log_received(message, customer, self.store)
 
             # see if there is an active airdrop session
-            try:
-                active_drop_session = DropSession.objects.get(
-                    customer=customer,
-                    drop__drop_type=DropType.AIRDROP,
-                    state__gte=SessionState.READY_TO_RECEIVE_INITIAL,
-                    state__lt=SessionState.COMPLETED,
-                )
-            except (Exception,):
-                #  there is *not* an active airdop session; continue exploring what to do
-                pass
-            else:
+
+            active_drop_session = DropSession.active.filter(
+                customer=customer,
+                drop__drop_type=DropType.AIRDROP,
+            ).first()
+            if active_drop_session:
                 # there *is* an active airdrop session.
                 print(f"found active drop session in state {active_drop_session.state}")
                 # manual_override means that a human is monitoring the chat via a linked
                 # device and wants to respond rather than having MOBot respond, so do
                 # nothing.
-                if active_drop_session.manual_override:
+                if not active_drop_session.manual_override:
+                    # Dispatch to the active_airdrop session handler
+                    air_drop = AirDropSession(self.store, self.payments, self.messenger)
+                    air_drop.handle_active_airdrop_drop_session(
+                        message, active_drop_session
+                    )
                     return
 
-                # Dispatch to the active_airdrop session handler
-                air_drop = AirDropSession(self.store, self.payments, self.messenger)
-                air_drop.handle_active_airdrop_drop_session(
-                    message, active_drop_session
-                )
-                return
-
-            # see if there's an active item drop session
-            try:
-                active_drop_session = DropSession.objects.get(
+            else:# see if there's an active item drop session
+                active_drop_session = DropSession.active.filter(
                     customer=customer,
                     drop__drop_type=DropType.ITEM,
-                    state__gte=SessionState.WAITING_FOR_PAYMENT,
-                    state__lt=SessionState.COMPLETED,
-                )
-            except (Exception,):
+                ).first()
+            if not active_drop_session:
                 #  there is not an active item drop session; continue to exploring what to do
                 pass
             else:

@@ -4,18 +4,21 @@ from django.db import models
 
 
 class SessionState(models.IntegerChoices):
+    OUT_OF_STOCK = -5 # Unable to fulfill, our fault
     IDLE_AND_REFUNDABLE = -4
     IDLE = -3
     REFUNDED = -2
-    CANCELLED = -1, 'cancelled'
-    READY = 0, 'ready_to_receive_initial'
-    WAITING_FOR_PAYMENT = 1, 'waiting_for_payment'
-    WAITING_FOR_SIZE = 2, 'waiting_for_size'
+    CANCELLED = -1
+    READY = 0
+    WAITING_FOR_PAYMENT = 1
+    WAITING_FOR_SIZE = 2
     WAITING_FOR_NAME = 3
     WAITING_FOR_ADDRESS = 4
     SHIPPING_INFO_CONFIRMATION = 5
     ALLOW_CONTACT_REQUESTED = 6
     COMPLETED = 7
+    CUSTOMER_DOES_NOT_MEET_RESTRICTIONS = 8  # Complete the session because
+
 
     @staticmethod
     def active_states():
