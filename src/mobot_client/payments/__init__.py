@@ -1,15 +1,18 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
-
+import mobilecoin
 import mobilecoin as mc
 import time
+from decimal import Decimal
+
 
 from mobot_client.drop_session import ItemSessionState
 from mobot_client.models import (
     Order,
     Sku,
+    Store,
 )
-from decimal import Decimal
-
+from mobot_client.logger import SignalMessenger
+from signald_client import Signal
 from mobot_client.chat_strings import ChatStrings
 
 
@@ -17,7 +20,7 @@ class Payments:
     """The Payments class handles the logic relevant to sending MOB and handling receipts."""
 
     def __init__(
-            self, mobilecoin_client, minimum_fee_pmob, account_id, store, messenger, signal
+            self, mobilecoin_client: mobilecoin.Client, minimum_fee_pmob: int, account_id: str, store: Store, messenger: SignalMessenger, signal: Signal
     ):
         self.mcc = mobilecoin_client
         self.minimum_fee_pmob = minimum_fee_pmob

@@ -32,6 +32,7 @@ from mobot_client.item_drop_session import ItemDropSession, OrderStatus
 from mobot_client.payments import Payments
 from mobot_client.chat_strings import ChatStrings
 from mobot_client.timeouts import Timeouts
+from django.conf import settings
 
 
 class MOBot:
@@ -41,18 +42,12 @@ class MOBot:
 
     def __init__(self):
         self.store = ChatbotSettings.load().store
-
-        signald_address = os.getenv("SIGNALD_ADDRESS", "127.0.0.1")
-        signald_port = os.getenv("SIGNALD_PORT", "15432")
         self.signal = Signal(
-            self.store.phone_number, socket_path=(signald_address, int(signald_port))
+            self.store.phone_number, socket_path=(settings.SIGNALD_ADDRESS, int(settings.SIGNALD_PORT))
         )
         self.messenger = SignalMessenger(self.signal, self.store)
 
-        fullservice_address = os.getenv("FULLSERVICE_ADDRESS", "127.0.0.1")
-        fullservice_port = os.getenv("FULLSERVICE_PORT", "9090")
-        fullservice_url = f"http://{fullservice_address}:{fullservice_port}/wallet"
-        self.mcc = mc.Client(url=fullservice_url)
+        self.mcc = mc.Client(url=settings.FULLSERVICE_URL)
 
         all_accounts_response = self.mcc.get_all_accounts()
         self.account_id = next(iter(all_accounts_response))
@@ -88,6 +83,7 @@ class MOBot:
         print("set profile response", resp)
         if resp.get("error"):
             assert False, resp
+
 
         # Chat handlers defined in __init__ so they can be registered with the Signal instance
         @self.signal.payment_handler

@@ -23,6 +23,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', "123")
+SIGNALD_ADDRESS = os.getenv("SIGNALD_ADDRESS", "127.0.0.1")
+SIGNALD_PORT = os.getenv("SIGNALD_PORT", "15432")
+
+FULLSERVICE_ADDRESS = os.getenv("FULLSERVICE_ADDRESS", "127.0.0.1")
+FULLSERVICE_PORT = os.getenv("FULLSERVICE_PORT", "9090")
+FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', False)

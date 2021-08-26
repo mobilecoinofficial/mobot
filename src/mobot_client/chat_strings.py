@@ -122,6 +122,9 @@ Send us 0.01 MOB, and we'll send it back, plus more!
 You could end up with as much as £50 of MOB"""
 
     REFUND_SENT = """We've sent you back {amount} MOB! That brings your total prize to {total_prize} MOB"""
+    APOLOGIES_HAVE_SOME_MOB = """Hey there! We heard you had some trouble yesterday. 
+We'd like to send you {mob} MOB!
+Hope to see you again soon!"""
 
     AIRDROP_COMPLETED = """You've completed the MOB Coin Drop! 
 

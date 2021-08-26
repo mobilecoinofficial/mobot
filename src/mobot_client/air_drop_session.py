@@ -134,6 +134,80 @@ class AirDropSession(BaseDropSession):
             )
         )
 
+    def handle_drop_session_ready_to_receive(self, message, drop_session):
+        if (
+            message.text.lower() == "n"
+            or message.text.lower() == "no"
+            or message.text.lower() == "cancel"
+        ):
+            drop_session.state = SessionState.CANCELLED.value
+            drop_session.save()
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                ChatStrings.SESSION_CANCELLED
+            )
+            return
+
+        if message.text.lower() == "y" or message.text.lower() == "yes":
+            if not self.under_drop_quota(drop_session.drop):
+                self.messenger.log_and_send_message(
+                    drop_session.customer,
+                    message.source,
+                    ChatStrings.AIRDROP_OVER
+                )
+                drop_session.state = SessionState.COMPLETED.value
+                drop_session.save()
+                return
+
+            if not self.minimum_coin_available(drop_session.drop):
+                self.messenger.log_and_send_message(
+                    drop_session.customer,
+                    message.source,
+                    ChatStrings.AIRDROP_OVER
+                )
+                drop_session.state = SessionState.COMPLETED.value
+                drop_session.save()
+                return
+
+            amount_in_mob = mc.pmob2mob(drop_session.drop.initial_coin_amount_pmob)
+            value_in_currency = amount_in_mob * Decimal(
+                drop_session.drop.conversion_rate_mob_to_currency
+            )
+            self.payments.send_mob_to_customer(drop_session.customer, message.source, amount_in_mob, True)
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                ChatStrings.AIRDROP_INITIALIZE.format(
+                    amount=amount_in_mob.normalize(),
+                    symbol=drop_session.drop.currency_symbol,
+                    value=value_in_currency
+                )
+            )
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                ChatStrings.PAY_HELP
+            )
+
+            drop_session.state = SessionState.WAITING_FOR_BONUS_TRANSACTION.value
+            drop_session.save()
+            return
+
+        if message.text.lower() == "help":
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                ChatStrings.YES_NO_HELP
+            )
+            return
+
+        self.messenger.log_and_send_message(
+            drop_session.customer,
+            message.source,
+            ChatStrings.YES_NO_HELP
+        )
+
     def handle_active_airdrop_drop_session(self, message, drop_session):
         if drop_session.state == SessionState.READY_TO_RECEIVE_INITIAL.value:
             self.handle_drop_session_ready_to_receive(message, drop_session)
