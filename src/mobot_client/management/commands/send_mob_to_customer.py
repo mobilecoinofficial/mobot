@@ -65,12 +65,20 @@ class Command(BaseCommand):
             default='BonusCoin',
             help='Memo to add to signal payment receipt'
         )
+        parser.add_argument(
+            '-f',
+            '--cover-fee',
+            action='store_true',
+            default=False
+        )
 
     def handle(self, *args, **kwargs):
         mob = kwargs['mob']
         memo = kwargs['memo']
+        cover_fee = kwargs['cover_fee']
         customers = Customer.objects.filter(phone_number__in=kwargs['customer_phone_numbers'])
         message_text = kwargs['text'].format(mob=mob)
+
         for customer in customers:
             self.logger.info(f"Sending message {message_text} to customer {customer.phone_number}")
             self.messenger.log_and_send_message(customer, str(customer.phone_number), message_text)
@@ -79,7 +87,7 @@ class Command(BaseCommand):
                 self.payments.send_mob_to_customer(customer=customer,
                                                    source=str(customer.phone_number),
                                                    amount_mob=mob,
-                                                   cover_transaction_fee=False,
+                                                   cover_transaction_fee=cover_fee,
                                                    memo=memo)
             except Exception as e:
                 self.logger.exception(f"Payment to Customer {customer.phone_number} of {mob} MOB failed!")
