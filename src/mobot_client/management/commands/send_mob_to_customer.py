@@ -41,19 +41,22 @@ class Command(BaseCommand):
         parser.add_argument(
             '-c',
             '--customer-phone-numbers',
+            help="A list of customer phone numbers separated by commas",
             required=True,
-            type=lambda s: [str(customer) for customer in s.split(',')])
+            type=lambda s: [str(customer) for customer in s.replace(' ', '').split(',')])
         parser.add_argument(
             '-m',
             '--mob',
             required=True,
             type=decimal.Decimal,
+            help='Amount of MOB to send'
         )
         parser.add_argument(
             '-t',
             '--text',
             default=ChatStrings.APOLOGIES_HAVE_SOME_MOB,
             type=str,
+            help='Text to send customers'
         )
 
     def handle(self, *args, **kwargs):
