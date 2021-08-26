@@ -1,7 +1,7 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
 """
-The entrypoint for the Django runserver command.
+A command to send funds to customers, with a friendly apology if necessary
 """
 import decimal
 from argparse import ArgumentParser
@@ -18,10 +18,10 @@ from mobot_client.payments.client import MCClient
 
 
 class Command(BaseCommand):
-    help = 'Run MOBot Client'
+    help = 'Send MOB to Customer'
 
-    def __init__(self, stdout=None, stderr=None, no_color=False, force_color=False):
-        super().__init__(stdout, stderr, no_color, force_color)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         store = ChatbotSettings.load().store
         signal = Signal(
             store.phone_number, socket_path=(settings.SIGNALD_ADDRESS, int(settings.SIGNALD_PORT))
@@ -58,15 +58,24 @@ class Command(BaseCommand):
             type=str,
             help='Text to send customers'
         )
+        parser.add_argument(
+            ''
+        )
 
     def handle(self, *args, **kwargs):
         mob = kwargs['mob']
         print(kwargs)
         customers = Customer.objects.filter(phone_number__in=kwargs['customer_phone_numbers'])
-        message_text = kwargs.get('text').format(mob=mob)
+        message_text = kwargs['text'].format(mob=mob)
         for customer in customers:
+            print(f"Sending message {message_text} to customer {customer.phone_number}")
             self.messenger.log_and_send_message(customer, str(customer.phone_number), message_text)
-            self.payments.send_mob_to_customer(customer=customer,
-                                               source=str(customer.phone_number),
-                                               amount_mob=mob,
-                                               cover_transaction_fee=False)
+            print(f"Sending payment of {mob} to customer {customer.phone_number}")
+            try:
+                self.payments.send_mob_to_customer(customer=customer,
+                                                   source=str(customer.phone_number),
+                                                   amount_mob=mob,
+                                                   cover_transaction_fee=False)
+            except Exception as e:
+                print(f"Payment to Customer {customer.phone_number} of {mob} MOB failed!")
+            print(f"Payment to customer {customer.phone_number} succeeded!")
