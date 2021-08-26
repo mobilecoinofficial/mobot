@@ -1,5 +1,4 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
-import mobilecoin
 import mobilecoin as mc
 import time
 from decimal import Decimal
@@ -20,7 +19,7 @@ class Payments:
     """The Payments class handles the logic relevant to sending MOB and handling receipts."""
 
     def __init__(
-            self, mobilecoin_client: mobilecoin.Client, minimum_fee_pmob: int, account_id: str, store: Store, messenger: SignalMessenger, signal: Signal
+            self, mobilecoin_client: mc.Client, minimum_fee_pmob: int, account_id: str, store: Store, messenger: SignalMessenger, signal: Signal
     ):
         self.mcc = mobilecoin_client
         self.minimum_fee_pmob = minimum_fee_pmob
