@@ -21,7 +21,7 @@ from mobot_client.models import (Drop,
                                  DropType,
                                  BonusCoin,
                                  Order,
-                                 OrderStatus)
+                                 OrderStatus, OutOfStockException)
 from mobot_client.models.states import SessionState
 
 
@@ -85,7 +85,7 @@ class ModelTests(TestCase):
     def test_airdrop_inventory(self):
         drop = DropFactory.create(drop_type=DropType.AIRDROP)
         print("Minting 3 BonusCoins")
-        BonusCoinFactory.create_batch(size=3, drop=drop)
+        coins = BonusCoinFactory.create_batch(size=3, drop=drop)
         sessions_by_coin: Dict[BonusCoin, List[DropSession]] = defaultdict(list)
         sessions = DropSessionFactory.create_batch(size=10, drop=drop)
 
@@ -99,8 +99,25 @@ class ModelTests(TestCase):
             print(f"Number of sessions claiming coin: {len(sessions)} Number available: {coin.number_remaining()}")
             self.assertEqual(coin.number_remaining(), coin.number_available_at_start - len(sessions))
 
-        print("Making many sessions, clearing out inventory")
-        more_sessions = DropSessionFactory.create_batch(size=100, drop=drop)
+        coins_available = sum(map(lambda c: c.number_remaining(), coins))
+        print(f"Before clearing inventory, we had {coins_available} coins available")
+        print("Making 100 sessions, clearing out inventory")
+        more_sessions = DropSessionFactory.create_batch(size=25, drop=drop)
+        coins_claimed = 0
+        for num, session in enumerate(more_sessions):
+            if coins_claimed < coins_available:
+                avail = sum(map(lambda c: c['number_available_at_start'] - c['num_active_sessions'], list(BonusCoin.available.values('num_active_sessions', 'number_available_at_start'))))
+                self.assertEqual(avail, coins_available - coins_claimed)
+                coin = BonusCoin.available.claim_random_coin(session)
+                coins_claimed += 1
+            else:
+                with self.assertRaises(OutOfStockException):
+                    BonusCoin.available.claim_random_coin(session)
+        self.assertEqual(coins_claimed, coins_available)
+        print(f"{coins_claimed} coins claimed by remaining sessions")
+
+
+
 
     def test_active_drop_sessions_found_for_customer(self):
         customer = CustomerFactory.create()
@@ -132,6 +149,16 @@ class ModelTests(TestCase):
         session.state = SessionState.COMPLETED
         session.save()
         self.assertTrue(customer.has_completed_drop(session.drop))
+
+    def test_find_completed_and_errored_drops(self):
+        customer = CustomerFactory.create()
+        print("Making 5 completed sessions...")
+        print(f"Made sessions {list(DropSessionFactory.create_batch(size=5, customer=customer, state=SessionState.COMPLETED))}")
+        print("Making 1 errored session...")
+        print(f"Made session {DropSessionFactory.create(customer=customer, state=SessionState.OUT_OF_STOCK)}")
+        self.assertEqual(customer.errored_sessions().count(), 1)
+        self.assertEqual(customer.completed_drop_sessions().count(), 6)
+        self.assertEqual(customer.successful_sessions().count(), 5)
 
     def test_find_active_drop(self):
         print("Creating 10 inactive drops")

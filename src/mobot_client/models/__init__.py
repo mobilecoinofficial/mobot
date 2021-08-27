@@ -19,6 +19,14 @@ import mobilecoin as mc
 from mobot_client.models.states import SessionState
 
 
+class SessionException(Exception):
+    pass
+
+
+class OutOfStockException(SessionException):
+    pass
+
+
 class Store(models.Model):
     name = models.TextField()
     phone_number = PhoneNumberField(db_index=True)
@@ -172,7 +180,9 @@ class BonusCoinManager(models.Manager):
             drop_session.save()
             return coin
         else:
-            return None
+            drop_session.state = SessionState.OUT_OF_STOCK
+            drop_session.save()
+            raise OutOfStockException("No more coins available to give out!")
 
 
 class BonusCoin(models.Model):
@@ -180,6 +190,7 @@ class BonusCoin(models.Model):
     amount_pmob = models.PositiveIntegerField(default=0)
     number_available_at_start = models.PositiveIntegerField(default=0)
 
+    ## Manager that annotates available coins
     available = BonusCoinManager()
 
     class Meta:
@@ -203,7 +214,13 @@ class Customer(models.Model):
         return self.drop_sessions(manager='active_sessions')
 
     def completed_drop_sessions(self):
-        return self.drop_sessions.filter(state__gte=SessionState.COMPLETED).all()
+        return self.drop_sessions(manager='completed_sessions').all()
+
+    def errored_sessions(self):
+        return self.drop_sessions(manager='errored_sessions').all()
+
+    def successful_sessions(self):
+        return self.drop_sessions(manager='successful_sessions').all()
 
     def has_completed_drop(self, drop: Drop) -> bool:
         completed_drop = self.completed_drop_sessions().filter(drop=drop).first()
@@ -235,8 +252,22 @@ class ActiveDropSessionManager(models.Manager):
     def get_queryset(self) -> models.QuerySet:
         return super().get_queryset().filter(state__lt=SessionState.COMPLETED,
                                              drop__start_time__lte=timezone.now(),
-                                             drop__end_time__gte=timezone.now(),
-                                             )
+                                             drop__end_time__gte=timezone.now())
+
+
+class ErroredDropSessionManager(models.Manager):
+    def get_queryset(self) -> models.QuerySet:
+        return super().get_queryset().filter(state__gt=SessionState.COMPLETED)
+
+
+class SuccessfulDropSessionManager(models.Manager):
+    def get_queryset(self) -> models.QuerySet:
+        return super().get_queryset().filter(state=SessionState.COMPLETED)
+
+
+class CompletedDropSessionManager(models.Manager):
+    def get_queryset(self) -> models.QuerySet:
+        return super().get_queryset().filter(state__gte=SessionState.COMPLETED)
 
 
 class DropSession(models.Model):
@@ -251,6 +282,9 @@ class DropSession(models.Model):
     ## Managers to find sessions at different states
     objects = models.Manager()
     active_sessions = ActiveDropSessionManager()
+    errored_sessions = ErroredDropSessionManager()
+    successful_sessions = SuccessfulDropSessionManager()
+    completed_sessions = CompletedDropSessionManager()
 
     def under_quota(self) -> bool:
         return self.bonus_coin_claimed.number_remaining() > 0

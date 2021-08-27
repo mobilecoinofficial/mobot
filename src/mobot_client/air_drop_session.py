@@ -30,7 +30,7 @@ class AirDropSession(BaseDropSession):
             drop_session.save()
             return
 
-        bonus_coin_objects_for_drop = BonusCoin.objects.filter(drop=drop_session.drop)
+        bonus_coin_objects_for_drop = BonusCoin.available.filter(drop=drop_session.drop)
         bonus_coins = []
 
         for bonus_coin in bonus_coin_objects_for_drop:
