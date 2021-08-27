@@ -151,6 +151,10 @@ class Drop(models.Model):
     def value_in_currency(self, amount: Decimal) -> Decimal:
         return amount * Decimal(self.conversion_rate_mob_to_currency)
 
+    def coins_available(self) -> int:
+        if self.drop_type == DropType.AIRDROP:
+            return sum(map(lambda c: c['remaining'], self.bonus_coins(manager='available').values('remaining')))
+
     def under_quota(self) -> bool:
         if self.drop_type == DropType.AIRDROP:
             return self.drop_sessions.count() < self.initial_coin_limit
@@ -168,7 +172,11 @@ class BonusCoinManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset()\
             .annotate(num_active_sessions=models.Count('drop_sessions', filter=Q(drop_sessions__state__gt=SessionState.READY))) \
-            .filter(num_active_sessions__lt=F('number_available_at_start'))
+            .filter(num_active_sessions__lt=F('number_available_at_start')) \
+            .annotate(remaining=F('number_available_at_start') - F('num_active_sessions'))
+
+    def available_for_drop(self, drop: Drop):
+        return self.get_queryset().values('number_available_at_start', 'num_active_sessions')
 
     @transaction.atomic()
     def claim_random_coin(self, drop_session) -> Optional['mobot_client.models.BonusCoin']:
@@ -285,9 +293,6 @@ class DropSession(models.Model):
     errored_sessions = ErroredDropSessionManager()
     successful_sessions = SuccessfulDropSessionManager()
     completed_sessions = CompletedDropSessionManager()
-
-    def under_quota(self) -> bool:
-        return self.bonus_coin_claimed.number_remaining() > 0
 
     def is_active(self) -> bool:
         return self.state < SessionState.COMPLETED and (self.drop.start_time < timezone.now() < self.drop.end_time)
