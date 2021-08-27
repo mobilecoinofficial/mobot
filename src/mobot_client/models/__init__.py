@@ -227,6 +227,9 @@ class Customer(models.Model):
         completed_drop = self.completed_drop_sessions().filter(drop=drop).first()
         return completed_drop is not None
 
+    def has_completed_drop_with_error(self, drop: Drop) -> bool:
+        return self.errored_sessions().filter(drop=drop).count() > 0
+
     def store_preferences(self, store: Store):
         return self.customer_store_preferences.filter(store=store).first()
 
