@@ -12,6 +12,7 @@ from mobot_client.models import (
     Order,
     Sku,
     CustomerDropRefunds, SessionState, OrderStatus,
+    Item,
 )
 from mobot_client.chat_strings import ChatStrings
 
@@ -35,17 +36,6 @@ class ItemDropSession(BaseDropSession):
                 return True
 
         return False
-
-    def drop_item_get_available(self, drop_item):
-        available_options = []
-        skus = Sku.objects.filter(item=drop_item).order_by("sort_order")
-
-        for sku in skus:
-            number_ordered = Order.objects.filter(sku=sku).exclude(status=OrderStatus.CANCELLED).count()
-            if number_ordered < sku.quantity:
-                available_options.append(sku)
-
-        return available_options
 
     def handle_item_drop_session_waiting_for_size(self, message, drop_session):
 
@@ -418,7 +408,7 @@ class ItemDropSession(BaseDropSession):
             ),
         )
 
-        if self.customer_has_store_preferences(drop_session.customer):
+        if drop_session.customer.has_store_preferences(store=self.store):
             drop_session.state = SessionState.COMPLETED
             drop_session.save()
             self.messenger.log_and_send_message(
@@ -507,7 +497,6 @@ class ItemDropSession(BaseDropSession):
                 customer, message.source, ChatStrings.COUNTRY_RESTRICTED
             )
             new_drop_session.state = SessionState.CUSTOMER_DOES_NOT_MEET_RESTRICTIONS
-
         else:
             customer_payments_address = self.payments.get_payments_address(message.source)
             if customer_payments_address is None:
@@ -532,7 +521,6 @@ class ItemDropSession(BaseDropSession):
                         customer, message.source, ChatStrings.OUT_OF_STOCK
                     )
                     new_drop_session.state = SessionState.OUT_OF_STOCK
-
                 else:
                     message_to_send += "\n\n"+ChatStrings.get_options(available_options, capitalize=True)
 
