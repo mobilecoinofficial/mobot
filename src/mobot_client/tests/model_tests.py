@@ -37,6 +37,7 @@ class ModelTests(TestCase):
         for sku in skus.values():
             self.assertEqual(sku.number_available(), 10)
 
+        self.assertEqual(item.available_skus().count(), 3)
         self.assertEqual(item.drops.count(), 1)
 
         print("Creating sessions...")
@@ -70,6 +71,7 @@ class ModelTests(TestCase):
 
         new_sessions = list(DropSessionFactory.create_batch(size=7, drop=drop))
         sku_to_sell_out = list(skus.values())[0]
+        order = None
         for session in new_sessions:
             order = Order.objects.create(
                 customer=session.customer,
@@ -79,8 +81,16 @@ class ModelTests(TestCase):
             )
             print(f"Order confirmed. Inventory remaining for sku: {sku_to_sell_out.number_available()}")
 
+        self.assertEqual(item.available_skus().count(), 2)
+
         print(f"Asserting {sku_to_sell_out} no longer in stock...")
         self.assertFalse(sku_to_sell_out.in_stock())
+        print(f"Testing to see if cancelling an order puts item back in stock")
+        order.status = OrderStatus.CANCELLED
+        order.save()
+        self.assertTrue(sku_to_sell_out.in_stock())
+        print(f"Cancelled orders are available!")
+
 
     def test_airdrop_inventory(self):
         drop = DropFactory.create(drop_type=DropType.AIRDROP)

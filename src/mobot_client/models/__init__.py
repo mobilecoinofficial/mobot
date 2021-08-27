@@ -46,7 +46,7 @@ class Item(models.Model):
         return mc.pmob2mob(self.price_in_pmob)
 
     def available_skus(self) -> models.QuerySet:
-        return self.skus.filter(available__gt=0)
+        return self.skus
 
     def __str__(self):
         return f"{self.name}"
@@ -56,8 +56,7 @@ class AvailableSkuManager(models.Manager):
     def get_queryset(self) -> models.QuerySet:
         return super().get_queryset().annotate(
             number_ordered=models.Count('orders'),
-            available=F('quantity') - models.Count('orders')
-        )
+            available=F('quantity') - models.Count('orders')).filter(available__gt=0)
 
 
 class Sku(models.Model):
