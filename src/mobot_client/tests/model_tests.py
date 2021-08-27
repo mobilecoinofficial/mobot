@@ -153,10 +153,13 @@ class ModelTests(TestCase):
         print("Making 5 completed sessions...")
         print(f"Made sessions {list(DropSessionFactory.create_batch(size=5, customer=customer, state=SessionState.COMPLETED))}")
         print("Making 1 errored session...")
-        print(f"Made session {DropSessionFactory.create(customer=customer, state=SessionState.OUT_OF_STOCK)}")
+        errored_session = DropSessionFactory.create(customer=customer, state=SessionState.OUT_OF_STOCK)
+        print(f"Made session {errored_session} with OUT OF STOCK error")
         self.assertEqual(customer.errored_sessions().count(), 1)
         self.assertEqual(customer.completed_drop_sessions().count(), 6)
         self.assertEqual(customer.successful_sessions().count(), 5)
+        self.assertEqual(customer.errored_sessions().first().drop.pk, errored_session.drop.pk)
+        self.assertTrue(customer.has_completed_drop_with_error(errored_session.drop))
 
     def test_find_active_drop(self):
         print("Creating 10 inactive drops")
