@@ -14,6 +14,7 @@ from mobot_client.logger import SignalMessenger
 from mobot_client.models import (
     Customer,
     DropSession,
+    Drop,
     CustomerStorePreferences,
     BonusCoin,
     ChatbotSettings,
@@ -151,8 +152,8 @@ class MOBot:
 
         @self.signal.chat_handler("coins")
         def chat_router_coins(message, match):
-            active_drop = BaseDropSession.get_active_drop()
-            if active_drop is None:
+            active_drop = Drop.objects.get_active_drop()
+            if not active_drop:
                 return "No active drop to check on coins"
             
             bonus_coins = BonusCoin.objects.filter(drop=active_drop)
@@ -169,7 +170,7 @@ class MOBot:
 
         @self.signal.chat_handler("items")
         def chat_router_items(message, match):
-            active_drop = BaseDropSession.get_active_drop()
+            active_drop = Drop.objects.get_active_drop()
             if active_drop is None:
                 return "No active drop to check on items"
 
@@ -187,11 +188,14 @@ class MOBot:
             customer, _is_new = Customer.objects.get_or_create(
                 phone_number=message.source["number"]
             )
-            store_preferences, _is_new = CustomerStorePreferences.objects.get_or_create(
-                customer=customer, store=self.store
-            )
+            if not customer.has_store_preferences(self.store):
+                store_preferences = CustomerStorePreferences.objects.create(
+                    customer=customer, store=self.store
+                )
+            else:
+                store_preferences = customer.store_preferences(store=self.store)
 
-            if not store_preferences.allows_contact:
+            if not customer.customer_store.allows_contact:
                 self.messenger.log_and_send_message(
                     customer, message.source, ChatStrings.NOTIFICATIONS_OFF
                 )
@@ -303,7 +307,7 @@ class MOBot:
                 return
 
             # is there no drop going or to advertise?
-            active_drop = BaseDropSession.get_active_drop()
+            active_drop = Drop.objects.get_active_drop()
             if active_drop is None:
                 self.messenger.log_and_send_message(
                     customer, message.source, ChatStrings.STORE_CLOSED_SHORT

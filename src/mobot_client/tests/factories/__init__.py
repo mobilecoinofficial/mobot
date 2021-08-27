@@ -53,8 +53,8 @@ class DropFactory(factory.django.DjangoModelFactory):
     id = factory.Sequence(lambda n: n)
     pre_drop_description = factory.Sequence(lambda n: f"Item drop {n}")
     advertisment_start_time = fake.date_time_between(start_date='-2d', end_date='+10d', tzinfo=pytz.utc)
-    start_time = fake.date_time_between(start_date='now', end_date='+10d', tzinfo=pytz.utc)
-    end_time = fake.date_time_between(start_date='+5d', end_date='+10d', tzinfo=pytz.utc)
+    start_time = fake.date_time_between(start_date='-2d', end_date='-1d', tzinfo=pytz.utc)
+    end_time = fake.date_time_between(start_date='now', end_date='+1d', tzinfo=pytz.utc)
     number_restriction = factory.Iterator(['+44', '+1'])
     timezone = 'PST'
     initial_coin_amount_pmob = 4 * 1e12
@@ -70,7 +70,9 @@ class DropFactory(factory.django.DjangoModelFactory):
             return self.item.pk
 
 
-
+class OldDropFactory(DropFactory):
+    end_time = fake.date_time_between(start_date='-4d', end_date='-1d', tzinfo=pytz.UTC)
+    advertisment_start_time = fake.date_time_between(start_date='-15d', end_date='-1d', tzinfo=pytz.UTC)
 
 
 class ItemFactory(factory.django.DjangoModelFactory):
@@ -132,14 +134,11 @@ class DropSessionFactory(factory.django.DjangoModelFactory):
         model = DropSession
 
     customer = factory.SubFactory(CustomerFactory)
+    drop = factory.SubFactory(DropFactory)
 
-    @factory.lazy_attribute
-    def drop_id(self):
-        return self.drop.pk
 
-    @factory.lazy_attribute
-    def customer_id(self):
-        return self.customer.pk
+class OldDropSessionFactory(DropSessionFactory):
+    drop = factory.SubFactory(OldDropFactory)
 
 
 class OrderFactory(factory.django.DjangoModelFactory):

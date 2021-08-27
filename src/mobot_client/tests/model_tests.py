@@ -102,5 +102,49 @@ class ModelTests(TestCase):
         print("Making many sessions, clearing out inventory")
         more_sessions = DropSessionFactory.create_batch(size=100, drop=drop)
 
+    def test_active_drop_sessions_found_for_customer(self):
+        customer = CustomerFactory.create()
+        new_session = DropSessionFactory.create(customer=customer)
+        old_session = OldDropSessionFactory.create(customer=customer, state=SessionState.ALLOW_CONTACT_REQUESTED)
 
+        self.assertTrue(new_session.drop.is_active())
+        self.assertFalse(old_session.drop.is_active())
 
+        print(DropSession.active_sessions)
+
+        actives = customer.active_drop_sessions()
+
+        self.assertEqual(actives.count(), 1)
+        print("Making sure we get the right drop session...")
+        self.assertEqual(actives.first().pk, new_session.pk)
+        print("Ending drop, making sure customer no longer sees it...")
+
+        new_session.drop.end_time = timezone.now() - timedelta(days=3) # Sets the active drop to an end time before now
+        new_session.drop.save()
+
+        self.assertFalse(new_session.drop.is_active())
+        self.assertEqual(customer.active_drop_sessions().count(), 0)
+
+    def test_customer_has_completed_drop(self):
+        session = DropSessionFactory.create()
+        customer = session.customer
+        self.assertFalse(customer.has_completed_drop(session.drop))
+        session.state = SessionState.COMPLETED
+        session.save()
+        self.assertTrue(customer.has_completed_drop(session.drop))
+
+    def test_find_active_drop(self):
+        print("Creating 10 inactive drops")
+        inactive_drops = OldDropFactory.create_batch(size=10)
+        active_drop = DropFactory.create()
+        self.assertEqual(Drop.objects.count(), 11)
+        # Assert that there's only one active drop
+        self.assertEqual(Drop.objects.active_drops().count(), 1)
+        self.assertEqual(Drop.objects.get_active_drop().pk, active_drop.pk)
+
+    def test_customer_store_preferences_found(self):
+        store = StoreFactory.create()
+        customer = CustomerFactory.create()
+        self.assertFalse(customer.has_store_preferences(store))
+        prefs = CustomerStorePreferences.objects.create(store=store, customer=customer, allows_contact=True)
+        self.assertTrue(customer.has_store_preferences(store))
