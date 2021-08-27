@@ -1,16 +1,9 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 from typing import List, Dict
 from collections import defaultdict
-import unittest
-
 from django.test import TestCase
 import factory.random
 from mobot_client.tests.factories import *
-
-from django.db import transaction
-import random
-
-factory.random.reseed_random('mobot cleanup')
 
 from mobot_client.models import (Drop,
                                  DropSession,
@@ -18,12 +11,14 @@ from mobot_client.models import (Drop,
                                  DropType,
                                  BonusCoin,
                                  Order,
-                                 OrderStatus, OutOfStockException)
+                                 OrderStatus,
+                                 OutOfStockException)
 from mobot_client.models.states import SessionState
+
+factory.random.reseed_random('mobot cleanup')
 
 
 class ModelTests(TestCase):
-
 
     def test_items_available(self):
         store = StoreFactory.create()
@@ -88,7 +83,6 @@ class ModelTests(TestCase):
         self.assertTrue(sku_to_sell_out.in_stock())
         print(f"Cancelled orders are available!")
 
-
     def test_airdrop_inventory(self):
         drop = DropFactory.create(drop_type=DropType.AIRDROP)
         print("Minting 3 BonusCoins")
@@ -123,7 +117,6 @@ class ModelTests(TestCase):
         self.assertEqual(coins_claimed, coins_available)
         print(f"{coins_claimed} coins claimed by remaining sessions")
 
-
     def test_active_drop_sessions_found_for_customer(self):
         customer = CustomerFactory.create()
         new_session = DropSessionFactory.create(customer=customer)
@@ -141,7 +134,7 @@ class ModelTests(TestCase):
         self.assertEqual(actives.first().pk, new_session.pk)
         print("Ending drop, making sure customer no longer sees it...")
 
-        new_session.drop.end_time = timezone.now() - timedelta(days=3) # Sets the active drop to an end time before now
+        new_session.drop.end_time = timezone.now() - timedelta(days=3)  # Sets the active drop to an end time before now
         new_session.drop.save()
 
         self.assertFalse(new_session.drop.is_active())
@@ -158,7 +151,8 @@ class ModelTests(TestCase):
     def test_find_completed_and_errored_drops(self):
         customer = CustomerFactory.create()
         print("Making 5 completed sessions...")
-        print(f"Made sessions {list(DropSessionFactory.create_batch(size=5, customer=customer, state=SessionState.COMPLETED))}")
+        print(
+            f"Made sessions {list(DropSessionFactory.create_batch(size=5, customer=customer, state=SessionState.COMPLETED))}")
         print("Making 1 errored session...")
         errored_session = DropSessionFactory.create(customer=customer, state=SessionState.OUT_OF_STOCK)
         print(f"Made session {errored_session} with OUT OF STOCK error")
