@@ -41,23 +41,6 @@ class BaseDropSession:
                 drop.initial_coin_amount_pmob + int(self.payments.get_minimum_fee_pmob())
         )
 
-    @staticmethod
-    def get_active_drop():
-        active_drops = Drop.objects.filter(start_time__lte=timezone.now()).filter(
-            end_time__gte=timezone.now()
-        )
-        return active_drops.first()
-
-    @staticmethod
-    def get_customer_store_preferences(customer, store_to_check):
-        try:
-            customer_store_preferences = CustomerStorePreferences.objects.get(
-                customer=customer, store=store_to_check
-            )
-            return customer_store_preferences
-        except (Exception,):
-            return None
-
     def customer_has_store_preferences(self, customer):
         try:
             _ = CustomerStorePreferences.objects.get(
@@ -67,21 +50,12 @@ class BaseDropSession:
         except (Exception,):
             return False
 
-    @staticmethod
-    def customer_has_completed_airdrop(customer, drop):
-        try:
-            _completed_drop_session = DropSession.objects.get(
-                customer=customer, drop=drop, state=SessionState.COMPLETED
-            )
-            return True
-        except (Exception,):
-            return False
 
     @staticmethod
     def customer_has_completed_airdrop_with_error(customer, drop):
         try:
             _completed_drop_session = DropSession.objects.get(
-                customer=customer, drop=drop, state=SessionState.OUT_OF_MOB.value
+                customer=customer, drop=drop, state=SessionState.OUT_OF_STOCK
             )
             return True
         except (Exception,):
@@ -99,7 +73,7 @@ class BaseDropSession:
 
     def handle_drop_session_allow_contact_requested(self, message, drop_session):
         if message.text.lower() in ("y", "yes"):
-            customer_prefs = CustomerStorePreferences.objects.create(
+            CustomerStorePreferences.objects.create(
                 customer=drop_session.customer, store=self.store, allows_contact=True
             )
             drop_session.state = SessionState.COMPLETED

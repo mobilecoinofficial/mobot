@@ -26,7 +26,7 @@ class AirDropSession(BaseDropSession):
                 ChatStrings.AIRDROP_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
             )
             self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
-            drop_session.state = SessionState.OUT_OF_MOB.value
+            drop_session.state = SessionState.OUT_OF_MOB
             drop_session.save()
             return
 
@@ -47,7 +47,7 @@ class AirDropSession(BaseDropSession):
                 ChatStrings.BONUS_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
             )
             self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
-            drop_session.state = SessionState.OUT_OF_MOB.value
+            drop_session.state = SessionState.OUT_OF_MOB
             drop_session.save()
             return
 
@@ -79,7 +79,7 @@ class AirDropSession(BaseDropSession):
             ChatStrings.AIRDROP_COMPLETED
         )
 
-        if self.customer_has_store_preferences(customer):
+        if customer.has_store_preferences(store=self.store):
             self.messenger.log_and_send_message(
                 customer, source, ChatStrings.BYE
             )
@@ -151,7 +151,7 @@ class AirDropSession(BaseDropSession):
             return
 
     def handle_no_active_airdrop_drop_session(self, customer, message, drop):
-        if self.customer_has_completed_airdrop(customer, drop):
+        if customer.has_completed_drop(drop):
             self.messenger.log_and_send_message(
                 customer,
                 message.source,
