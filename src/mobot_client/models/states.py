@@ -19,7 +19,6 @@ class SessionState(models.IntegerChoices):
     COMPLETED = 7
     CUSTOMER_DOES_NOT_MEET_RESTRICTIONS = 8  # Complete the session because
 
-
     @staticmethod
     def active_states():
         return {

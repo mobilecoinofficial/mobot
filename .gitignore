@@ -21,6 +21,7 @@ parts/
 sdist/
 var/
 wheels/
+**/migrations/
 pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
@@ -137,5 +138,5 @@ dmypy.json
 .stage.dns.json
 .prod.dns.json
 
-.idea/
 manage.py
+src/migrations/**
