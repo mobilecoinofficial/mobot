@@ -11,12 +11,8 @@ from django.db import transaction
 
 from mobot_client.models.states import SessionState
 from mobot_client.models.phone_numbers import PhoneNumberField
-from mobot_client.models.managers import CustomQuerySetManager
-
-
-import mobilecoin as mc
-
 from mobot_client.models.states import SessionState
+import mobilecoin as mc
 
 
 class SessionException(Exception):
