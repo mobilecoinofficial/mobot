@@ -14,10 +14,7 @@ factory.random.reseed_random('mobot cleanup')
 
 from mobot_client.models import (Drop,
                                  DropSession,
-                                 Item,
                                  Sku,
-                                 Customer,
-                                 Store,
                                  DropType,
                                  BonusCoin,
                                  Order,
@@ -37,7 +34,7 @@ class ModelTests(TestCase):
         for sku in skus.values():
             self.assertEqual(sku.number_available(), 10)
 
-        self.assertEqual(item.available_skus().count(), 3)
+        self.assertEqual(item.skus.count(), 3)
         self.assertEqual(item.drops.count(), 1)
 
         print("Creating sessions...")
@@ -81,7 +78,7 @@ class ModelTests(TestCase):
             )
             print(f"Order confirmed. Inventory remaining for sku: {sku_to_sell_out.number_available()}")
 
-        self.assertEqual(item.available_skus().count(), 2)
+        self.assertEqual(item.skus.count(), 2)
 
         print(f"Asserting {sku_to_sell_out} no longer in stock...")
         self.assertFalse(sku_to_sell_out.in_stock())

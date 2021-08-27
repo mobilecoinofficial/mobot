@@ -9,6 +9,7 @@ from django.db.models import F, BooleanField, ExpressionWrapper, Q, Case, When, 
 from django.utils import timezone
 from django.db import transaction
 
+import mobot_client.models
 from mobot_client.models.states import SessionState
 from mobot_client.models.phone_numbers import PhoneNumberField
 from mobot_client.models.states import SessionState
@@ -154,7 +155,7 @@ class Drop(models.Model):
         if self.drop_type == DropType.AIRDROP:
             return self.drop_sessions.count() < self.initial_coin_limit and self.coins_available() > 0
         else:
-            return True
+            return self.item.skus
 
     def is_active(self) -> bool:
         return self.start_time < timezone.now() < self.end_time
@@ -171,7 +172,7 @@ class BonusCoinManager(models.Manager):
             .annotate(remaining=F('number_available_at_start') - F('num_active_sessions'))
 
     @transaction.atomic()
-    def claim_random_coin(self, drop_session) -> Optional['mobot_client.models.BonusCoin']:
+    def claim_random_coin(self, drop_session):
         coins_available = self.get_queryset().select_for_update().filter(drop=drop_session.drop)
         if coins_available.count() > 0:
             coin = random.choice(list(coins_available))
