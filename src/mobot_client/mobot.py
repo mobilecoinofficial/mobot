@@ -156,7 +156,7 @@ class MOBot:
             if not active_drop:
                 return "No active drop to check on coins"
             
-            bonus_coins = BonusCoin.objects.filter(drop=active_drop)
+            bonus_coins = BonusCoin.available.filter(drop=active_drop)
             message_to_send = ""
             for bonus_coin in bonus_coins:
                 number_claimed = DropSession.objects.filter(
