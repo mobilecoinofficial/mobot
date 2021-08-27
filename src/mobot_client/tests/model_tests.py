@@ -104,10 +104,10 @@ class ModelTests(TestCase):
         print("Making 100 sessions, clearing out inventory")
         more_sessions = DropSessionFactory.create_batch(size=25, drop=drop)
         coins_claimed = 0
+
         for num, session in enumerate(more_sessions):
             if coins_claimed < coins_available:
-                avail = sum(map(lambda c: c['number_available_at_start'] - c['num_active_sessions'], list(BonusCoin.available.values('num_active_sessions', 'number_available_at_start'))))
-                self.assertEqual(avail, coins_available - coins_claimed)
+                self.assertEqual(session.drop.coins_available(), coins_available - coins_claimed)
                 coin = BonusCoin.available.claim_random_coin(session)
                 coins_claimed += 1
             else:
@@ -115,8 +115,6 @@ class ModelTests(TestCase):
                     BonusCoin.available.claim_random_coin(session)
         self.assertEqual(coins_claimed, coins_available)
         print(f"{coins_claimed} coins claimed by remaining sessions")
-
-
 
 
     def test_active_drop_sessions_found_for_customer(self):
