@@ -157,7 +157,7 @@ class Drop(models.Model):
 
     def under_quota(self) -> bool:
         if self.drop_type == DropType.AIRDROP:
-            return self.drop_sessions.count() < self.initial_coin_limit
+            return self.drop_sessions.count() < self.initial_coin_limit and self.coins_available() > 0
         else:
             return True
 
@@ -174,9 +174,6 @@ class BonusCoinManager(models.Manager):
             .annotate(num_active_sessions=models.Count('drop_sessions', filter=Q(drop_sessions__state__gt=SessionState.READY))) \
             .filter(num_active_sessions__lt=F('number_available_at_start')) \
             .annotate(remaining=F('number_available_at_start') - F('num_active_sessions'))
-
-    def available_for_drop(self, drop: Drop):
-        return self.get_queryset().values('number_available_at_start', 'num_active_sessions')
 
     @transaction.atomic()
     def claim_random_coin(self, drop_session) -> Optional['mobot_client.models.BonusCoin']:
