@@ -1,9 +1,9 @@
 #  Copyright (c) 2021 MobileCoin. All rights reserved.
 
+from __future__ import annotations
 import random
 from decimal import Decimal
 from typing import Optional
-from __future__ import annotations
 
 
 from django.db import models
