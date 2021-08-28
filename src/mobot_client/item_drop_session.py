@@ -12,7 +12,7 @@ from mobot_client.models import (
     Order,
     Sku,
     CustomerDropRefunds, SessionState, OrderStatus,
-    Item,
+    Item, OutOfStockException,
 )
 from mobot_client.chat_strings import ChatStrings
 
@@ -26,27 +26,15 @@ class ItemDropSession(BaseDropSession):
         
         self.vat_id = os.environ["VAT_ID"]
 
-    @staticmethod
-    def drop_item_has_stock_remaining(drop):
-        # FIXME: Unused
-        skus = Sku.objects.fliter(item=drop.item)
-        for sku in skus:
-            number_ordered = Order.objects.filter(sku=sku).exclude(status=OrderStatus.CANCELLED).count()
-            if number_ordered < sku.quantity:
-                return True
-
-        return False
 
     def handle_item_drop_session_waiting_for_size(self, message, drop_session):
-
         if message.text.lower() == "cancel" or message.text.lower() == 'refund':
             self.handle_cancel_and_refund(message, drop_session, None)
             return
         elif message.text.lower() == "help" or message.text == '?':
-            available_options = self.drop_item_get_available(drop_session.drop.item)
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source,
-                ChatStrings.ITEM_OPTION_HELP + "\n\n" + ChatStrings.get_options(available_options,capitalize=True) 
+                ChatStrings.ITEM_OPTION_HELP + "\n\n" + ChatStrings.get_options(drop_session.drop.item.skus, capitalize=True)
             )
             return
 
@@ -58,8 +46,7 @@ class ItemDropSession(BaseDropSession):
                 ChatStrings.PRIVACY_POLICY.format(url=privacy_policy_url),
             )
 
-            available_options = self.drop_item_get_available(drop_session.drop.item)
-            message_to_send = "\n\n" + ChatStrings.get_options(available_options, capitalize=True)
+            message_to_send = "\n\n" + ChatStrings.get_options(drop_session.drop.item.skus, capitalize=True)
             message_to_send += "\n\n" + ChatStrings.ITEM_WHAT_SIZE_OR_CANCEL
 
             self.messenger.log_and_send_message(
@@ -104,50 +91,38 @@ class ItemDropSession(BaseDropSession):
                 message_to_send
             )
             return
+        else:
+            try:
+                sku: Sku = drop_session.drop.item.skus.get(identifier__iexact=message.text)
+            except (Sku.DoesNotExist,):
+                message_to_send = f"{message.text} is not an available size"
+                available_options = drop_session.drop.item.skus
+                message_to_send += "\n\n" + ChatStrings.get_options(available_options, capitalize=True)
+                message_to_send += "\n\n" + ChatStrings.ITEM_WHAT_SIZE_OR_CANCEL
 
-        try:
-            sku = Sku.objects.get(
-                item=drop_session.drop.item, identifier__iexact=message.text
-            )
-        except (Exception,):
-            message_to_send = f"{message.text} is not an available size"
-            available_options = self.drop_item_get_available(drop_session.drop.item)
-            message_to_send += "\n\n" + ChatStrings.get_options(available_options, capitalize=True)
-            message_to_send += "\n\n" + ChatStrings.ITEM_WHAT_SIZE_OR_CANCEL
+                self.messenger.log_and_send_message(
+                    drop_session.customer,
+                    message.source,
+                    message_to_send
+                )
+            else:
+                try:
+                    # Atomically order the item
+                    order = sku.order(drop_session)
+                    print(f"Successfully created order: {order}")
+                except OutOfStockException:
+                    message_to_send = ChatStrings.ITEM_SOLD_OUT
+                    available_options = drop_session.drop.item.skus
+                    message_to_send += "\n\n" + ChatStrings.get_options(available_options, capitalize=True)
+                    message_to_send += "\n\n" + ChatStrings.ITEM_WHAT_SIZE
+                    self.messenger.log_and_send_message(drop_session.customer, message.source, message_to_send)
+                else:
+                    drop_session.state = SessionState.WAITING_FOR_NAME
+                    drop_session.save()
 
-            self.messenger.log_and_send_message(
-                drop_session.customer,
-                message.source,
-                message_to_send
-            )
-            return
-
-        number_ordered = Order.objects.filter(sku=sku).exclude(status=OrderStatus.CANCELLED).count()
-        if number_ordered >= sku.quantity:
-            message_to_send = ChatStrings.ITEM_SOLD_OUT
-            available_options = self.drop_item_get_available(drop_session.drop.item)
-            message_to_send += "\n\n" + ChatStrings.get_options(available_options, capitalize=True)
-            message_to_send += "\n\n" + ChatStrings.ITEM_WHAT_SIZE
-            self.messenger.log_and_send_message(
-                drop_session.customer, message.source, message_to_send
-            )
-
-            return
-
-        new_order = Order(
-            customer=drop_session.customer,
-            drop_session=drop_session,
-            sku=sku,
-            conversion_rate_mob_to_currency=drop_session.drop.conversion_rate_mob_to_currency
-        )
-        new_order.save()
-
-        drop_session.state = SessionState.WAITING_FOR_NAME
-        drop_session.save()
-
-        self.messenger.log_and_send_message(
-            drop_session.customer, message.source, ChatStrings.NAME_REQUEST
-        )
+                    self.messenger.log_and_send_message(
+                        drop_session.customer, message.source, ChatStrings.NAME_REQUEST
+                    )
 
     def handle_item_drop_session_waiting_for_payment(self, message, drop_session):
         price_in_mob = mc.pmob2mob(drop_session.drop.item.price_in_pmob)
