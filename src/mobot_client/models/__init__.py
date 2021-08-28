@@ -3,6 +3,8 @@
 import random
 from decimal import Decimal
 from typing import Optional
+from __future__ import annotations
+
 
 from django.db import models
 from django.db.models import F, BooleanField, ExpressionWrapper, Q, Case, When, Value
@@ -46,9 +48,6 @@ class Item(models.Model):
     def price_in_mob(self) -> Decimal:
         return mc.pmob2mob(self.price_in_pmob)
 
-    def available_skus(self) -> models.QuerySet:
-        return self.skus
-
     def __str__(self):
         return f"{self.name}"
 
@@ -81,6 +80,17 @@ class Sku(models.Model):
 
     def in_stock(self) -> bool:
         return self.number_available() > 0
+
+    @transaction.atomic()
+    def order(self, drop_session: DropSession) -> Order:
+        # Need to check whether this is in-stock again, just in case!
+        if self.in_stock():
+            return Order.objects.create(customer=drop_session.customer,
+                                        drop_session=drop_session,
+                                        sku=self,
+                                        conversion_rate_mob_to_currency=drop_session.drop.conversion_rate_mob_to_currency)
+        else:
+            raise OutOfStockException(f"Unable to complete order; Item {self.identifier} out of stock!")
 
 
 class DropType(models.IntegerChoices):
@@ -340,7 +350,7 @@ class Order(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     shipping_address = models.TextField(default=None, blank=True, null=True)
     shipping_name = models.TextField(default=None, blank=True, null=True)
-    status = models.IntegerField(default=0, choices=OrderStatus.choices, db_index=True)
+    status = models.IntegerField(default=OrderStatus.STARTED, choices=OrderStatus.choices, db_index=True)
     conversion_rate_mob_to_currency = models.FloatField(default=0.0)
 
     active_orders = OrdersManager(None, True)
