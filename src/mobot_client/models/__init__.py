@@ -89,6 +89,7 @@ class Sku(models.Model):
                                         drop_session=drop_session,
                                         sku=self,
                                         conversion_rate_mob_to_currency=drop_session.drop.conversion_rate_mob_to_currency)
+            self.save()
         else:
             raise OutOfStockException(f"Unable to complete order; Item {self.identifier} out of stock!")
 
@@ -358,6 +359,10 @@ class Order(models.Model):
 
     class Meta:
         base_manager_name = 'active_orders'
+
+    def cancel(self):
+        self.status = OrderStatus.CANCELLED
+        self.save()
 
 
 # ------------------------------------------------------------------------------------------

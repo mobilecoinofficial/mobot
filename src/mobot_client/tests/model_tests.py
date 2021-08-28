@@ -42,21 +42,15 @@ class ModelTests(TestCase):
 
         for count, drop_session in enumerate(drop_sessions):
             print(f"Creating order for drop session {drop_session.pk}")
-            order = Order.objects.create(
-                customer=drop_session.customer,
-                drop_session=drop_session,
-                sku=list(skus.values())[count % 3],
-                status=OrderStatus.CONFIRMED,
-            )
+            sku = list(skus.values())[count % 3]
+            order = sku.order(drop_session)
             orders[sku.identifier].append(order)
 
         for sku in skus.values():
             self.assertEqual(sku.number_available(), (sku.quantity - sku.orders.count()))
             print("Cancelling an order to see if it affects sku availability")
             num_available_before_cancellation = sku.number_available()
-            first_order = sku.orders.first()
-            first_order.status = OrderStatus.CANCELLED
-            first_order.save()
+            sku.orders.first().cancel()
             print(f"Order for sku {sku.identifier} cancelled by customer {order.customer}")
             self.assertEqual(sku.number_available(), num_available_before_cancellation + 1)
 
@@ -66,12 +60,7 @@ class ModelTests(TestCase):
         sku_to_sell_out = list(skus.values())[0]
         order = None
         for session in new_sessions:
-            order = Order.objects.create(
-                customer=session.customer,
-                drop_session=session,
-                sku=sku_to_sell_out,
-                status=OrderStatus.CONFIRMED,
-            )
+            order = sku_to_sell_out.order(session)
             print(f"Order confirmed. Inventory remaining for sku: {sku_to_sell_out.number_available()}")
 
         self.assertEqual(item.skus.count(), 2)
@@ -79,8 +68,7 @@ class ModelTests(TestCase):
         print(f"Asserting {sku_to_sell_out} no longer in stock...")
         self.assertFalse(sku_to_sell_out.in_stock())
         print(f"Testing to see if cancelling an order puts item back in stock")
-        order.status = OrderStatus.CANCELLED
-        order.save()
+        order.cancel()
         self.assertTrue(sku_to_sell_out.in_stock())
         print(f"Cancelled orders are available!")
 
