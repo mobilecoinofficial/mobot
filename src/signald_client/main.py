@@ -8,6 +8,8 @@ import random
 import re
 from signald import Signal as _Signal
 
+from mobot_client.log_utils import getConsoleLogger
+
 # We'll need to know the compiled RE object later.
 RE_TYPE = type(re.compile(""))
 
@@ -15,15 +17,22 @@ RE_TYPE = type(re.compile(""))
 class Signal(_Signal):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.logger = getConsoleLogger("SignalListener")
         self._chat_handlers = []
         self._payment_handlers = []
 
     def register_handler(self, regex, func, order=100):
-        print(f"\033[1;31m Registering chat handler for {regex}\033[0m")
+        self.logger.info(f"\033[1;31m Registering chat handler for {regex if regex else 'default'}\033[0m")
         if not isinstance(regex, RE_TYPE):
             regex = re.compile(regex, re.I)
 
-        self._chat_handlers.append((order, regex, func))
+        def isolated_handler(message, match):
+            try:
+                func(message, match)
+            except Exception as e:
+                self.logger.exception(f"Chat exception from message {message}!")
+
+        self._chat_handlers.append((order, regex, isolated_handler))
         # Use only the first value to sort so that declaration order doesn't change.
         self._chat_handlers.sort(key=lambda x: x[0])
 

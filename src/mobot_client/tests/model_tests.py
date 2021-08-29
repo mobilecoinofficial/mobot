@@ -75,7 +75,9 @@ class ModelTests(TestCase):
     def test_airdrop_inventory(self):
         drop = DropFactory.create(drop_type=DropType.AIRDROP)
         print("Minting 3 BonusCoins")
-        coins = BonusCoinFactory.create_batch(size=3, drop=drop)
+        coins = BonusCoinFactory.create_batch(size=3, drop=drop, number_available_at_start=10)
+        # Make sure we don't give out initial coins when there are no bonuses left
+        self.assertEqual(drop.initial_coin_limit, 30)
         sessions_by_coin: Dict[BonusCoin, List[DropSession]] = defaultdict(list)
         sessions = DropSessionFactory.create_batch(size=10, drop=drop)
         self.assertTrue(drop.under_quota())
@@ -103,6 +105,7 @@ class ModelTests(TestCase):
                 self.assertTrue(session.drop.under_quota())
                 self.assertEqual(session.drop.coins_available(), coins_available - coins_claimed)
                 coin = BonusCoin.available.claim_random_coin(session)
+                print(f"Coin {coin} claimed!")
                 coins_claimed += 1
                 sessions_with_coins.append(session)
             else:

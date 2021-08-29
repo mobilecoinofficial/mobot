@@ -2,9 +2,15 @@
 
 import logging
 
+from django.conf import settings
+
+
 def getConsoleLogger(name: str):
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+    if settings.DEBUG:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
     # create console handler with a higher log level
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
