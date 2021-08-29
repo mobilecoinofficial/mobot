@@ -124,7 +124,7 @@ class DropManager(models.Manager.from_queryset(DropQuerySet)):
     def active_drops(self) -> DropQuerySet:
         return self.get_queryset().active_drops()
 
-    def get_active_drop(self) -> Optional['mobot_client.models.Drop']:
+    def get_active_drop(self) -> Optional[Drop]:
         return self.active_drops().first()
 
 
