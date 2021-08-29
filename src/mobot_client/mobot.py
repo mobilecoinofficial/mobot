@@ -90,7 +90,7 @@ class MOBot:
         resp = self.signal.set_profile(
             bot_name, b64_public_address, bot_avatar_filename, True
         )
-        print("set profile response", resp)
+        self.logger.info("set profile response", resp)
         if resp.get("error"):
             assert False, resp
 
@@ -99,7 +99,23 @@ class MOBot:
         self.signal.register_handler("items", self.chat_router_items)
         self.signal.register_handler("unsubscribe", self.unsubscribe_handler)
         self.signal.register_handler("subscribe", self.subscribe_handler)
-        self.signal.register_handler("", self.chat_router)
+        self.signal.register_handler("", self.default_handler)
+
+    def register_handler(self, regex, func):
+        def isolated_handler(message, match):
+            try:
+                func(message, match)
+            except Exception as e:
+                self.logger.exception(f"Chat exception from message {message}!")
+        self.signal.register_handler(regex, isolated_handler)
+
+    def register_payment_handler(self, regex, func):
+        def isolated_handler(message, match):
+            try:
+                func(message, match)
+            except Exception as e:
+                self.logger.exception(f"Chat exception from message {message}!")
+        self.signal.register_handler(regex, isolated_handler)
 
     def maybe_advertise_drop(self, customer):
         self.logger.info("Checking for advertising drop")
@@ -123,6 +139,7 @@ class MOBot:
                 )
 
     def handle_unsolicited_payment(self, customer: Customer, amount_paid_mob: Decimal):
+        self.logger.warning("Could not find drop session for customer; Payment unsolicited!")
         self.messenger.log_and_send_message(
             customer, str(customer.phone_number), ChatStrings.UNSOLICITED_PAYMENT
         )
@@ -130,14 +147,14 @@ class MOBot:
 
     # Chat handlers defined in __init__ so they can be registered with the Signal instance
     def handle_payment(self, source, receipt):
-        print(f"Received payment from {source}")
+        self.logger.info(f"Received payment from {source}")
         receipt_status = None
         transaction_status = "TransactionPending"
 
         if isinstance(source, dict):
             source = source["number"]
 
-        print("received receipt", receipt)
+        self.logger.info("received receipt", receipt)
         receipt = mc.utility.b64_receipt_to_full_service_receipt(receipt.receipt)
 
         while transaction_status == "TransactionPending":
@@ -145,10 +162,10 @@ class MOBot:
                 self.public_address, receipt
             )
             transaction_status = receipt_status["receipt_transaction_status"]
-            print("Waiting for", receipt, receipt_status)
+            self.logger.info(f"Waiting for {receipt}, current status {receipt_status}")
 
         if transaction_status != "TransactionSuccess":
-            print("failed", transaction_status)
+            self.logger.error(f"failed {transaction_status}")
             return "The transaction failed!"
 
         amount_paid_mob = mc.pmob2mob(receipt_status["txo"]["value_pmob"])
@@ -156,7 +173,7 @@ class MOBot:
         drop_session = customer.active_drop_sessions().filter(state=SessionState.WAITING_FOR_PAYMENT).first()
 
         if drop_session:
-            print(f"Found drop session {drop_session}")
+            self.logger.info(f"Found drop session {drop_session}")
             if drop_session.drop.drop_type == DropType.AIRDROP:
                 air_drop = AirDropSession(self.store, self.payments, self.messenger)
                 air_drop.handle_airdrop_payment(
@@ -165,7 +182,6 @@ class MOBot:
             elif drop_session.drop.drop_type == DropType.ITEM:
                 self.payments.handle_item_payment(source, customer, amount_paid_mob, drop_session)
         else:
-            print("Could not find drop session for customer")
             self.handle_unsolicited_payment(customer, amount_paid_mob)
 
     def chat_router_coins(self, message, match):
@@ -258,12 +274,13 @@ class MOBot:
                 customer, message, active_drop
             )
 
-    def chat_router(self, message, match):
+    def default_handler(self, message, match):
         # Store the message
-        print("\033[1;33m NOW ROUTING CHAT\033[0m", message)
+        self.logger.info(f"\033[1;33m NOW ROUTING CHAT\033[0m {message}")
         customer, _ = Customer.objects.get_or_create(
             phone_number=message.source["number"]
         )
+        
         self.messenger.log_received(message, customer, self.store)
         # see if there is an active airdrop session
         active_drop_session: DropSession = customer.active_drop_sessions().first()
@@ -274,7 +291,7 @@ class MOBot:
             self.logger.info(f"Searching for active drops...")
             active_drop = Drop.objects.get_active_drop()
             if active_drop:
-                self.logger.info(f"Active drop found!")
+                self.logger.info(f"Active drop found: {active_drop}")
                 self.handle_new_drop_session(customer, message, active_drop)
             else:
                 self.logger.warning(f"No active drops; Sending Store Closed message to customer {customer}")
@@ -295,17 +312,17 @@ class MOBot:
                     )
                 elif active_drop_session.drop.drop_type == DropType.ITEM:
                     # there *is* an active item drop session.
-                    print(f"found active drop session in state {active_drop_session.state}")
+                    self.logger.info(f"found active drop session in state {active_drop_session.state}")
                     # dispatch to active_item_drop session handler
                     item_drop = ItemDropSession(self.store, self.payments, self.messenger)
                     item_drop.handle_active_item_drop_session(message, active_drop_session)
 
 
     def run_chat(self):
-        # print("Starting timeouts thread")
+        # self.logger.info("Starting timeouts thread")
         # t = threading.Thread(target=self.timeouts.process_timeouts, args=(), kwargs={})
         # t.setDaemon(True)
         # t.start()
 
-        print("Now running MOBot chat")
+        self.logger.info("Now running MOBot chat")
         self.signal.run_chat(True)

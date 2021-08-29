@@ -58,7 +58,6 @@ class DropFactory(factory.django.DjangoModelFactory):
     number_restriction = factory.Iterator(['+44', '+1'])
     timezone = 'PST'
     initial_coin_amount_pmob = 4 * 1e12
-    initial_coin_limit = 2 * 1e12
 
     @factory.lazy_attribute
     def store_id(self):

@@ -5,16 +5,18 @@ import random
 from decimal import Decimal
 from typing import Optional
 
-
 from django.db import models
 from django.db.models import F, BooleanField, ExpressionWrapper, Q, Case, When, Value
 from django.utils import timezone
+from django.utils.functional import cached_property
 from django.db import transaction
+from django.conf import settings
 from phonenumber_field.modelfields import PhoneNumberField
 
 from mobot_client.models.states import SessionState
 from mobot_client.models.phone_numbers import PhoneNumberField, PhoneNumberWithRFC3966
 from mobot_client.models.states import SessionState
+from mobot_client.log_utils import getConsoleLogger
 import mobilecoin as mc
 
 
@@ -118,6 +120,7 @@ class DropQuerySet(models.QuerySet):
 
 
 class DropManager(models.Manager.from_queryset(DropQuerySet)):
+    logger = getConsoleLogger("DropLogger")
 
     def advertising_drops(self) -> DropQuerySet:
         return self.get_queryset().advertising_drops()
@@ -143,7 +146,6 @@ class Drop(models.Model):
     number_restriction = models.CharField(default="+44", max_length=4)
     timezone = models.TextField(default="UTC")
     initial_coin_amount_pmob = models.PositiveIntegerField(default=0)
-    initial_coin_limit = models.PositiveIntegerField(default=0)
     conversion_rate_mob_to_currency = models.FloatField(default=1.0)
     currency_symbol = models.TextField(default="$")
     country_code_restriction = models.TextField(default="GB")
@@ -168,15 +170,21 @@ class Drop(models.Model):
     def value_in_currency(self, amount: Decimal) -> Decimal:
         return amount * Decimal(self.conversion_rate_mob_to_currency)
 
+    @cached_property
+    def initial_coin_limit(self) -> int:
+        return sum(map(lambda coin: coin.number_available_at_start, self.bonus_coins.all()))
+
     def coins_available(self) -> int:
         if self.drop_type == DropType.AIRDROP:
             return sum(map(lambda c: c['remaining'], self.bonus_coins(manager='available').values('remaining')))
 
     def under_quota(self) -> bool:
         if self.drop_type == DropType.AIRDROP:
-            print("Checking if there are coins available to give out...")
+            DropManager.logger.debug("Checking if there are coins available to give out...")
             active_drop_sessions_count = self.drop_sessions(manager='initial_coin_sent_sessions').count()
-            print(f"There are {active_drop_sessions_count} sessions on this airdrop with an initial limit of {self.initial_coin_limit}")
+            if settings.DEBUG:
+                DropManager.logger.debug(
+                f"There are {active_drop_sessions_count} sessions on this airdrop with an initial limit of {self.initial_coin_limit}")
             return active_drop_sessions_count < self.initial_coin_limit and self.coins_available() > 0
         else:
             return len(self.item.skus) > 0
@@ -190,8 +198,9 @@ class Drop(models.Model):
 
 class BonusCoinManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset()\
-            .annotate(num_active_sessions=models.Count('drop_sessions', filter=Q(drop_sessions__state__gt=SessionState.READY))) \
+        return super().get_queryset() \
+            .annotate(
+            num_active_sessions=models.Count('drop_sessions', filter=Q(drop_sessions__state__gt=SessionState.READY))) \
             .filter(num_active_sessions__lt=F('number_available_at_start')) \
             .annotate(remaining=F('number_available_at_start') - F('num_active_sessions'))
 
@@ -215,17 +224,17 @@ class BonusCoin(models.Model):
     amount_pmob = models.PositiveIntegerField(default=0)
     number_available_at_start = models.PositiveIntegerField(default=0)
 
-    ## Manager that annotates available coins
+    # Manager that annotates available coins
     available = BonusCoinManager()
 
     class Meta:
         base_manager_name = 'available'
 
     def __str__(self):
-        return f"BonusCoin {self.pk} ({self.amount_pmob} PMOB)"
+        return f"BonusCoin ({self.amount_pmob} PMOB)"
 
     def number_remaining(self) -> int:
-        return self.number_available_at_start - self.drop_sessions(manager='active_sessions').count()
+        return self.number_available_at_start - self.drop_sessions.count()
 
     def number_claimed(self) -> int:
         return self.number_available_at_start - self.number_remaining()
@@ -271,7 +280,8 @@ class Customer(models.Model):
 
 
 class CustomerStorePreferences(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="customer_store_preferences", db_index=True)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="customer_store_preferences",
+                                 db_index=True)
     store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="customer_store_preferences", db_index=True)
     allows_contact = models.BooleanField()
 
@@ -377,7 +387,8 @@ class OrdersManager(models.Manager):
 
 class Order(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, db_index=True, related_name="orders")
-    drop_session = models.OneToOneField(DropSession, on_delete=models.CASCADE, db_index=True,  blank=False, null=False, related_name='order')
+    drop_session = models.OneToOneField(DropSession, on_delete=models.CASCADE, db_index=True, blank=False, null=False,
+                                        related_name='order')
     sku = models.ForeignKey(Sku, on_delete=models.CASCADE, related_name="orders", db_index=True)
     date = models.DateTimeField(auto_now_add=True)
     shipping_address = models.TextField(default=None, blank=True, null=True)
@@ -443,14 +454,11 @@ class Payment(models.Model):
         SUCCEEDED = 1, 'succeeded'
         NOT_NECESSARY = 2, 'empty because amount in mob was too small to send'
 
-    drop_session = models.ForeignKey(DropSession, related_name='payments', null=True, blank=True, on_delete=models.CASCADE)
+    drop_session = models.ForeignKey(DropSession, related_name='payments', null=True, blank=True,
+                                     on_delete=models.CASCADE)
     payment_type = models.IntegerField(choices=PaymentType.choices, db_index=True, null=True, blank=True)
-    amount_in_mob = models.DecimalField(db_index=True, max_length=16, decimal_places=6, max_digits=6, default=Decimal(0))
+    amount_in_mob = models.DecimalField(db_index=True, max_length=16, decimal_places=6, max_digits=6,
+                                        default=Decimal(0))
     direction = models.IntegerField(choices=PaymentDirection.choices, default=PaymentDirection.TO_STORE)
     status = models.IntegerField(choices=PaymentStatus.choices, default=PaymentStatus.NOT_STARTED)
     payment_address = models.TextField(blank=True, null=True)
-
-
-
-
-
