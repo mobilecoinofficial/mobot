@@ -1,7 +1,6 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
 import random
-import mobilecoin as mc
 
 from decimal import Decimal
 from mobot_client.drop_session import BaseDropSession
@@ -80,6 +79,67 @@ class AirDropSession(BaseDropSession):
                     drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED
                     drop_session.save()
 
+    def handle_airdrop_session_ready_to_receive(self, message, drop_session):
+        """Ask if the customer is ready to receive MOB.
+           If the customer replies in the affirmative, we send them the original MOB.
+        """
+        if (
+                message.text.lower() == "n"
+                or message.text.lower() == "no"
+                or message.text.lower() == "cancel"
+        ):
+            drop_session.state = SessionState.CANCELLED
+            drop_session.save()
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                ChatStrings.SESSION_CANCELLED
+            )
+        elif message.text.lower() == "y" or message.text.lower() == "yes":
+            if not self.under_drop_quota(drop_session.drop):
+                self.messenger.log_and_send_message(
+                    drop_session.customer,
+                    message.source,
+                    ChatStrings.AIRDROP_OVER
+                )
+                drop_session.state = SessionState.COMPLETED
+            elif not self.minimum_coin_available(drop_session.drop):
+                self.messenger.log_and_send_message(
+                    drop_session.customer,
+                    message.source,
+                    ChatStrings.AIRDROP_OVER
+                )
+                drop_session.state = SessionState.COMPLETED
+            else:
+                amount_in_mob = mc.pmob2mob(drop_session.drop.initial_coin_amount_pmob)
+                value_in_currency = amount_in_mob * Decimal(
+                    drop_session.drop.conversion_rate_mob_to_currency
+                )
+                print(f"Sending customer {drop_session.customer} initial coin amount...")
+                self.payments.send_mob_to_customer(drop_session.customer, message.source, amount_in_mob, True)
+                self.messenger.log_and_send_message(
+                    drop_session.customer,
+                    message.source,
+                    ChatStrings.AIRDROP_INITIALIZE.format(
+                        amount=amount_in_mob.normalize(),
+                        symbol=drop_session.drop.currency_symbol,
+                        value=value_in_currency
+                    )
+                )
+                self.messenger.log_and_send_message(
+                    drop_session.customer,
+                    message.source,
+                    ChatStrings.PAY_HELP
+                )
+                drop_session.state = SessionState.WAITING_FOR_PAYMENT
+        else:
+            self.messenger.log_and_send_message(
+                drop_session.customer,
+                message.source,
+                ChatStrings.YES_NO_HELP
+            )
+        drop_session.save()
+
     def handle_drop_session_waiting_for_bonus_transaction(self, message, drop_session):
         print("----------------WAITING FOR BONUS TRANSACTION------------------")
         if message.text.lower() == "help":
@@ -125,18 +185,13 @@ class AirDropSession(BaseDropSession):
 
     def handle_active_airdrop_drop_session(self, message, drop_session):
         if drop_session.state == SessionState.READY:
-            self.handle_drop_session_ready_to_receive(message, drop_session)
-            return
-
-        if drop_session.state == SessionState.WAITING_FOR_PAYMENT:
+            self.handle_airdrop_session_ready_to_receive(message, drop_session)
+        elif drop_session.state == SessionState.WAITING_FOR_PAYMENT:
             self.handle_drop_session_waiting_for_bonus_transaction(
                 message, drop_session
             )
-            return
-
-        if drop_session.state == SessionState.ALLOW_CONTACT_REQUESTED:
+        elif drop_session.state == SessionState.ALLOW_CONTACT_REQUESTED:
             self.handle_drop_session_allow_contact_requested(message, drop_session)
-            return
 
     def handle_no_active_airdrop_drop_session(self, customer, message, drop):
         if customer.has_completed_drop(drop):
@@ -145,59 +200,52 @@ class AirDropSession(BaseDropSession):
                 message.source,
                 ChatStrings.AIRDROP_SUMMARY
             )
-            return
 
-        if customer.has_completed_drop_with_error(drop):
+        elif customer.has_completed_drop_with_error(drop):
             self.messenger.log_and_send_message(
                 customer,
                 message.source,
                 ChatStrings.AIRDROP_INCOMPLETE_SUMMARY
             )
-            return
-
-        if not customer.phone_number.startswith(drop.number_restriction):
+        elif not customer.matches_country_code_restriction(drop):
             self.messenger.log_and_send_message(
                 customer,
                 message.source,
                 ChatStrings.COUNTRY_RESTRICTED
             )
-            return
+        else:
+            customer_payments_address = self.payments.get_payments_address(message.source)
+            if customer_payments_address is None:
+                self.messenger.log_and_send_message(
+                    customer,
+                    message.source,
+                    ChatStrings.PAYMENTS_ENABLED_HELP.format(item_desc=drop.item.description),
+                )
+            elif not drop.under_quota():
+                self.logger.warn(f"{drop} has run out of coins")
+                self.messenger.log_and_send_message(
+                    customer, message.source, ChatStrings.OVER_QUOTA
+                )
+            elif not self.minimum_coin_available(drop):
+                self.messenger.log_and_send_message(
+                    customer, message.source, ChatStrings.NO_COIN_LEFT
+                )
+            else:
 
-        customer_payments_address = self.payments.get_payments_address(message.source)
-        if customer_payments_address is None:
-            self.messenger.log_and_send_message(
-                customer,
-                message.source,
-                ChatStrings.PAYMENTS_ENABLED_HELP.format(item_desc=drop.item.description),
-            )
-            return
+                new_drop_session, _ = DropSession.objects.get_or_create(
+                    customer=customer,
+                    drop=drop,
+                    state=SessionState.READY,
+                )
 
-        if not drop.under_quota():
-            self.messenger.log_and_send_message(
-                customer, message.source, ChatStrings.OVER_QUOTA
-            )
-            return
-
-        if not self.minimum_coin_available(drop):
-            self.messenger.log_and_send_message(
-                customer, message.source, ChatStrings.NO_COIN_LEFT
-            )
-            return
-
-        new_drop_session, _ = DropSession.objects.get_or_create(
-            customer=customer,
-            drop=drop,
-            state=SessionState.READY,
-        )
-
-        self.messenger.log_and_send_message(
-            customer,
-            message.source,
-            ChatStrings.AIRDROP_DESCRIPTION
-        )
-        self.messenger.log_and_send_message(
-            customer,
-            message.source,
-            ChatStrings.AIRDROP_INSTRUCTIONS,
-        )
-        self.messenger.log_and_send_message(customer, message.source, ChatStrings.READY)
+                self.messenger.log_and_send_message(
+                    customer,
+                    message.source,
+                    ChatStrings.AIRDROP_DESCRIPTION
+                )
+                self.messenger.log_and_send_message(
+                    customer,
+                    message.source,
+                    ChatStrings.AIRDROP_INSTRUCTIONS,
+                )
+                self.messenger.log_and_send_message(customer, message.source, ChatStrings.READY)

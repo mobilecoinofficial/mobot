@@ -78,6 +78,7 @@ class ModelTests(TestCase):
         coins = BonusCoinFactory.create_batch(size=3, drop=drop)
         sessions_by_coin: Dict[BonusCoin, List[DropSession]] = defaultdict(list)
         sessions = DropSessionFactory.create_batch(size=10, drop=drop)
+        self.assertTrue(drop.under_quota())
 
         for session in sessions:
             coin = BonusCoin.available.claim_random_coin(session)
@@ -91,18 +92,28 @@ class ModelTests(TestCase):
 
         coins_available = sum(map(lambda c: c.number_remaining(), coins))
         print(f"Before clearing inventory, we had {coins_available} coins available")
+        print(f"Before clearing inventory, drop.under_quota evaluated to {drop.under_quota()}")
         print("Making 100 sessions, clearing out inventory")
         more_sessions = DropSessionFactory.create_batch(size=25, drop=drop)
         coins_claimed = 0
+        sessions_with_coins = []
 
         for num, session in enumerate(more_sessions):
             if coins_claimed < coins_available:
+                self.assertTrue(session.drop.under_quota())
                 self.assertEqual(session.drop.coins_available(), coins_available - coins_claimed)
                 coin = BonusCoin.available.claim_random_coin(session)
                 coins_claimed += 1
+                sessions_with_coins.append(session)
             else:
                 with self.assertRaises(OutOfStockException):
                     BonusCoin.available.claim_random_coin(session)
+                self.assertFalse(session.drop.under_quota())
+
+        print("Asserting drop is over quota")
+        self.assertFalse(drop.under_quota())
+        print(f"drop.under_quota() evaluated to {drop.under_quota()}")
+
         self.assertEqual(coins_claimed, coins_available)
         print(f"{coins_claimed} coins claimed by remaining sessions")
 

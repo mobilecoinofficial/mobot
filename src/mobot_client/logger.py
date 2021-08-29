@@ -1,8 +1,7 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
-from django.db.models import IntegerChoices
-
 from mobot_client.models import Message, MessageDirection
+from phonenumbers import PhoneNumber
 
 
 class SignalMessenger:
@@ -11,6 +10,8 @@ class SignalMessenger:
         self.store = store
 
     def log_and_send_message(self, customer, source, text, attachments=[]):
+        if isinstance(source, PhoneNumber):
+            source = source.as_international()
         if isinstance(source, dict):
             source = source["number"]
 

@@ -10,10 +10,10 @@ from django.db import models
 from django.db.models import F, BooleanField, ExpressionWrapper, Q, Case, When, Value
 from django.utils import timezone
 from django.db import transaction
+from phonenumber_field.modelfields import PhoneNumberField
 
-import mobot_client.models
 from mobot_client.models.states import SessionState
-from mobot_client.models.phone_numbers import PhoneNumberField
+from mobot_client.models.phone_numbers import PhoneNumberField, PhoneNumberWithRFC3966
 from mobot_client.models.states import SessionState
 import mobilecoin as mc
 
@@ -33,7 +33,7 @@ class Store(models.Model):
     privacy_policy_url = models.URLField()
 
     def __str__(self):
-        return f"{self.name} ({self.phone_number})"
+        return f"{self.name} [{self.phone_number.as_e164}]"
 
 
 class Item(models.Model):
@@ -71,6 +71,7 @@ class Sku(models.Model):
     class Meta:
         unique_together = ('item', 'identifier')
         base_manager_name = 'available'
+        ordering = ['sort_order']
 
     def __str__(self) -> str:
         return f"{self.item.name} - {self.identifier}"
@@ -97,6 +98,9 @@ class Sku(models.Model):
 class DropType(models.IntegerChoices):
     AIRDROP = 0, 'airdrop'
     ITEM = 1, 'item'
+
+    def __str__(self):
+        return self.label
 
 
 class DropQuerySet(models.QuerySet):
@@ -136,7 +140,7 @@ class Drop(models.Model):
     start_time = models.DateTimeField(db_index=True)
     end_time = models.DateTimeField(db_index=True)
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='drops', db_index=True, null=True, blank=True)
-    number_restriction = models.TextField(default="+44")
+    number_restriction = models.CharField(default="+44", max_length=4)
     timezone = models.TextField(default="UTC")
     initial_coin_amount_pmob = models.PositiveIntegerField(default=0)
     initial_coin_limit = models.PositiveIntegerField(default=0)
@@ -164,15 +168,18 @@ class Drop(models.Model):
 
     def under_quota(self) -> bool:
         if self.drop_type == DropType.AIRDROP:
-            return self.drop_sessions.count() < self.initial_coin_limit and self.coins_available() > 0
+            print("Checking if there are coins available to give out...")
+            active_drop_sessions_count = self.drop_sessions(manager='initial_coin_sent_sessions').count()
+            print(f"There are {active_drop_sessions_count} sessions on this airdrop with an initial limit of {self.initial_coin_limit}")
+            return active_drop_sessions_count < self.initial_coin_limit and self.coins_available() > 0
         else:
-            return self.item.skus
+            return len(self.item.skus) > 0
 
     def is_active(self) -> bool:
         return self.start_time < timezone.now() < self.end_time
 
     def __str__(self):
-        return f"{self.store.name}-{self.drop.name} - {self.start_time}-{self.end_time}"
+        return f"{self.store.name}-{self.name} - {self.start_time}-{self.end_time}"
 
 
 class BonusCoinManager(models.Manager):
@@ -222,8 +229,14 @@ class Customer(models.Model):
     phone_number = PhoneNumberField(db_index=True)
     received_sticker_pack = models.BooleanField(default=False)
 
+    def matches_country_code_restriction(self, drop: Drop) -> bool:
+        return f"+{self.phone_number.country_code}" == drop.number_restriction
+
     def active_drop_sessions(self):
         return self.drop_sessions(manager='active_sessions')
+
+    def sessions_awaiting_payment(self):
+        return self.active_drop_sessions().filter(state=SessionState.WAITING_FOR_PAYMENT)
 
     def completed_drop_sessions(self):
         return self.drop_sessions(manager='completed_sessions').all()
@@ -248,7 +261,7 @@ class Customer(models.Model):
         return self.store_preferences(store) is not None
 
     def __str__(self):
-        return f"{self.phone_number}"
+        return f"{self.phone_number.as_e164}"
 
 
 class CustomerStorePreferences(models.Model):
@@ -266,6 +279,14 @@ class CustomerDropRefunds(models.Model):
 class ActiveDropSessionManager(models.Manager):
     def get_queryset(self) -> models.QuerySet:
         return super().get_queryset().filter(state__lt=SessionState.COMPLETED,
+                                             state__gte=SessionState.READY,
+                                             drop__start_time__lte=timezone.now(),
+                                             drop__end_time__gte=timezone.now())
+
+
+class InitialCoinSentDropSessionManager(models.Manager):
+    def get_queryset(self) -> models.QuerySet:
+        return super().get_queryset().filter(state__gt=SessionState.READY,
                                              drop__start_time__lte=timezone.now(),
                                              drop__end_time__gte=timezone.now())
 
@@ -297,12 +318,16 @@ class DropSession(models.Model):
     ## Managers to find sessions at different states
     objects = models.Manager()
     active_sessions = ActiveDropSessionManager()
+    initial_coin_sent_sessions = InitialCoinSentDropSessionManager()
     errored_sessions = ErroredDropSessionManager()
     successful_sessions = SuccessfulDropSessionManager()
     completed_sessions = CompletedDropSessionManager()
 
     def is_active(self) -> bool:
         return self.state < SessionState.COMPLETED and (self.drop.start_time < timezone.now() < self.drop.end_time)
+
+    def __str__(self):
+        return f"{self.drop.name}:{self.drop.drop_type} - {self.customer.phone_number.as_e164}"
 
 
 class MessageDirection(models.IntegerChoices):
