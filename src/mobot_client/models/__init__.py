@@ -149,7 +149,7 @@ class Drop(models.Model):
     country_code_restriction = models.TextField(default="GB")
     country_long_name_restriction = models.TextField(default="United Kingdom")
     max_refund_transaction_fees_covered = models.PositiveIntegerField(default=0)
-    name = models.TextField(default="A drop", db_index=True)
+    name = models.CharField(default="A drop", db_index=True, max_length=255)
 
     objects = DropManager()
 
@@ -158,6 +158,12 @@ class Drop(models.Model):
 
     def clean(self):
         assert self.start_time < self.end_time
+        if self.drop_type == DropType.ITEM:
+            assert self.item is not None
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def value_in_currency(self, amount: Decimal) -> Decimal:
         return amount * Decimal(self.conversion_rate_mob_to_currency)

@@ -48,13 +48,13 @@ class DropFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Drop
 
-    drop_type = factory.Iterator([DropType.ITEM, DropType.AIRDROP])
+    drop_type = DropType.AIRDROP
     store = factory.SubFactory(StoreFactory)
     id = factory.Sequence(lambda n: n)
     pre_drop_description = factory.Sequence(lambda n: f"Item drop {n}")
     advertisment_start_time = fake.date_time_between(start_date='-2d', end_date='+10d', tzinfo=pytz.utc)
-    start_time = fake.date_time_between(start_date='-2d', end_date='-1d', tzinfo=pytz.utc)
-    end_time = fake.date_time_between(start_date='now', end_date='+1d', tzinfo=pytz.utc)
+    start_time = timezone.now() - timedelta(days=2)
+    end_time = timezone.now() + timedelta(days=2)
     number_restriction = factory.Iterator(['+44', '+1'])
     timezone = 'PST'
     initial_coin_amount_pmob = 4 * 1e12
@@ -71,7 +71,8 @@ class DropFactory(factory.django.DjangoModelFactory):
 
 
 class OldDropFactory(DropFactory):
-    end_time = fake.date_time_between(start_date='-4d', end_date='-1d', tzinfo=pytz.UTC)
+    start_time = timezone.now() - timedelta(days=3)
+    end_time = timezone.now() - timedelta(days=1)
     advertisment_start_time = fake.date_time_between(start_date='-15d', end_date='-1d', tzinfo=pytz.UTC)
 
 

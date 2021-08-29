@@ -132,6 +132,7 @@ class ModelTests(TestCase):
         self.assertEqual(actives.first().pk, new_session.pk)
         print("Ending drop, making sure customer no longer sees it...")
 
+        new_session.drop.start_time = timezone.now() - timedelta(days=5)
         new_session.drop.end_time = timezone.now() - timedelta(days=3)  # Sets the active drop to an end time before now
         new_session.drop.save()
 
