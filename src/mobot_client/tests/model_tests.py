@@ -114,8 +114,6 @@ class ModelTests(TestCase):
         self.assertTrue(new_session.drop.is_active())
         self.assertFalse(old_session.drop.is_active())
 
-        print(DropSession.active_sessions)
-
         actives = customer.active_drop_sessions()
 
         self.assertEqual(actives.count(), 1)
@@ -140,8 +138,7 @@ class ModelTests(TestCase):
     def test_find_completed_and_errored_drops(self):
         customer = CustomerFactory.create()
         print("Making 5 completed sessions...")
-        print(
-            f"Made sessions {list(DropSessionFactory.create_batch(size=5, customer=customer, state=SessionState.COMPLETED))}")
+        print(f"Made sessions {list(DropSessionFactory.create_batch(size=5, customer=customer, state=SessionState.COMPLETED))}")
         print("Making 1 errored session...")
         errored_session = DropSessionFactory.create(customer=customer, state=SessionState.OUT_OF_STOCK)
         print(f"Made session {errored_session} with OUT OF STOCK error")
