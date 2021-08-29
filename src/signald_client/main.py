@@ -18,18 +18,21 @@ class Signal(_Signal):
         self._chat_handlers = []
         self._payment_handlers = []
 
-    def chat_handler(self, regex, order=100):
-        """
-        A decorator that registers a chat handler function with a regex.
-        """
+    def register_handler(self, regex, func, order=100):
         print(f"\033[1;31m Registering chat handler for {regex}\033[0m")
         if not isinstance(regex, RE_TYPE):
             regex = re.compile(regex, re.I)
 
+        self._chat_handlers.append((order, regex, func))
+        # Use only the first value to sort so that declaration order doesn't change.
+        self._chat_handlers.sort(key=lambda x: x[0])
+
+    def chat_handler(self, regex, order=100):
+        """
+        A decorator that registers a chat handler function with a regex.
+        """
         def decorator(func):
-            self._chat_handlers.append((order, regex, func))
-            # Use only the first value to sort so that declaration order doesn't change.
-            self._chat_handlers.sort(key=lambda x: x[0])
+            self.register_handler(regex, func, order)
             return func
 
         return decorator
@@ -37,6 +40,9 @@ class Signal(_Signal):
     def payment_handler(self, func):
         self._payment_handlers.append(func)
         return func
+
+    def register_payment_handler(self, func):
+        self.payment_handler(func)
 
     def run_chat(self, auto_send_receipts=False):
         """

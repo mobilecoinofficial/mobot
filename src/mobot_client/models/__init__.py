@@ -172,7 +172,7 @@ class Drop(models.Model):
         return self.start_time < timezone.now() < self.end_time
 
     def __str__(self):
-        return f"{self.store.name} - {self.start_time}-{self.end_time}"
+        return f"{self.store.name}-{self.drop.name} - {self.start_time}-{self.end_time}"
 
 
 class BonusCoinManager(models.Manager):
