@@ -1,10 +1,7 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
-
 # This code is copied from [pysignald](https://pypi.org/project/pysignald/) and modified to run locally with payments
 
-import os
-import json
-import random
+
 import re
 from signald import Signal as _Signal
 
@@ -21,18 +18,20 @@ class Signal(_Signal):
         self._chat_handlers = []
         self._payment_handlers = []
 
+    def isolated_handler(self, func):
+        def isolated(*args, **kwargs):
+            try:
+                func(*args, **kwargs)
+            except Exception as e:
+                self.logger.exception(f"Chat exception while processing: {func.__name__}({args}, {kwargs})")
+        return isolated
+
     def register_handler(self, regex, func, order=100):
         self.logger.info(f"\033[1;31m Registering chat handler for {regex if regex else 'default'}\033[0m")
         if not isinstance(regex, RE_TYPE):
             regex = re.compile(regex, re.I)
 
-        def isolated_handler(message, match):
-            try:
-                func(message, match)
-            except Exception as e:
-                self.logger.exception(f"Chat exception from message {message}!")
-
-        self._chat_handlers.append((order, regex, isolated_handler))
+        self._chat_handlers.append((order, regex, self.isolated_handler(func)))
         # Use only the first value to sort so that declaration order doesn't change.
         self._chat_handlers.sort(key=lambda x: x[0])
 
@@ -47,8 +46,9 @@ class Signal(_Signal):
         return decorator
 
     def payment_handler(self, func):
-        self._payment_handlers.append(func)
-        return func
+        isolated = self.isolated_handler(func)
+        self._payment_handlers.append(isolated)
+        return isolated
 
     def register_payment_handler(self, func):
         self.payment_handler(func)
@@ -85,7 +85,6 @@ class Signal(_Signal):
                     stop, reply = reply
                 else:
                     stop = True
-
 
                 # In case a message came from a group chat
                 group_id = message.group_v2 and message.group_v2.get("id")  # TODO - not tested
