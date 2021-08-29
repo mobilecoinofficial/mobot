@@ -5,6 +5,10 @@ import os
 import mobilecoin as mc
 import pytz
 import threading
+from decimal import Decimal
+from mobot_client.log_utils import getConsoleLogger
+
+
 
 from django.utils import timezone
 
@@ -20,7 +24,7 @@ from mobot_client.models import (
     ChatbotSettings,
     Message,
     Order,
-    Sku, SessionState, SessionState, DropType, OrderStatus,
+    Sku, SessionState, SessionState, DropType, OrderStatus, Store,
 )
 
 from mobot_client.drop_session import (
@@ -34,14 +38,15 @@ from mobot_client.chat_strings import ChatStrings
 from mobot_client.timeouts import Timeouts
 
 
+
 class MOBot:
     """
     MOBot is the container which holds all of the business logic relevant to a Drop.
     """
 
     def __init__(self):
-        self.store = ChatbotSettings.load().store
-
+        self.store: Store = ChatbotSettings.load().store
+        self.logger = getConsoleLogger(f"MOBot({self.store})")
         signald_address = os.getenv("SIGNALD_ADDRESS", "127.0.0.1")
         signald_port = os.getenv("SIGNALD_PORT", "15432")
         self.signal = Signal(
@@ -77,7 +82,7 @@ class MOBot:
 
         bot_name = ChatbotSettings.load().name
         bot_avatar_filename = ChatbotSettings.load().avatar_filename
-        print("bot_avatar_filename", bot_avatar_filename)
+        self.logger.info(f"bot_avatar_filename {bot_avatar_filename}")
         b64_public_address = mc.utility.b58_wrapper_to_b64_public_address(
             self.public_address
         )
@@ -89,19 +94,18 @@ class MOBot:
         if resp.get("error"):
             assert False, resp
 
-        self.signal.register_handler("", self.chat_router)
+        self.signal.register_payment_handler(self.handle_payment)
         self.signal.register_handler("coins", self.chat_router_coins)
         self.signal.register_handler("items", self.chat_router_items)
         self.signal.register_handler("unsubscribe", self.unsubscribe_handler)
         self.signal.register_handler("subscribe", self.subscribe_handler)
-        self.signal.register_payment_handler(self.handle_payment)
+        self.signal.register_handler("", self.chat_router)
 
     def maybe_advertise_drop(self, customer):
+        self.logger.info("Checking for advertising drop")
         drop_to_advertise = BaseDropSession.get_advertising_drop()
         if drop_to_advertise is not None:
-            if not customer.phone_number.startswith(
-                    drop_to_advertise.number_restriction
-            ):
+            if not customer.matches_country_code_restriction(drop_to_advertise):
                 self.messenger.log_and_send_message(
                     customer, customer.phone_number, ChatStrings.COUNTRY_RESTRICTED
                 )
@@ -118,8 +122,15 @@ class MOBot:
                     customer, customer.phone_number, response_message
                 )
 
+    def handle_unsolicited_payment(self, customer: Customer, amount_paid_mob: Decimal):
+        self.messenger.log_and_send_message(
+            customer, str(customer.phone_number), ChatStrings.UNSOLICITED_PAYMENT
+        )
+        self.payments.send_mob_to_customer(customer, str(customer.phone_number.as_e164), amount_paid_mob, False)
+
     # Chat handlers defined in __init__ so they can be registered with the Signal instance
     def handle_payment(self, source, receipt):
+        print(f"Received payment from {source}")
         receipt_status = None
         transaction_status = "TransactionPending"
 
@@ -141,42 +152,21 @@ class MOBot:
             return "The transaction failed!"
 
         amount_paid_mob = mc.pmob2mob(receipt_status["txo"]["value_pmob"])
-
-        customer = None
-        drop_session = None
-
         customer, _ = Customer.objects.get_or_create(phone_number=source)
-        try:
+        drop_session = customer.active_drop_sessions().filter(state=SessionState.WAITING_FOR_PAYMENT).first()
 
-            drop_session = DropSession.objects.get(
-                customer=customer,
-                drop__drop_type=DropType.AIRDROP,
-                state=SessionState.WAITING_FOR_PAYMENT,
-            )
-        except DropSession.DoesNotExist:
-            pass
+        if drop_session:
+            print(f"Found drop session {drop_session}")
+            if drop_session.drop.drop_type == DropType.AIRDROP:
+                air_drop = AirDropSession(self.store, self.payments, self.messenger)
+                air_drop.handle_airdrop_payment(
+                    source, customer, amount_paid_mob, drop_session
+                )
+            elif drop_session.drop.drop_type == DropType.ITEM:
+                self.payments.handle_item_payment(source, customer, amount_paid_mob, drop_session)
         else:
-            air_drop = AirDropSession(self.store, self.payments, self.messenger)
-            air_drop.handle_airdrop_payment(
-                source, customer, amount_paid_mob, drop_session
-            )
-            return
-
-        try:
-            drop_session = DropSession.objects.get(
-                customer=customer,
-                drop__drop_type=DropType.ITEM,
-                state=SessionState.WAITING_FOR_PAYMENT,
-            )
-        except DropSession.DoesNotExist:
-            self.messenger.log_and_send_message(
-                customer, source, ChatStrings.UNSOLICITED_PAYMENT
-            )
-            self.payments.send_mob_to_customer(customer, source, amount_paid_mob, False)
-        else:
-            self.payments.handle_item_payment(
-                source, customer, amount_paid_mob, drop_session
-            )
+            print("Could not find drop session for customer")
+            self.handle_unsolicited_payment(customer, amount_paid_mob)
 
     def chat_router_coins(self, message, match):
         active_drop = Drop.objects.get_active_drop()
@@ -212,19 +202,18 @@ class MOBot:
         customer, _is_new = Customer.objects.get_or_create(
             phone_number=message.source["number"]
         )
-        if not customer.has_store_preferences(self.store):
+        store_preferences = customer.store_preferences(self.store)
+        if store_preferences:
+            if not store_preferences.allows_contact:
+                self.messenger.log_and_send_message(
+                    customer, message.source, ChatStrings.NOTIFICATIONS_OFF
+                )
+        else:
             store_preferences = CustomerStorePreferences.objects.create(
                 customer=customer, store=self.store
             )
-        else:
-            store_preferences = customer.store_preferences(store=self.store)
 
-        if not customer.customer_store.allows_contact:
-            self.messenger.log_and_send_message(
-                customer, message.source, ChatStrings.NOTIFICATIONS_OFF
-            )
-            return
-
+        store_preferences = customer.store_preferences(store=self.store)
         store_preferences.allows_contact = False
         store_preferences.save()
 
@@ -253,6 +242,22 @@ class MOBot:
             customer, message.source, ChatStrings.SUBSCRIBE_NOTIFICATIONS
         )
 
+    def handle_new_drop_session(self, customer: Customer, message, active_drop: Drop):
+        if active_drop.drop_type == DropType.AIRDROP:
+        # if this is an airdrop session, dispatch to the
+        # no_active_airdrop session handler to initiate a session
+            air_drop = AirDropSession(self.store, self.payments, self.messenger)
+            air_drop.handle_no_active_airdrop_drop_session(
+                customer, message, active_drop
+            )
+        elif active_drop.drop_type == DropType.ITEM:
+            # if this is an item drop session, dispacth to the
+            # no_active_item_drop session handler to initiate a session
+            item_drop = ItemDropSession(self.store, self.payments, self.messenger)
+            item_drop.handle_no_active_item_drop_session(
+                customer, message, active_drop
+            )
+
     def chat_router(self, message, match):
         # Store the message
         print("\033[1;33m NOW ROUTING CHAT\033[0m", message)
@@ -260,67 +265,41 @@ class MOBot:
             phone_number=message.source["number"]
         )
         self.messenger.log_received(message, customer, self.store)
-
         # see if there is an active airdrop session
-
         active_drop_session: DropSession = customer.active_drop_sessions().first()
+
         if not active_drop_session:
+            self.logger.info(f"Found no active session for customer {customer}")
             self.maybe_advertise_drop(customer)
-        if active_drop_session:
+            self.logger.info(f"Searching for active drops...")
+            active_drop = Drop.objects.get_active_drop()
+            if active_drop:
+                self.logger.info(f"Active drop found!")
+                self.handle_new_drop_session(customer, message, active_drop)
+            else:
+                self.logger.warning(f"No active drops; Sending Store Closed message to customer {customer}")
+                self.messenger.log_and_send_message(
+                    customer, message.source, ChatStrings.STORE_CLOSED_SHORT
+                )
+        else:
+            self.logger.info(f"Found a drop session for customer {customer} of type {active_drop_session.drop.drop_type}")
             if not active_drop_session.manual_override:
+                # manual_override means that a human is monitoring the chat via a linked
+                # device and wants to respond rather than having MOBot respond, so do
+                # nothing.
                 if active_drop_session.drop.drop_type == DropType.AIRDROP:
-                    # there *is* an active airdrop session.
-                    print(f"found active drop session in state {active_drop_session.state}")
-                    # manual_override means that a human is monitoring the chat via a linked
-                    # device and wants to respond rather than having MOBot respond, so do
-                    # nothing.
+                    self.logger.info(f"found active drop session in state {active_drop_session.state}")
                     air_drop = AirDropSession(self.store, self.payments, self.messenger)
                     air_drop.handle_active_airdrop_drop_session(
                         message, active_drop_session
                     )
                 elif active_drop_session.drop.drop_type == DropType.ITEM:
-                    if not active_drop_session:
-                        #  there is not an active item drop session; continue to exploring what to do
-                        #  should we advertise a future drop?
+                    # there *is* an active item drop session.
+                    print(f"found active drop session in state {active_drop_session.state}")
+                    # dispatch to active_item_drop session handler
+                    item_drop = ItemDropSession(self.store, self.payments, self.messenger)
+                    item_drop.handle_active_item_drop_session(message, active_drop_session)
 
-                        # is there no drop going or to advertise?
-                        active_drop = Drop.objects.get_active_drop()
-                        if active_drop is None:
-                            self.messenger.log_and_send_message(
-                                customer, message.source, ChatStrings.STORE_CLOSED_SHORT
-                            )
-                        elif active_drop.drop_type == DropType.AIRDROP:
-                            # if this is an airdrop session, dispatch to the
-                            # no_active_airdrop session handler to initiate a session
-                            air_drop = AirDropSession(self.store, self.payments, self.messenger)
-                            air_drop.handle_no_active_airdrop_drop_session(
-                                customer, message, active_drop
-                            )
-                        elif active_drop.drop_type == DropType.ITEM:
-                            # if this is an item drop session, dispacth to the
-                            # no_active_item_drop session handler to initiate a session
-                            if active_drop.drop_type == DropType.ITEM:
-                                item_drop = ItemDropSession(self.store, self.payments, self.messenger)
-                                item_drop.handle_no_active_item_drop_session(
-                                    customer, message, active_drop
-                                )
-                    else:
-                        # there *is* an active item drop session.
-                        print(f"found active drop session in state {active_drop_session.state}")
-                        # manual_override means that a human is monitoring the chat via a linked
-                        # device and wants to respond rather than having MOBot respond, so do
-                        # nothing.
-                        if active_drop_session.manual_override:
-                            return
-
-                        # dispatch to active_item_drop session handler
-                        item_drop = ItemDropSession(self.store, self.payments, self.messenger)
-                        item_drop.handle_active_item_drop_session(message, active_drop_session)
-                        return
-
-
-
-    # FIXME: Handler for cancel/help?
 
     def run_chat(self):
         # print("Starting timeouts thread")

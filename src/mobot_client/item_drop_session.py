@@ -467,7 +467,7 @@ class ItemDropSession(BaseDropSession):
             state=SessionState.READY,
         )
 
-        if not customer.phone_number.startswith(drop.number_restriction):
+        if not customer.matches_country_code_restriction(drop):
             self.messenger.log_and_send_message(
                 customer, message.source, ChatStrings.COUNTRY_RESTRICTED
             )
