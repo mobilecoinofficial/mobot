@@ -28,7 +28,7 @@ class Signal(_Signal):
         return isolated
 
     def register_handler(self, regex, func, order=100):
-        self.logger.info(f"\033[1;31m Registering chat handler for {regex if regex else 'default'}\033[0m")
+        self.logger.info(f"Registering chat handler for {regex if regex else 'default'}")
         if not isinstance(regex, RE_TYPE):
             regex = re.compile(regex, re.I)
 

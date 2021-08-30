@@ -14,7 +14,6 @@ from django.conf import settings
 from phonenumber_field.modelfields import PhoneNumberField
 
 from mobot_client.models.states import SessionState
-from mobot_client.models.phone_numbers import PhoneNumberField, PhoneNumberWithRFC3966
 from mobot_client.models.states import SessionState
 from mobot_client.log_utils import getConsoleLogger
 import mobilecoin as mc

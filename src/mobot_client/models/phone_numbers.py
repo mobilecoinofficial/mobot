@@ -10,12 +10,8 @@ class PhoneNumberWithRFC3966(PhoneNumber):
     def country_code_string(self) -> str:
         return f"+{self.country_code}"
 
-    @property
-    def rfc3966(self) -> str:
-        return f"+{self.country_code}{self.national_number}"
-
     def __str__(self) -> str:
-        return f"+{self.country_code}{self.national_number}"
+        return self.as_e164
 
 
 class PhoneNumberField(BasePhoneNumberField):
