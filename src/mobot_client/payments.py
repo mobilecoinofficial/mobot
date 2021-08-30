@@ -5,7 +5,9 @@ import time
 
 from mobot_client.models import (
     Order,
-    Sku, SessionState,
+    Sku,
+    SessionState,
+    Store,
 )
 from decimal import Decimal
 
@@ -16,12 +18,12 @@ class Payments:
     """The Payments class handles the logic relevant to sending MOB and handling receipts."""
 
     def __init__(
-            self, mobilecoin_client, minimum_fee_pmob, account_id, store, messenger, signal
+            self, mobilecoin_client, minimum_fee_pmob, account_id, store: Store, messenger, signal
     ):
         self.mcc = mobilecoin_client
         self.minimum_fee_pmob = minimum_fee_pmob
         self.account_id = account_id
-        self.store = (store,)
+        self.store = store
         self.signal = signal
         self.messenger = messenger
 

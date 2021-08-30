@@ -24,6 +24,7 @@ class Signal(_Signal):
                 func(*args, **kwargs)
             except Exception as e:
                 self.logger.exception(f"Chat exception while processing: {func.__name__}({args}, {kwargs})")
+                print("Signal hit exception.")
         return isolated
 
     def register_handler(self, regex, func, order=100):

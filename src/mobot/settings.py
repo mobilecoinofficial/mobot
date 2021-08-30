@@ -23,6 +23,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', "123")
+GMAPS_CLIENT_KEY = os.environ.get('GMAPS_CLIENT_KEY')
+VAT_ID = os.environ.get('VAT_ID', "123")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', False)
