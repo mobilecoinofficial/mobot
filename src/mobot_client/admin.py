@@ -45,8 +45,6 @@ class CustomerDropRefundsAdmin(admin.ModelAdmin):
 
 
 class DropSessionAdmin(admin.ModelAdmin):
-    model = DropSession
-
     def get_queryset(self, request):
         return self.model.objects.all()
 
@@ -56,7 +54,6 @@ class MessageAdmin(admin.ModelAdmin):
 
 
 class BonusCoinAdmin(admin.ModelAdmin):
-    model = BonusCoin
     readonly_fields = ('num_claimed', 'num_remaining',)
 
     def get_queryset(self, request):
@@ -64,7 +61,6 @@ class BonusCoinAdmin(admin.ModelAdmin):
 
 
 class SkuAdmin(admin.ModelAdmin):
-    model = Sku
     readonly_fields = ('num_available',)
 
     def get_queryset(self, request):
