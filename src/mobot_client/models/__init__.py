@@ -78,8 +78,15 @@ class Sku(models.Model):
     def __str__(self) -> str:
         return f"{self.item.name} - {self.identifier}"
 
+    def number_ordered(self) -> int:
+        return self.orders.count()
+
     def number_available(self) -> int:
-        return self.quantity - self.orders.count()
+        return self.quantity - self.number_ordered()
+
+
+
+    num_available = property(number_available)
 
     def in_stock(self) -> bool:
         return self.number_available() > 0
@@ -236,8 +243,14 @@ class BonusCoin(models.Model):
     def number_remaining(self) -> int:
         return self.number_available_at_start - self.drop_sessions.count()
 
+    # Add as read-only property for Admin
+    num_remaining = property(number_remaining)
+
     def number_claimed(self) -> int:
         return self.number_available_at_start - self.number_remaining()
+
+    # Add as read-only property for Admin
+    num_claimed = property(number_claimed)
 
 
 class Customer(models.Model):
@@ -250,8 +263,16 @@ class Customer(models.Model):
     def active_drop_sessions(self):
         return self.drop_sessions(manager='active_sessions').all()
 
+    @property
+    def has_active_drop_session(self) -> bool:
+        return self.drop_sessions.count() > 0
+
     def sessions_awaiting_payment(self):
         return self.active_drop_sessions().filter(state=SessionState.WAITING_FOR_PAYMENT)
+
+    @property
+    def has_sessions_awaiting_payment(self):
+        return self.sessions_awaiting_payment().count() > 0
 
     def completed_drop_sessions(self):
         return self.drop_sessions(manager='completed_sessions').all()
@@ -329,12 +350,12 @@ class DropSession(models.Model):
     state = models.IntegerField(choices=SessionState.choices, default=SessionState.READY)
     manual_override = models.BooleanField(default=False)
     bonus_coin_claimed = models.ForeignKey(
-        BonusCoin, on_delete=models.CASCADE, default=None, blank=True, null=True, related_name="drop_sessions"
+        BonusCoin, on_delete=models.SET_NULL, default=None, blank=True, null=True, related_name="drop_sessions"
     )
 
     ## Managers to find sessions at different states
-    objects = models.Manager()
     active_sessions = ActiveDropSessionManager()
+    objects = models.Manager()
     initial_coin_sent_sessions = InitialCoinSentDropSessionManager()
     errored_sessions = ErroredDropSessionManager()
     successful_sessions = SuccessfulDropSessionManager()
@@ -373,11 +394,6 @@ class OrderQuerySet(models.QuerySet):
 
 
 class OrdersManager(models.Manager):
-    def __init__(self, sku: Sku = None, active: bool = True, *args, **kwargs):
-        self._sku = sku
-        self._active = active
-        super().__init__(*args, **kwargs)
-
     def get_queryset(self) -> models.QuerySet:
         return OrderQuerySet(
             model=self.model,
@@ -397,11 +413,8 @@ class Order(models.Model):
     status = models.IntegerField(default=OrderStatus.STARTED, choices=OrderStatus.choices, db_index=True)
     conversion_rate_mob_to_currency = models.FloatField(default=0.0)
 
-    active_orders = OrdersManager(None, True)
+    active_orders = OrdersManager()
     objects = models.Manager()
-
-    class Meta:
-        base_manager_name = 'active_orders'
 
     def cancel(self):
         self.status = OrderStatus.CANCELLED
@@ -430,8 +443,8 @@ class SingletonModel(models.Model):
 
 class ChatbotSettings(SingletonModel):
     store = models.ForeignKey(Store, null=True, on_delete=models.SET_NULL)
-    name = models.TextField()
-    avatar_filename = models.TextField()
+    name = models.CharField(max_length=255)
+    avatar_filename = models.CharField(max_length=255)
 
     def __str__(self):
         return "Global settings"

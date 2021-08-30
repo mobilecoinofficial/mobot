@@ -104,6 +104,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.idea
 env/
 venv/
 ENV/
@@ -138,3 +139,5 @@ dmypy.json
 
 manage.py
 src/migrations/**
+signald.db
+.envrc

@@ -22,10 +22,13 @@ class StoreAdmin(admin.ModelAdmin):
 
 
 class CustomerAdmin(admin.ModelAdmin):
-    pass
+    model = Customer
+    readonly_fields = ('has_active_drop_session', 'has_sessions_awaiting_payment',)
 
 
 class DropAdmin(admin.ModelAdmin):
+    model = Drop
+    readonly_fields = ('initial_coin_limit',)
     pass
 
 
@@ -54,6 +57,7 @@ class MessageAdmin(admin.ModelAdmin):
 
 class BonusCoinAdmin(admin.ModelAdmin):
     model = BonusCoin
+    readonly_fields = ('num_claimed', 'num_remaining',)
 
     def get_queryset(self, request):
         return self.model.objects.all()
@@ -61,6 +65,7 @@ class BonusCoinAdmin(admin.ModelAdmin):
 
 class SkuAdmin(admin.ModelAdmin):
     model = Sku
+    readonly_fields = ('num_available',)
 
     def get_queryset(self, request):
         return self.model.objects.all()

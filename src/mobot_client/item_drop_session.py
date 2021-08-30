@@ -45,6 +45,19 @@ class ItemDropSession(BaseDropSession):
         elif drop_session.state == SessionState.READY:
             self.show_catalog_and_display_payment_instructions(message, drop_session)
 
+    def handle_item_payment(self, amount_paid_mob: Decimal, drop_session: DropSession):
+        customer = drop_session.customer
+        payment_succeeded = self.payments.handle_item_payment(customer.phone_number.as_e164, customer, amount_paid_mob, drop_session)
+        if payment_succeeded:
+            message_to_send = (
+                    ChatStrings.WAITING_FOR_SIZE_PREFIX + ChatStrings.get_options(list(drop_session.drop.item.skus.all()),
+                                                                                  capitalize=True)
+            )
+            self.messenger.log_and_send_message(customer, customer.phone_number.as_e164, message_to_send)
+            drop_session.state = SessionState.WAITING_FOR_SIZE
+        drop_session.save()
+
+
     def handle_item_drop_session_waiting_for_size(self, message, drop_session):
         if message.text.lower() == "cancel" or message.text.lower() == 'refund':
             self.handle_cancel_and_refund(message, drop_session, None)
