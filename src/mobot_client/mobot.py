@@ -2,16 +2,13 @@
 
 
 import os
-import mobilecoin as mc
 import pytz
-import threading
 from decimal import Decimal
+
+import mobilecoin as mc
+from django.conf import settings
+
 from mobot_client.log_utils import getConsoleLogger
-
-
-
-from django.utils import timezone
-
 from signald_client import Signal
 
 from mobot_client.logger import SignalMessenger
@@ -44,20 +41,13 @@ class MOBot:
     MOBot is the container which holds all of the business logic relevant to a Drop.
     """
 
-    def __init__(self):
+    def __init__(self, signal: Signal, mcc: mc.Client):
         self.store: Store = ChatbotSettings.load().store
         self.logger = getConsoleLogger(f"MOBot({self.store})")
-        signald_address = os.getenv("SIGNALD_ADDRESS", "127.0.0.1")
-        signald_port = os.getenv("SIGNALD_PORT", "15432")
-        self.signal = Signal(
-            str(self.store.phone_number), socket_path=(signald_address, int(signald_port))
-        )
-        self.messenger = SignalMessenger(self.signal, self.store)
+        self.signal = signal
+        self.mcc = mcc
 
-        fullservice_address = os.getenv("FULLSERVICE_ADDRESS", "127.0.0.1")
-        fullservice_port = os.getenv("FULLSERVICE_PORT", "9090")
-        fullservice_url = f"http://{fullservice_address}:{fullservice_port}/wallet"
-        self.mcc = mc.Client(url=fullservice_url)
+        self.messenger = SignalMessenger(self.signal, self.store)
 
         all_accounts_response = self.mcc.get_all_accounts()
         self.account_id = next(iter(all_accounts_response))
@@ -330,6 +320,5 @@ class MOBot:
         # t = threading.Thread(target=self.timeouts.process_timeouts, args=(), kwargs={})
         # t.setDaemon(True)
         # t.start()
-
         self.logger.info("Now running MOBot chat")
         self.signal.run_chat(True)

@@ -25,6 +25,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', "123")
 GMAPS_CLIENT_KEY = os.environ.get('GMAPS_CLIENT_KEY')
 VAT_ID = os.environ.get('VAT_ID', "123")
+SIGNALD_ADDRESS = os.getenv("SIGNALD_ADDRESS", "127.0.0.1")
+SIGNALD_PORT = os.getenv("SIGNALD_PORT", "15432")
+FULLSERVICE_ADDRESS = os.getenv("FULLSERVICE_ADDRESS", "127.0.0.1")
+FULLSERVICE_PORT = os.getenv("FULLSERVICE_PORT", "9090")
+FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', False)

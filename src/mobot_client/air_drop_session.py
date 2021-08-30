@@ -18,6 +18,7 @@ class AirDropSession(BaseDropSession):
         super().__init__(*args, **kwargs)
 
     def handle_airdrop_payment(self, source, customer, amount_paid_mob, drop_session: DropSession):
+        """Handle bonus payment"""
         if not self.minimum_coin_available(drop_session.drop):
             self.messenger.log_and_send_message(
                 customer,

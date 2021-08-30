@@ -25,6 +25,8 @@ class Signal(_Signal):
         self._payment_handlers = []
         self._executor = ThreadPoolExecutor(max_workers=5)
         self._futures: List[Future] = []
+        # If we're interrupted, timeout to complete futures
+        self._timeout = kwargs.get('timeout', 10)
 
     def isolated_handler(self, func):
         def isolated(*args, **kwargs):
@@ -111,7 +113,7 @@ class Signal(_Signal):
     def finish_processing(self, sig=None, frame=None):
         if sig:
             self.logger.error(f"Interrupt called! Finishing message processing with a timeout of 20 seconds.")
-        completed_futures = as_completed(self._futures, timeout=2)
+        completed_futures = as_completed(self._futures, timeout=self._timeout)
         for future in completed_futures:
             self.logger.info(f"Completed future {future}")
         sys.exit(0)
