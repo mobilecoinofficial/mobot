@@ -1,14 +1,15 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 # This code is copied from [pysignald](https://pypi.org/project/pysignald/) and modified to run locally with payments
 
-import re
-from typing import List
-from concurrent.futures import ThreadPoolExecutor, Future, as_completed
-from signald import Signal as _Signal
-
 import signal
 import sys
+import re
+import threading
+from typing import List
+from concurrent.futures import ThreadPoolExecutor, Future, as_completed
+from collections import defaultdict
 
+from signald import Signal as _Signal
 
 
 from mobot_client.log_utils import getConsoleLogger
@@ -23,6 +24,7 @@ class Signal(_Signal):
         self.logger = getConsoleLogger("SignalListener")
         self._chat_handlers = []
         self._payment_handlers = []
+        self._user_locks = defaultdict(lambda: threading.Lock())
         self._executor = ThreadPoolExecutor(max_workers=5)
         self._futures: List[Future] = []
         # If we're interrupted, timeout to complete futures
@@ -65,6 +67,13 @@ class Signal(_Signal):
         self.payment_handler(func)
 
     def _process(self, message, auto_send_receipts=False) -> bool:
+        number = message.source
+        if isinstance(message.source, dict):
+            number = message.source['number']
+        # Must lock around each user's messages to make sure they're processed serially
+        # Otherwise, a user can say 'yes' twice, quickly, to the initial airdrop and be
+        # paid twice.
+        self._user_locks[number].acquire(timeout=15)
         self.logger.info("Processing message...")
         if message.payment:
             for func in self._payment_handlers:
@@ -109,6 +118,7 @@ class Signal(_Signal):
                 if stop:
                     # We don't want to continue matching things.
                     break
+        self._user_locks[number].release()
 
     def finish_processing(self, sig=None, frame=None):
         if sig:
@@ -126,6 +136,5 @@ class Signal(_Signal):
         signal.signal(signal.SIGINT, self.finish_processing)
         for message in self.receive_messages():
             self.logger.info(f"Received message from {message.source}: {message}")
-
             processed_message_future = self._executor.submit(self._process, message, auto_send_receipts)
             self._futures.append(processed_message_future)
