@@ -4,6 +4,7 @@ from __future__ import annotations
 import random
 from decimal import Decimal
 from typing import Optional, Union
+import logging
 
 from django.db import models
 from django.db.models import F, BooleanField, ExpressionWrapper, Q, Case, When, Value
@@ -15,7 +16,6 @@ from phonenumber_field.modelfields import PhoneNumberField
 
 from mobot_client.models.states import SessionState
 from mobot_client.models.states import SessionState
-from mobot_client.log_utils import getConsoleLogger
 import mobilecoin as mc
 
 
@@ -125,7 +125,7 @@ class DropQuerySet(models.QuerySet):
 
 
 class DropManager(models.Manager.from_queryset(DropQuerySet)):
-    logger = getConsoleLogger("DropLogger")
+    logger = logging.getLogger("DropLogger")
 
     def advertising_drops(self) -> DropQuerySet:
         return self.get_queryset().advertising_drops()
