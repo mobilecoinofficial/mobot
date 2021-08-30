@@ -29,6 +29,22 @@ class ItemDropSession(BaseDropSession):
         self.gmaps = googlemaps.Client(key=settings.GMAPS_CLIENT_KEY)
         self.vat_id = settings.VAT_ID
 
+    def handle_active_item_drop_session(self, message, drop_session):
+        if drop_session.state == SessionState.WAITING_FOR_PAYMENT:
+            self.handle_item_drop_session_waiting_for_payment(message, drop_session)
+        elif drop_session.state == SessionState.WAITING_FOR_SIZE:
+            self.handle_item_drop_session_waiting_for_size(message, drop_session)
+        elif drop_session.state == SessionState.WAITING_FOR_ADDRESS:
+            self.handle_item_drop_session_waiting_for_address(message, drop_session)
+        elif drop_session.state == SessionState.WAITING_FOR_NAME:
+            self.handle_item_drop_session_waiting_for_name(message, drop_session)
+        elif drop_session.state == SessionState.SHIPPING_INFO_CONFIRMATION:
+            self.handle_item_drop_session_shipping_confirmation(message, drop_session)
+        elif drop_session.state == SessionState.ALLOW_CONTACT_REQUESTED:
+            self.handle_item_drop_session_allow_contact_requested(message, drop_session)
+        elif drop_session.state == SessionState.READY:
+            self.show_catalog_and_display_payment_instructions(message, drop_session)
+
     def handle_item_drop_session_waiting_for_size(self, message, drop_session):
         if message.text.lower() == "cancel" or message.text.lower() == 'refund':
             self.handle_cancel_and_refund(message, drop_session, None)
@@ -86,7 +102,6 @@ class ItemDropSession(BaseDropSession):
                     )
 
     def handle_item_drop_session_waiting_for_payment(self, message, drop_session):
-        price_in_mob = drop_session.drop.item.price_in_mob
 
         if message.text.lower() == "help":
             self.messenger.log_and_send_message(
@@ -98,7 +113,7 @@ class ItemDropSession(BaseDropSession):
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 message.source,
-                ChatStrings.PAY.format(amount=price_in_mob.normalize()),
+                ChatStrings.PAY.format(amount=drop_session.drop.item.price_in_mob.normalize()),
             )
         elif message.text.lower() == "privacy":
             self.handle_privacy_policy_request(message, drop_session)
@@ -134,16 +149,16 @@ class ItemDropSession(BaseDropSession):
         self.messenger.log_and_send_message(
             drop_session.customer, message.source, ChatStrings.ITEM_OPTION_CANCEL
         )
-        price_in_mob = drop_session.item.price_in_mob
         customer_drop_refunds, _ = CustomerDropRefunds.objects.get_or_create(customer=drop_session.customer, drop=drop_session.drop)
-        should_refund_transaction_fee = False
 
-        if customer_drop_refunds.number_of_times_refunded < drop_session.drop.max_refund_transaction_fees_covered:
-            should_refund_transaction_fee = True
+        if should_refund_transaction_fee := customer_drop_refunds.number_of_times_refunded < drop_session.drop.max_refund_transaction_fees_covered:
             customer_drop_refunds.number_of_times_refunded = customer_drop_refunds.number_of_times_refunded + 1
             customer_drop_refunds.save()
 
-        self.payments.send_mob_to_customer(drop_session.customer, message.source, price_in_mob, should_refund_transaction_fee)
+        self.payments.send_mob_to_customer(drop_session.customer,
+                                           message.source,
+                                           drop_session.drop.item.price_in_mob,
+                                           should_refund_transaction_fee)
         
         if order is not None:
             order.status = OrderStatus.CANCELLED
@@ -233,8 +248,7 @@ class ItemDropSession(BaseDropSession):
         order.save()
 
         item = drop_session.drop.item
-        price_in_mob = mc.pmob2mob(item.price_in_pmob)
-        price_local_fiat = float(price_in_mob) * drop_session.drop.conversion_rate_mob_to_currency
+        price_local_fiat = float(item.price_in_mob) * drop_session.drop.conversion_rate_mob_to_currency
         vat = price_local_fiat * 1 / 6
         tz = pytz.timezone(drop_session.drop.timezone)
         self.messenger.log_and_send_message(
@@ -245,7 +259,7 @@ class ItemDropSession(BaseDropSession):
                 today=order.date.astimezone(tz).strftime("%b %d, %Y %I:%M %p %Z"),
                 item_name=item.name,
                 sku_name=order.sku.identifier,
-                price=price_in_mob.normalize(),
+                price=item.price_in_mob.normalize(),
                 ship_name=order.shipping_name,
                 ship_address=order.shipping_address,
                 vat=vat,
@@ -256,8 +270,7 @@ class ItemDropSession(BaseDropSession):
         )
 
     def handle_item_drop_session_shipping_confirmation(self, message, drop_session: DropSession):
-        order = drop_session.order
-        if not order:
+        if not drop_session.order:
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source, ChatStrings.MISSING_ORDER
             )
@@ -268,36 +281,21 @@ class ItemDropSession(BaseDropSession):
                 drop_session.customer, message.source, ChatStrings.NAME_REQUEST
             )
         elif message.text.lower() == "privacy":
-            privacy_policy_url = drop_session.drop.store.privacy_policy_url
-            self.messenger.log_and_send_message(
-                drop_session.customer,
-                message.source,
-                ChatStrings.PRIVACY_POLICY.format(url=privacy_policy_url),
-            )
+            self.handle_privacy_policy_request(message, drop_session)
         elif message.text.lower() == "c" or message.text.lower() == "cancel" or message.text.lower() == "refund":
-            self.handle_cancel_and_refund(message, drop_session, order)
+            self.handle_cancel_and_refund(message, drop_session, drop_session.order)
         elif message.text.lower() != "yes" and message.text.lower() != "y":
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 message.source,
                 ChatStrings.SHIPPING_CONFIRMATION_HELP.format(
-                    name=order.shipping_name, address=order.shipping_address
+                    name=drop_session.order.shipping_name, address=drop_session.order.shipping_address
                 )
             )
         else:
             self.confirm_order(message, drop_session)
-        if drop_session.customer.has_store_preferences(store=self.store):
-            drop_session.state = SessionState.COMPLETED
-            drop_session.save()
-            self.messenger.log_and_send_message(
-                drop_session.customer, message.source, ChatStrings.BYE
-            )
-        else:
-            drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED
-            drop_session.save()
-            self.messenger.log_and_send_message(
-                drop_session.customer, message.source, ChatStrings.FUTURE_NOTIFICATIONS
-            )
+        # Finish off by offering further contact
+        self.handle_item_drop_session_allow_contact_requested(message, drop_session)
 
     def handle_item_drop_session_allow_contact_requested(self, message, drop_session):
         if message.text.lower() == "n" or message.text.lower() == "no":
@@ -309,8 +307,6 @@ class ItemDropSession(BaseDropSession):
                 drop_session.customer, message.source, ChatStrings.BYE
             )
             drop_session.state = SessionState.COMPLETED
-            drop_session.save()
-
         elif message.text.lower() == "y" or message.text.lower() == "yes":
             customer_store_prefs = CustomerStorePreferences(
                 customer=drop_session.customer, store=self.store, allows_contact=True
@@ -320,34 +316,13 @@ class ItemDropSession(BaseDropSession):
                 drop_session.customer, message.source, ChatStrings.BYE
             )
             drop_session.state = SessionState.COMPLETED
-            drop_session.save()
         elif message.text.lower() == 'p' or message.text.lower() == "privacy" or message.text.lower() == "privacy policy":
-            privacy_policy_url = drop_session.drop.store.privacy_policy_url
-            self.messenger.log_and_send_message(
-                drop_session.customer,
-                message.source,
-                ChatStrings.PRIVACY_POLICY_REPROMPT.format(url=privacy_policy_url),
-            )
+            self.handle_privacy_policy_request(message, drop_session)
         else:
             self.messenger.log_and_send_message(
                 drop_session.customer, message.source, ChatStrings.HELP
             )
-
-    def handle_active_item_drop_session(self, message, drop_session):
-        if drop_session.state == SessionState.WAITING_FOR_PAYMENT:
-            self.handle_item_drop_session_waiting_for_payment(message, drop_session)
-        elif drop_session.state == SessionState.WAITING_FOR_SIZE:
-            self.handle_item_drop_session_waiting_for_size(message, drop_session)
-        elif drop_session.state == SessionState.WAITING_FOR_ADDRESS:
-            self.handle_item_drop_session_waiting_for_address(message, drop_session)
-        elif drop_session.state == SessionState.WAITING_FOR_NAME:
-            self.handle_item_drop_session_waiting_for_name(message, drop_session)
-        elif drop_session.state == SessionState.SHIPPING_INFO_CONFIRMATION:
-            self.handle_item_drop_session_shipping_confirmation(message, drop_session)
-        elif drop_session.state == SessionState.ALLOW_CONTACT_REQUESTED:
-            self.handle_item_drop_session_allow_contact_requested(message, drop_session)
-        elif drop_session.state == SessionState.READY:
-            self.show_catalog_and_display_payment_instructions(message, drop_session)
+        drop_session.save()
 
     def request_payment_from_customer(self, drop_session: DropSession, price_in_mob: Decimal):
         self.messenger.log_and_send_message(
