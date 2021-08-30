@@ -11,7 +11,7 @@ git diff --cached --name-status | while read flag file; do
     if [[ "${flag}" == 'D' ]]; then
       continue;
     fi
-    if [[ ! -f "${file}" ]]; then
+    if [[ "${file}" == "${IGNORE}" ]]; then
       continue
     fi
     
