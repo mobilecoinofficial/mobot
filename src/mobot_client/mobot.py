@@ -3,12 +3,13 @@
 
 import os
 import pytz
+import logging
 from decimal import Decimal
+
 
 import mobilecoin as mc
 from django.conf import settings
 
-from mobot_client.log_utils import getConsoleLogger
 from signald_client import Signal
 
 from mobot_client.logger import SignalMessenger
@@ -43,9 +44,10 @@ class MOBot:
 
     def __init__(self, signal: Signal, mcc: mc.Client):
         self.store: Store = ChatbotSettings.load().store
-        self.logger = getConsoleLogger(f"MOBot({self.store})")
+        self.logger = logging.getLogger(f"MOBot({self.store})")
         self.signal = signal
         self.mcc = mcc
+
 
         self.messenger = SignalMessenger(self.signal, self.store)
 

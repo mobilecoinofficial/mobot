@@ -3,16 +3,14 @@
 
 import signal
 import sys
-import re
 import threading
 from typing import List
 from concurrent.futures import ThreadPoolExecutor, Future, as_completed
 from collections import defaultdict
+import logging
+import re
 
 from signald import Signal as _Signal
-
-
-from mobot_client.log_utils import getConsoleLogger
 
 # We'll need to know the compiled RE object later.
 RE_TYPE = type(re.compile(""))
@@ -24,7 +22,7 @@ class Signal(_Signal):
         if kwargs.get('timeout'):
             del kwargs['timeout']
         super().__init__(*args, **kwargs)
-        self.logger = getConsoleLogger("SignalListener")
+        self.logger = logging.getLogger("SignalListener")
         self._chat_handlers = []
         self._payment_handlers = []
         self._user_locks = defaultdict(lambda: threading.Lock())
