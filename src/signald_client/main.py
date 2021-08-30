@@ -1,9 +1,15 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 # This code is copied from [pysignald](https://pypi.org/project/pysignald/) and modified to run locally with payments
 
-
 import re
+from typing import List
+from concurrent.futures import ThreadPoolExecutor, Future, as_completed
 from signald import Signal as _Signal
+
+import signal
+import sys
+
+
 
 from mobot_client.log_utils import getConsoleLogger
 
@@ -17,6 +23,8 @@ class Signal(_Signal):
         self.logger = getConsoleLogger("SignalListener")
         self._chat_handlers = []
         self._payment_handlers = []
+        self._executor = ThreadPoolExecutor(max_workers=5)
+        self._futures: List[Future] = []
 
     def isolated_handler(self, func):
         def isolated(*args, **kwargs):
@@ -54,22 +62,15 @@ class Signal(_Signal):
     def register_payment_handler(self, func):
         self.payment_handler(func)
 
-    def run_chat(self, auto_send_receipts=False):
-        """
-        Start the chat event loop.
-        """
-        for message in self.receive_messages():
-            print("Receiving message")
-            print(message)
+    def _process(self, message, auto_send_receipts=False) -> bool:
+        self.logger.info("Processing message...")
+        if message.payment:
+            for func in self._payment_handlers:
+                func(message.source, message.payment)
 
-            if message.payment:
-                for func in self._payment_handlers:
-                    func(message.source, message.payment)
-                continue
-
-            if not message.text:
-                continue
-
+        elif not message.text:
+            return False
+        else:
             for _, regex, func in self._chat_handlers:
                 match = re.search(regex, message.text)
                 if not match:
@@ -106,3 +107,23 @@ class Signal(_Signal):
                 if stop:
                     # We don't want to continue matching things.
                     break
+
+    def finish_processing(self, sig=None, frame=None):
+        if sig:
+            self.logger.error(f"Interrupt called! Finishing message processing with a timeout of 20 seconds.")
+        completed_futures = as_completed(self._futures, timeout=2)
+        for future in completed_futures:
+            self.logger.info(f"Completed future {future}")
+        sys.exit(0)
+
+    def run_chat(self, auto_send_receipts=True):
+        """
+        Start the chat event loop.
+        """
+        self.logger.info("Registering interrupt handler...")
+        signal.signal(signal.SIGINT, self.finish_processing)
+        for message in self.receive_messages():
+            self.logger.info(f"Received message from {message.source}: {message}")
+
+            processed_message_future = self._executor.submit(self._process, message, auto_send_receipts)
+            self._futures.append(processed_message_future)
