@@ -3,7 +3,7 @@
 from __future__ import annotations
 import random
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, Union
 
 from django.db import models
 from django.db.models import F, BooleanField, ExpressionWrapper, Q, Case, When, Value
@@ -180,9 +180,14 @@ class Drop(models.Model):
     def initial_coin_limit(self) -> int:
         return sum(map(lambda coin: coin.number_available_at_start, self.bonus_coins.all()))
 
-    def coins_available(self) -> int:
+    def coins_available(self) -> Union[int, str]:
         if self.drop_type == DropType.AIRDROP:
             return sum(map(lambda c: c['remaining'], self.bonus_coins(manager='available').values('remaining')))
+        else:
+            return "N/A"
+
+    # Added for Admin panel
+    num_coins_remaining = property(coins_available)
 
     def under_quota(self) -> bool:
         if self.drop_type == DropType.AIRDROP:
@@ -197,6 +202,9 @@ class Drop(models.Model):
 
     def is_active(self) -> bool:
         return self.start_time < timezone.now() < self.end_time
+
+    # Added fo admin panel
+    currently_active = property(is_active)
 
     def __str__(self):
         return f"{self.store.name}-{self.name} - {self.start_time}-{self.end_time}"

@@ -28,7 +28,7 @@ class CustomerAdmin(admin.ModelAdmin):
 
 class DropAdmin(admin.ModelAdmin):
     model = Drop
-    readonly_fields = ('initial_coin_limit',)
+    readonly_fields = ('initial_coin_limit', 'currently_active', 'num_coins_remaining')
     pass
 
 
