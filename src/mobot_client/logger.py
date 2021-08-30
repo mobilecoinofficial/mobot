@@ -10,8 +10,6 @@ class SignalMessenger:
         self.store = store
 
     def log_and_send_message(self, customer, source, text, attachments=[]):
-        if isinstance(source, PhoneNumber):
-            source = source.as_international()
         if isinstance(source, dict):
             source = source["number"]
 

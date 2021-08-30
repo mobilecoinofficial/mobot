@@ -113,3 +113,20 @@ class BaseDropSession:
             message.source,
             ChatStrings.HELP
         )
+
+    def handle_cancel(self, message, drop_session: DropSession):
+        drop_session.state = SessionState.CANCELLED
+        drop_session.save()
+        self.messenger.log_and_send_message(
+            drop_session.customer,
+            message.source,
+            ChatStrings.SESSION_CANCELLED
+        )
+
+    def handle_privacy_policy_request(self, message, drop_session: DropSession):
+        privacy_policy_url = drop_session.drop.store.privacy_policy_url
+        self.messenger.log_and_send_message(
+            drop_session.customer,
+            message.source,
+            ChatStrings.PRIVACY_POLICY.format(url=privacy_policy_url),
+        )
