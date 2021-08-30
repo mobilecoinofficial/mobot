@@ -201,7 +201,10 @@ class Drop(models.Model):
             return len(self.item.skus) > 0
 
     def is_active(self) -> bool:
-        return self.start_time < timezone.now() < self.end_time
+        if self.start_time and self.end_time:
+            return self.start_time < timezone.now() < self.end_time
+        else:
+            return False
 
     # Added fo admin panel
     currently_active = property(is_active)
