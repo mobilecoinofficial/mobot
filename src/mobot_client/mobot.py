@@ -273,6 +273,8 @@ class MOBot:
             item_drop.handle_no_active_item_drop_session(
                 customer, message, active_drop
             )
+        else:
+            raise Exception("Unknown Drop Type")
 
     def default_handler(self, message, match):
         # Store the message
@@ -305,17 +307,19 @@ class MOBot:
                 # device and wants to respond rather than having MOBot respond, so do
                 # nothing.
                 if active_drop_session.drop.drop_type == DropType.AIRDROP:
-                    self.logger.info(f"found active drop session in state {active_drop_session.state}")
+                    self.logger.info(f"found active air drop session in state {active_drop_session.state}")
                     air_drop = AirDropSession(self.store, self.payments, self.messenger)
                     air_drop.handle_active_airdrop_drop_session(
                         message, active_drop_session
                     )
                 elif active_drop_session.drop.drop_type == DropType.ITEM:
                     # there *is* an active item drop session.
-                    self.logger.info(f"found active drop session in state {active_drop_session.state}")
+                    self.logger.info(f"found active item drop session in state {active_drop_session.state}")
                     # dispatch to active_item_drop session handler
                     item_drop = ItemDropSession(self.store, self.payments, self.messenger)
                     item_drop.handle_active_item_drop_session(message, active_drop_session)
+                else:
+                    raise Exception("Unknown drop type")
 
 
     def run_chat(self):

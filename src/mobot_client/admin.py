@@ -53,7 +53,10 @@ class MessageAdmin(admin.ModelAdmin):
 
 
 class BonusCoinAdmin(admin.ModelAdmin):
-    pass
+    model = BonusCoin
+
+    def get_queryset(self, request):
+        return self.model.objects.all()
 
 
 class SkuAdmin(admin.ModelAdmin):

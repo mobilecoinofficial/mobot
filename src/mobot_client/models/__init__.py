@@ -88,12 +88,10 @@ class Sku(models.Model):
     def order(self, drop_session: DropSession) -> Order:
         # Need to check whether this is in-stock again, just in case!
         if self.in_stock():
-            order = Order.objects.create(customer=drop_session.customer,
+            return Order.objects.create(customer=drop_session.customer,
                                         drop_session=drop_session,
                                         sku=self,
                                         conversion_rate_mob_to_currency=drop_session.drop.conversion_rate_mob_to_currency)
-            self.save()
-            return order
         else:
             raise OutOfStockException(f"Unable to complete order; Item {self.identifier} out of stock!")
 
@@ -227,6 +225,7 @@ class BonusCoin(models.Model):
 
     # Manager that annotates available coins
     available = BonusCoinManager()
+    objects = models.Manager()
 
     class Meta:
         base_manager_name = 'available'
