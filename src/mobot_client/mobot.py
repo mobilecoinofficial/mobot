@@ -4,9 +4,8 @@
 import os
 import mobilecoin as mc
 import pytz
-import threading
+import logging
 from decimal import Decimal
-from mobot_client.log_utils import getConsoleLogger
 
 
 
@@ -46,7 +45,7 @@ class MOBot:
 
     def __init__(self):
         self.store: Store = ChatbotSettings.load().store
-        self.logger = getConsoleLogger(f"MOBot({self.store})")
+        self.logger = logging.getLogger(f"MOBot({self.store})")
         signald_address = os.getenv("SIGNALD_ADDRESS", "127.0.0.1")
         signald_port = os.getenv("SIGNALD_PORT", "15432")
         self.signal = Signal(

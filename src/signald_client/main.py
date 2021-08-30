@@ -1,11 +1,10 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 # This code is copied from [pysignald](https://pypi.org/project/pysignald/) and modified to run locally with payments
 
-
+import logging
 import re
-from signald import Signal as _Signal
 
-from mobot_client.log_utils import getConsoleLogger
+from signald import Signal as _Signal
 
 # We'll need to know the compiled RE object later.
 RE_TYPE = type(re.compile(""))
@@ -14,7 +13,7 @@ RE_TYPE = type(re.compile(""))
 class Signal(_Signal):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.logger = getConsoleLogger("SignalListener")
+        self.logger = logging.getLogger("SignalListener")
         self._chat_handlers = []
         self._payment_handlers = []
 
