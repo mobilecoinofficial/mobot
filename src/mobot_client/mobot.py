@@ -136,6 +136,9 @@ class MOBot:
                 self.messenger.log_and_send_message(
                     customer, customer.phone_number.as_e164, response_message
                 )
+                return True
+        else:
+            return False
 
     def handle_unsolicited_payment(self, customer: Customer, amount_paid_mob: Decimal):
         self.logger.warning("Could not find drop session for customer; Payment unsolicited!")
@@ -291,7 +294,6 @@ class MOBot:
 
         if not active_drop_session:
             self.logger.info(f"Found no active session for customer {customer}")
-            self.maybe_advertise_drop(customer)
             self.logger.info(f"Searching for active drops...")
             active_drop = Drop.objects.get_active_drop()
             if active_drop:
@@ -299,9 +301,10 @@ class MOBot:
                 self.handle_new_drop_session(customer, message, active_drop)
             else:
                 self.logger.warning(f"No active drops; Sending Store Closed message to customer {customer}")
-                self.messenger.log_and_send_message(
-                    customer, message.source, ChatStrings.STORE_CLOSED_SHORT
-                )
+                if not self.maybe_advertise_drop(customer):
+                    self.messenger.log_and_send_message(
+                        customer, message.source, ChatStrings.STORE_CLOSED_SHORT
+                    )
         else:
             self.logger.info(f"Found a drop session for customer {customer} of type {active_drop_session.drop.drop_type}")
             if not active_drop_session.manual_override:
