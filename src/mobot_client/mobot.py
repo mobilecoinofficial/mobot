@@ -173,14 +173,17 @@ class MOBot:
         drop_session = customer.active_drop_sessions().filter(state=SessionState.WAITING_FOR_PAYMENT).first()
 
         if drop_session:
-            self.logger.info(f"Found drop session {drop_session}")
+            self.logger.info(f"Found drop session {drop_session} awaiting payment")
             if drop_session.drop.drop_type == DropType.AIRDROP:
                 air_drop = AirDropSession(self.store, self.payments, self.messenger)
                 air_drop.handle_airdrop_payment(
                     source, customer, amount_paid_mob, drop_session
                 )
             elif drop_session.drop.drop_type == DropType.ITEM:
-                self.payments.handle_item_payment(source, customer, amount_paid_mob, drop_session)
+                item_drop = ItemDropSession(self.store, self.payments, self.messenger)
+                item_drop.handle_item_payment(
+                    amount_paid_mob, drop_session
+                )
         else:
             self.handle_unsolicited_payment(customer, amount_paid_mob)
 

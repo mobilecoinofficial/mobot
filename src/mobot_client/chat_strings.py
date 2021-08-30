@@ -239,3 +239,7 @@ if you have any questions or issues"""
     TIMEOUT = "Your session is about to timeout. Send any message to continue."
     TIMEOUT_CANCELLED = "Your session has expired."
     TIMEOUT_REFUND = "Your session has expired. We will refund the amount you sent."
+
+    ### Payment chat strings
+    COULD_NOT_GENERATE_RECEIPT = "Couldn't generate a receipt, please contact us if you didn't a payment!"
+    WE_RECEIVED_MOB = "We received {amount_mob} MOB"
