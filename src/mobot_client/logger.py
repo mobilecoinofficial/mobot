@@ -20,7 +20,7 @@ class SignalMessenger:
             direction=MessageDirection.SENT,
         )
         sent_message.save()
-        self.signal.send_message(source, text, attachments=attachments)
+        self.signal.send_message(str(source), text, attachments=attachments)
 
     @staticmethod
     def log_received(message, customer, store):

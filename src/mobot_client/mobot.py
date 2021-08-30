@@ -123,7 +123,7 @@ class MOBot:
         if drop_to_advertise is not None:
             if not customer.matches_country_code_restriction(drop_to_advertise):
                 self.messenger.log_and_send_message(
-                    customer, customer.phone_number, ChatStrings.COUNTRY_RESTRICTED
+                    customer, customer.phone_number.as_e164, ChatStrings.COUNTRY_RESTRICTED
                 )
             else:
                 bst_time = drop_to_advertise.start_time.astimezone(
@@ -135,7 +135,7 @@ class MOBot:
                     desc=drop_to_advertise.pre_drop_description
                 )
                 self.messenger.log_and_send_message(
-                    customer, customer.phone_number, response_message
+                    customer, customer.phone_number.as_e164, response_message
                 )
 
     def handle_unsolicited_payment(self, customer: Customer, amount_paid_mob: Decimal):
