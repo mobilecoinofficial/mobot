@@ -42,7 +42,10 @@ class CustomerDropRefundsAdmin(admin.ModelAdmin):
 
 
 class DropSessionAdmin(admin.ModelAdmin):
-    pass
+    model = DropSession
+
+    def get_queryset(self, request):
+        return self.model.objects.all()
 
 
 class MessageAdmin(admin.ModelAdmin):
@@ -54,7 +57,10 @@ class BonusCoinAdmin(admin.ModelAdmin):
 
 
 class SkuAdmin(admin.ModelAdmin):
-    pass
+    model = Sku
+
+    def get_queryset(self, request):
+        return self.model.objects.all()
 
 
 class OrderAdmin(admin.ModelAdmin):
