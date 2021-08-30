@@ -20,6 +20,9 @@ RE_TYPE = type(re.compile(""))
 
 class Signal(_Signal):
     def __init__(self, *args, **kwargs):
+        self._timeout = kwargs.get('timeout', 20)
+        if kwargs.get('timeout'):
+            del kwargs['timeout']
         super().__init__(*args, **kwargs)
         self.logger = getConsoleLogger("SignalListener")
         self._chat_handlers = []
@@ -28,7 +31,6 @@ class Signal(_Signal):
         self._executor = ThreadPoolExecutor(max_workers=5)
         self._futures: List[Future] = []
         # If we're interrupted, timeout to complete futures
-        self._timeout = kwargs.get('timeout', 10)
 
     def isolated_handler(self, func):
         def isolated(*args, **kwargs):
@@ -72,8 +74,9 @@ class Signal(_Signal):
             number = message.source['number']
         # Must lock around each user's messages to make sure they're processed serially
         # Otherwise, a user can say 'yes' twice, quickly, to the initial airdrop and be
-        # paid twice.
-        self._user_locks[number].acquire(timeout=15)
+        # paid twice. If we haven't finished the first message in less than (x) seconds, timeout.
+
+        self._user_locks[number].acquire(timeout=self._timeout)
         self.logger.info("Processing message...")
         if message.payment:
             for func in self._payment_handlers:

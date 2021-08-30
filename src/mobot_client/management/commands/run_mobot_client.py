@@ -20,7 +20,9 @@ class Command(BaseCommand):
         try:
             store = ChatbotSettings.load().store
             signal = Signal(
-                str(store.phone_number), socket_path=(settings.SIGNALD_ADDRESS, int(settings.SIGNALD_PORT))
+                str(store.phone_number),
+                socket_path=(settings.SIGNALD_ADDRESS, int(settings.SIGNALD_PORT)),
+                timeout=settings.SIGNALD_PROCESS_TIMEOUT,
             )
             mcc = Client(settings.FULLSERVICE_URL)
             mobot = MOBot(signal=signal, mcc=mcc)
