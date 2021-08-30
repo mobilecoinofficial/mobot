@@ -29,7 +29,7 @@ class OutOfStockException(SessionException):
 
 
 class Store(models.Model):
-    name = models.TextField()
+    name = models.CharField(max_length=255)
     phone_number = PhoneNumberField(db_index=True)
     description = models.TextField()
     privacy_policy_url = models.URLField()
@@ -40,7 +40,7 @@ class Store(models.Model):
 
 class Item(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="items")
-    name = models.TextField()
+    name = models.CharField(max_length=255)
     price_in_pmob = models.PositiveIntegerField(default=None, blank=True, null=True)
     description = models.TextField(default=None, blank=True, null=True)
     short_description = models.TextField(default=None, blank=True, null=True)
@@ -63,7 +63,7 @@ class AvailableSkuManager(models.Manager):
 
 class Sku(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="skus")
-    identifier = models.TextField()
+    identifier = models.CharField(max_length=255)
     quantity = models.PositiveIntegerField(default=0)
     sort_order = models.PositiveIntegerField(default=0)
 
@@ -88,11 +88,12 @@ class Sku(models.Model):
     def order(self, drop_session: DropSession) -> Order:
         # Need to check whether this is in-stock again, just in case!
         if self.in_stock():
-            return Order.objects.create(customer=drop_session.customer,
+            order = Order.objects.create(customer=drop_session.customer,
                                         drop_session=drop_session,
                                         sku=self,
                                         conversion_rate_mob_to_currency=drop_session.drop.conversion_rate_mob_to_currency)
             self.save()
+            return order
         else:
             raise OutOfStockException(f"Unable to complete order; Item {self.identifier} out of stock!")
 
@@ -144,12 +145,12 @@ class Drop(models.Model):
     end_time = models.DateTimeField(db_index=True)
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='drops', db_index=True, null=True, blank=True)
     number_restriction = models.CharField(default="+44", max_length=4)
-    timezone = models.TextField(default="UTC")
+    timezone = models.CharField(default="UTC", max_length=6)
     initial_coin_amount_pmob = models.PositiveIntegerField(default=0)
     conversion_rate_mob_to_currency = models.FloatField(default=1.0)
-    currency_symbol = models.TextField(default="$")
-    country_code_restriction = models.TextField(default="GB")
-    country_long_name_restriction = models.TextField(default="United Kingdom")
+    currency_symbol = models.CharField(default="$", max_length=1)
+    country_code_restriction = models.CharField(default="GB", max_length=3)
+    country_long_name_restriction = models.CharField(default="United Kingdom", max_length=255)
     max_refund_transaction_fees_covered = models.PositiveIntegerField(default=0)
     name = models.CharField(default="A drop", db_index=True, max_length=255)
 
@@ -241,14 +242,14 @@ class BonusCoin(models.Model):
 
 
 class Customer(models.Model):
-    phone_number = PhoneNumberField(db_index=True)
+    phone_number = PhoneNumberField(db_index=True, unique=True)
     received_sticker_pack = models.BooleanField(default=False)
 
     def matches_country_code_restriction(self, drop: Drop) -> bool:
         return f"+{self.phone_number.country_code}" == drop.number_restriction
 
     def active_drop_sessions(self):
-        return self.drop_sessions(manager='active_sessions')
+        return self.drop_sessions(manager='active_sessions').all()
 
     def sessions_awaiting_payment(self):
         return self.active_drop_sessions().filter(state=SessionState.WAITING_FOR_PAYMENT)
@@ -293,6 +294,7 @@ class CustomerDropRefunds(models.Model):
 
 
 class ActiveDropSessionManager(models.Manager):
+    """Manager for all current drop sessions with active drops"""
     def get_queryset(self) -> models.QuerySet:
         return super().get_queryset().filter(state__lt=SessionState.COMPLETED,
                                              state__gte=SessionState.READY,
@@ -434,31 +436,3 @@ class ChatbotSettings(SingletonModel):
 
     def __str__(self):
         return "Global settings"
-
-
-class Payment(models.Model):
-    class PaymentType(models.IntegerChoices):
-        REFUND = -2, 'refund'
-        BONUS = -1, 'bonus'
-        PAYMENT = 1, 'payment'
-
-    class PaymentDirection(models.IntegerChoices):
-        TO_CUSTOMER = -1, 'to_customer'
-        TO_STORE = 1, 'to_store'
-
-    class PaymentStatus(models.IntegerChoices):
-        NOT_STARTED = -3, 'not_started'
-        FAILURE = -2, 'failure'
-        NO_ADDRESS = -1, 'no address found for customer'
-        IN_PROGRESS = 0, 'in progress'
-        SUCCEEDED = 1, 'succeeded'
-        NOT_NECESSARY = 2, 'empty because amount in mob was too small to send'
-
-    drop_session = models.ForeignKey(DropSession, related_name='payments', null=True, blank=True,
-                                     on_delete=models.CASCADE)
-    payment_type = models.IntegerField(choices=PaymentType.choices, db_index=True, null=True, blank=True)
-    amount_in_mob = models.DecimalField(db_index=True, max_length=16, decimal_places=6, max_digits=6,
-                                        default=Decimal(0))
-    direction = models.IntegerField(choices=PaymentDirection.choices, default=PaymentDirection.TO_STORE)
-    status = models.IntegerField(choices=PaymentStatus.choices, default=PaymentStatus.NOT_STARTED)
-    payment_address = models.TextField(blank=True, null=True)
