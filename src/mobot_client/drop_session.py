@@ -1,18 +1,17 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
-from decimal import Decimal
+import logging
 from django.utils import timezone
 
 from mobot_client.chat_strings import ChatStrings
 from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku, SessionState
-from mobot_client.log_utils import getConsoleLogger
 
 class BaseDropSession:
     def __init__(self, store, payments, messenger):
         self.store = store
         self.payments = payments
         self.messenger = messenger
-        self.logger = getConsoleLogger(f"DropSession ({self.store})")
+        self.logger = logging.getLogger(f"DropSession ({self.store})")
 
 
     @staticmethod

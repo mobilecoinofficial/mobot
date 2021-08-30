@@ -3,19 +3,16 @@
 import time
 from decimal import Decimal
 import threading
+import logging
 
 import mobilecoin as mc
 
 from mobot_client.models import (
-    Order,
-    Sku,
     SessionState,
     Store,
     DropSession,
-    Customer,
 )
 
-from mobot_client.log_utils import getConsoleLogger
 
 from mobot_client.chat_strings import ChatStrings
 
@@ -32,7 +29,7 @@ class Payments:
         self.store = store
         self.signal = signal
         self.messenger = messenger
-        self.logger = getConsoleLogger("MOBot.Payments")
+        self.logger = logging.getLogger("MOBot.Payments")
         self._transaction_lock = threading.Lock()
 
     def get_payments_address(self, source):
