@@ -150,7 +150,7 @@ class Drop(models.Model):
     end_time = models.DateTimeField(db_index=True)
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='drops', db_index=True, null=True, blank=True)
     number_restriction = models.CharField(default="+44", max_length=4)
-    timezone = models.CharField(default="UTC", max_length=6)
+    timezone = models.CharField(default="UTC", max_length=255)
     initial_coin_amount_pmob = models.PositiveIntegerField(default=0)
     conversion_rate_mob_to_currency = models.FloatField(default=1.0)
     currency_symbol = models.CharField(default="$", max_length=1)
