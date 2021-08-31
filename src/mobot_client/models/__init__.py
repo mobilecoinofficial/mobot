@@ -223,22 +223,15 @@ class BonusCoinManager(models.Manager):
             .filter(num_active_sessions__lt=F('number_available_at_start')) \
             .annotate(remaining=F('number_available_at_start') - F('num_active_sessions'))
 
-    @transaction.atomic()
     def claim_random_coin(self, drop_session):
         coins_available = self.get_queryset().select_for_update().filter(drop=drop_session.drop)
         if coins_available.count() > 0:
             coins_dist = [coin.number_remaining() for coin in coins_available]
             coin = random.choices(list(coins_available), weights=coins_dist)[0]
             drop_session.bonus_coin_claimed = coin
-            if drop_session.customer.has_store_preferences(drop_session.drop.store):
-                drop_session.state = SessionState.COMPLETED
-            else:
-                drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED
-            drop_session.save()
             return coin
         else:
             drop_session.state = SessionState.OUT_OF_STOCK
-            drop_session.save()
             raise OutOfStockException("No more coins available to give out!")
 
 

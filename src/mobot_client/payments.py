@@ -122,6 +122,12 @@ class Payments:
         unspent_pmob = int(account_amount_response["unspent_pmob"])
         return unspent_pmob
 
+    def has_enough_funds_for_payment(self, payment_amount: int) -> bool:
+        """Return a bool to check if we can pay out the desired amount"""
+        return self.get_unspent_pmob() >= (
+                payment_amount + int(self.get_minimum_fee_pmob())
+        )
+
     def get_minimum_fee_pmob(self) -> int:
         return self.minimum_fee_pmob
 
