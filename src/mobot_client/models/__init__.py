@@ -369,6 +369,7 @@ class DropSession(models.Model):
     bonus_coin_claimed = models.ForeignKey(
         BonusCoin, on_delete=models.SET_NULL, default=None, blank=True, null=True, related_name="drop_sessions"
     )
+    created_at = models.DateTimeField(default=timezone.now)
 
     ## Managers to find sessions at different states
     active_sessions = ActiveDropSessionManager()
@@ -385,7 +386,7 @@ class DropSession(models.Model):
         return self.state < SessionState.COMPLETED and (self.drop.start_time < timezone.now() < self.drop.end_time)
 
     def __str__(self):
-        return f"{self.drop.name}:{self.drop.drop_type} - {self.customer.phone_number.as_e164}"
+        return f"{self.drop.name}:{self.drop.drop_type}:{self.created_at} - {self.customer.phone_number.as_e164}"
 
 
 class MessageDirection(models.IntegerChoices):
