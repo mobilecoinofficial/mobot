@@ -31,12 +31,6 @@ class BaseDropSession:
         ).count()
         return number_initial_drops_finished < drop.initial_coin_limit
 
-    def minimum_coin_available(self, drop):
-        unspent_pmob = self.payments.get_unspent_pmob()
-        return unspent_pmob >= (
-                drop.initial_coin_amount_pmob + int(self.payments.get_minimum_fee_pmob())
-        )
-
     def customer_has_store_preferences(self, customer):
         try:
             _ = CustomerStorePreferences.objects.get(

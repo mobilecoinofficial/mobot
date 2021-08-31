@@ -88,8 +88,7 @@ class Signal(_Signal):
                 try:
                     reply = func(message, match)
                 except Exception as e:  # noqa - We don't care why this failed.
-                    print(e)
-                    raise
+                    self.logger.exception(f"Failed to process message {message}")
                     continue
 
                 if isinstance(reply, tuple):
