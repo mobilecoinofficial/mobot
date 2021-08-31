@@ -136,10 +136,15 @@ class MOBot:
 
     def handle_unsolicited_payment(self, customer: Customer, amount_paid_mob: Decimal):
         self.logger.warning("Could not find drop session for customer; Payment unsolicited!")
-        self.messenger.log_and_send_message(
-            customer, str(customer.phone_number), ChatStrings.UNSOLICITED_PAYMENT
-        )
-        self.payments.send_mob_to_customer(customer, str(customer.phone_number.as_e164), amount_paid_mob, False)
+        if mc.pmob2mob(self.minimum_fee_pmob) < amount_paid_mob:
+            self.messenger.log_and_send_message(
+                customer, str(customer.phone_number), ChatStrings.UNSOLICITED_PAYMENT
+            )
+            self.payments.send_mob_to_customer(customer, str(customer.phone_number.as_e164), amount_paid_mob, False)
+        else:
+            self.messenger.log_and_send_message(
+                customer, str(customer.phone_number), ChatStrings.UNSOLICITED_NOT_ENOUGH
+            )
 
     # Chat handlers defined in __init__ so they can be registered with the Signal instance
     def handle_payment(self, source, receipt):
@@ -195,17 +200,17 @@ class MOBot:
         active_drop = Drop.objects.get_active_drop()
         if not active_drop:
             return "No active drop to check on coins"
-
-        bonus_coins = BonusCoin.available.filter(drop=active_drop)
-        message_to_send = ""
-        for bonus_coin in bonus_coins:
-            number_claimed = DropSession.objects.filter(
-                bonus_coin_claimed=bonus_coin
-            ).count()
-            message_to_send += (
-                f"{number_claimed} / {bonus_coin.number_remaining()} - {mc.pmob2mob(bonus_coin.amount_pmob).normalize()} claimed\n"
+        else:
+            bonus_coins = BonusCoin.objects.filter(drop=active_drop)
+            message_to_send = ChatStrings.COINS_SENT.format(
+                initial_num_sent=active_drop.num_initial_sent(),
+                total=mc.utility.pmob2mob(active_drop.initial_pmob_disbursed()),
             )
-        self.messenger.log_and_send_message(customer, customer.phone_number.as_e164, message_to_send)
+            for bonus_coin in bonus_coins:
+                message_to_send += (
+                    f"\n{bonus_coin.number_claimed()} / {bonus_coin.number_available_at_start} - {mc.pmob2mob(bonus_coin.amount_pmob).normalize()} claimed"
+                )
+            self.messenger.log_and_send_message(customer, customer.phone_number.as_e164, message_to_send)
 
     def chat_router_items(self, message, match):
         active_drop = Drop.objects.get_active_drop()

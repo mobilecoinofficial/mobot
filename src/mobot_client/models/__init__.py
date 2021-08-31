@@ -160,9 +160,6 @@ class Drop(models.Model):
 
     objects = DropManager()
 
-    class Meta:
-        base_manager_name = 'objects'
-
     def clean(self):
         assert self.start_time < self.end_time
         if self.drop_type == DropType.ITEM:
@@ -179,9 +176,15 @@ class Drop(models.Model):
     def initial_coin_limit(self) -> int:
         return sum(map(lambda coin: coin.number_available_at_start, self.bonus_coins.all()))
 
+    def num_initial_sent(self) -> int:
+        return self.drop_sessions(manager='initial_coin_sent_sessions').count()
+
+    def initial_pmob_disbursed(self) -> int:
+        return self.num_initial_sent() * self.initial_coin_amount_pmob
+
     def coins_available(self) -> Union[int, str]:
         if self.drop_type == DropType.AIRDROP:
-            return sum(map(lambda c: c['remaining'], self.bonus_coins(manager='available').values('remaining')))
+            return self.initial_coin_limit - self.num_initial_sent()
         else:
             return "N/A"
 
@@ -192,9 +195,9 @@ class Drop(models.Model):
         if self.drop_type == DropType.AIRDROP:
             DropManager.logger.debug("Checking if there are coins available to give out...")
             active_drop_sessions_count = self.drop_sessions(manager='initial_coin_sent_sessions').count()
-            if settings.DEBUG:
-                DropManager.logger.debug(
-                f"There are {active_drop_sessions_count} sessions on this airdrop with an initial limit of {self.initial_coin_limit}")
+            DropManager.logger.debug(
+                f"There are {active_drop_sessions_count} sessions on this airdrop with an initial limit of {self.initial_coin_limit}"
+            )
             return active_drop_sessions_count < self.initial_coin_limit and self.coins_available() > 0
         else:
             return len(self.item.skus) > 0
@@ -224,9 +227,13 @@ class BonusCoinManager(models.Manager):
     def claim_random_coin(self, drop_session):
         coins_available = self.get_queryset().select_for_update().filter(drop=drop_session.drop)
         if coins_available.count() > 0:
-            coin = random.choice(list(coins_available))
+            coins_dist = [coin.number_remaining() for coin in coins_available]
+            coin = random.choices(list(coins_available), weights=coins_dist)[0]
             drop_session.bonus_coin_claimed = coin
-            drop_session.state = SessionState.WAITING_FOR_PAYMENT
+            if drop_session.customer.has_store_preferences(drop_session.drop.store):
+                drop_session.state = SessionState.COMPLETED
+            else:
+                drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED
             drop_session.save()
             return coin
         else:
@@ -240,18 +247,15 @@ class BonusCoin(models.Model):
     amount_pmob = models.PositiveIntegerField(default=0)
     number_available_at_start = models.PositiveIntegerField(default=0)
 
+    objects = models.Manager()
     # Manager that annotates available coins
     available = BonusCoinManager()
-    objects = models.Manager()
-
-    class Meta:
-        base_manager_name = 'available'
 
     def __str__(self):
         return f"BonusCoin ({self.amount_pmob} PMOB)"
 
     def number_remaining(self) -> int:
-        return self.number_available_at_start - self.drop_sessions.count()
+        return self.number_available_at_start - self.drop_sessions(manager='sold_sessions').count()
 
     # Add as read-only property for Admin
     num_remaining = property(number_remaining)
@@ -291,7 +295,8 @@ class Customer(models.Model):
         return self.drop_sessions(manager='errored_sessions').all()
 
     def successful_sessions(self):
-        return self.drop_sessions(manager='successful_sessions').all()
+        '''Return customer sessions with a sale completed'''
+        return self.drop_sessions(manager='sold_sessions').all()
 
     def has_completed_drop(self, drop: Drop) -> bool:
         completed_drop = self.completed_drop_sessions().filter(drop=drop).first()
@@ -344,14 +349,13 @@ class ErroredDropSessionManager(models.Manager):
         return super().get_queryset().filter(state__gt=SessionState.COMPLETED)
 
 
-class SuccessfulDropSessionManager(models.Manager):
+class CompletedDropSessionManager(models.Manager):
     def get_queryset(self) -> models.QuerySet:
         return super().get_queryset().filter(state=SessionState.COMPLETED)
 
-
-class CompletedDropSessionManager(models.Manager):
+class SaleCompleteDropSessionManager(models.Manager):
     def get_queryset(self) -> models.QuerySet:
-        return super().get_queryset().filter(state__gte=SessionState.COMPLETED)
+        return super().get_queryset().filter(state__in=(SessionState.ALLOW_CONTACT_REQUESTED, SessionState.COMPLETED))
 
 
 class DropSession(models.Model):
@@ -362,20 +366,24 @@ class DropSession(models.Model):
     bonus_coin_claimed = models.ForeignKey(
         BonusCoin, on_delete=models.SET_NULL, default=None, blank=True, null=True, related_name="drop_sessions"
     )
+    created_at = models.DateTimeField(default=timezone.now)
 
     ## Managers to find sessions at different states
-    active_sessions = ActiveDropSessionManager()
     objects = models.Manager()
+    active_sessions = ActiveDropSessionManager()
     initial_coin_sent_sessions = InitialCoinSentDropSessionManager()
     errored_sessions = ErroredDropSessionManager()
-    successful_sessions = SuccessfulDropSessionManager()
+    sold_sessions = SaleCompleteDropSessionManager()
     completed_sessions = CompletedDropSessionManager()
+
+    class Meta:
+        base_manager_name = 'active_sessions'
 
     def is_active(self) -> bool:
         return self.state < SessionState.COMPLETED and (self.drop.start_time < timezone.now() < self.drop.end_time)
 
     def __str__(self):
-        return f"{self.drop.name}:{self.drop.drop_type} - {self.customer.phone_number.as_e164}"
+        return f"{self.drop.name}:{self.drop.drop_type}:{self.created_at} - {self.customer.phone_number.as_e164}"
 
 
 class MessageDirection(models.IntegerChoices):
