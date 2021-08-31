@@ -135,6 +135,7 @@ class Signal(_Signal):
         """
         self.logger.info("Registering interrupt handler...")
         signal.signal(signal.SIGINT, self.finish_processing)
+        signal.signal(signal.SIGQUIT, self.finish_processing)
         for message in self.receive_messages():
             self.logger.info(f"Received message from {message.source}: {message}")
             processed_message_future = self._executor.submit(self._process, message, auto_send_receipts)
