@@ -87,6 +87,7 @@ class MOBot:
             assert False, resp
 
         self.signal.register_payment_handler(self.handle_payment)
+        self.signal.register_handler("\+", self.chat_router_plus)
         self.signal.register_handler("coins", self.chat_router_coins)
         self.signal.register_handler("items", self.chat_router_items)
         self.signal.register_handler("unsubscribe", self.unsubscribe_handler)
@@ -129,6 +130,9 @@ class MOBot:
                 self.messenger.log_and_send_message(
                     customer, customer.phone_number.as_e164, response_message
                 )
+                return True
+        else:
+            return False
 
     def handle_unsolicited_payment(self, customer: Customer, amount_paid_mob: Decimal):
         self.logger.warning("Could not find drop session for customer; Payment unsolicited!")
@@ -179,7 +183,15 @@ class MOBot:
         else:
             self.handle_unsolicited_payment(customer, amount_paid_mob)
 
+    def chat_router_plus(self, message, match):
+        self.logger.debug(message)
+        customer, _ = Customer.objects.get_or_create(phone_number=message.source['number'])
+        message_to_send = ChatStrings.PLUS_SIGN_HELP
+        message_to_send += f"\n{ChatStrings.PAY_HELP}"
+        self.messenger.log_and_send_message(customer, customer.phone_number.as_e164, message_to_send)
+
     def chat_router_coins(self, message, match):
+        customer, _ = Customer.objects.get_or_create(phone_number=message.source['number'])
         active_drop = Drop.objects.get_active_drop()
         if not active_drop:
             return "No active drop to check on coins"
@@ -191,9 +203,9 @@ class MOBot:
                 bonus_coin_claimed=bonus_coin
             ).count()
             message_to_send += (
-                f"{number_claimed} / {bonus_coin.number_available} - {mc.pmob2mob(bonus_coin.amount_pmob).normalize()} claimed\n"
+                f"{number_claimed} / {bonus_coin.number_remaining()} - {mc.pmob2mob(bonus_coin.amount_pmob).normalize()} claimed\n"
             )
-        return message_to_send
+        self.messenger.log_and_send_message(customer, customer.phone_number.as_e164, message_to_send)
 
     def chat_router_items(self, message, match):
         active_drop = Drop.objects.get_active_drop()
@@ -284,7 +296,6 @@ class MOBot:
 
         if not active_drop_session:
             self.logger.info(f"Found no active session for customer {customer}")
-            self.maybe_advertise_drop(customer)
             self.logger.info(f"Searching for active drops...")
             active_drop = Drop.objects.get_active_drop()
             if active_drop:
@@ -292,9 +303,10 @@ class MOBot:
                 self.handle_new_drop_session(customer, message, active_drop)
             else:
                 self.logger.warning(f"No active drops; Sending Store Closed message to customer {customer}")
-                self.messenger.log_and_send_message(
-                    customer, message.source, ChatStrings.STORE_CLOSED_SHORT
-                )
+                if not self.maybe_advertise_drop(customer):
+                    self.messenger.log_and_send_message(
+                        customer, message.source, ChatStrings.STORE_CLOSED_SHORT
+                    )
         else:
             self.logger.info(f"Found a drop session for customer {customer} of type {active_drop_session.drop.drop_type}")
             if not active_drop_session.manual_override:

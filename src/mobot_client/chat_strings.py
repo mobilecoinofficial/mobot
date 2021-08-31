@@ -131,7 +131,7 @@ To give others a chance, we're only allowing one MOB airdrop per person"""
     NOTIFICATIONS_ASK = "Would you like to receive alerts for future drops?"
 
     PAY_HELP = """To see your balance and send a payment:
-1. Select the attachment icon and select Pay
+1. Select the attachment (+) icon and select Pay
 2. Enter the amount you want to send (e.g. 0.01 MOB)
 3. Tap Pay
 4. Tap Confirm Payment
@@ -243,3 +243,4 @@ if you have any questions or issues"""
     ### Payment chat strings
     COULD_NOT_GENERATE_RECEIPT = "Couldn't generate a receipt, please contact us if you didn't a payment!"
     WE_RECEIVED_MOB = "We received {amount_mob} MOB"
+    PLUS_SIGN_HELP = "Whoops! Looks like you meant to hit the '+' button to the left of the text field."
