@@ -230,7 +230,8 @@ class BonusCoinManager(models.Manager):
     def claim_random_coin(self, drop_session):
         coins_available = self.get_queryset().select_for_update().filter(drop=drop_session.drop)
         if coins_available.count() > 0:
-            coin = random.choice(list(coins_available))
+            coins_dist = [coin.number_remaining() for coin in coins_available]
+            coin = random.choices(list(coins_available), weights=coins_dist)[0]
             drop_session.bonus_coin_claimed = coin
             drop_session.state = SessionState.WAITING_FOR_PAYMENT
             drop_session.save()

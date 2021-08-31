@@ -208,7 +208,7 @@ class MOBot:
         if not active_drop:
             return "No active drop to check on coins"
         else:
-            bonus_coins = BonusCoin.available.filter(drop=active_drop)
+            bonus_coins = BonusCoin.objects.filter(drop=active_drop)
             message_to_send = ChatStrings.COINS_SENT.format(
                 initial_num_sent=active_drop.num_initial_sent(),
                 total=mc.utility.pmob2mob(active_drop.initial_pmob_disbursed()),
@@ -218,7 +218,7 @@ class MOBot:
                     bonus_coin_claimed=bonus_coin
                 ).count()
                 message_to_send += (
-                    f"\n{number_claimed} / {bonus_coin.number_remaining()} - {mc.pmob2mob(bonus_coin.amount_pmob).normalize()} claimed\n"
+                    f"\n{number_claimed} / {bonus_coin.number_remaining()} - {mc.pmob2mob(bonus_coin.amount_pmob).normalize()} claimed"
                 )
             self.messenger.log_and_send_message(customer, customer.phone_number.as_e164, message_to_send)
 
