@@ -15,6 +15,7 @@ from mobot_client.models import (
 
 import mobilecoin as mc
 from mobot_client.chat_strings import ChatStrings
+from mobot_client.payments import NotEnoughFundsException
 
 
 class AirDropSession(BaseDropSession):
@@ -39,8 +40,9 @@ class AirDropSession(BaseDropSession):
                 )
                 self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
                 drop_session.state = SessionState.WAITING_FOR_PAYMENT
+                raise NotEnoughFundsException("Not enough MOB in wallet to cover bonus coin")
             ###  This will stop us from sending an initial payment if bonus coins aren't available
-        except OutOfStockException:
+        except (OutOfStockException, NotEnoughFundsException) as e:
             self.messenger.log_and_send_message(
                 customer,
                 source,
@@ -238,8 +240,8 @@ class AirDropSession(BaseDropSession):
                 self.messenger.log_and_send_message(
                     customer, message.source, ChatStrings.NO_COIN_LEFT
                 )
+                raise NotEnoughFundsException("Not enough MOB in wallet to cover initial payment")
             else:
-
                 new_drop_session, _ = DropSession.objects.get_or_create(
                     customer=customer,
                     drop=drop,
