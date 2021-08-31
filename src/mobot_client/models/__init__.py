@@ -247,9 +247,9 @@ class BonusCoin(models.Model):
     amount_pmob = models.PositiveIntegerField(default=0)
     number_available_at_start = models.PositiveIntegerField(default=0)
 
+    objects = models.Manager()
     # Manager that annotates available coins
     available = BonusCoinManager()
-    objects = models.Manager()
 
     class Meta:
         base_manager_name = 'objects'
@@ -372,8 +372,8 @@ class DropSession(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
 
     ## Managers to find sessions at different states
-    active_sessions = ActiveDropSessionManager()
     objects = models.Manager()
+    active_sessions = ActiveDropSessionManager()
     initial_coin_sent_sessions = InitialCoinSentDropSessionManager()
     errored_sessions = ErroredDropSessionManager()
     sold_sessions = SaleCompleteDropSessionManager()
