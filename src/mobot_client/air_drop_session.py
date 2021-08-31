@@ -38,7 +38,7 @@ class AirDropSession(BaseDropSession):
                     ChatStrings.AIRDROP_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
                 )
                 self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
-                drop_session.state = SessionState.OUT_OF_MOB
+                drop_session.state = SessionState.WAITING_FOR_PAYMENT
             ###  This will stop us from sending an initial payment if bonus coins aren't available
         except OutOfStockException:
             self.messenger.log_and_send_message(
