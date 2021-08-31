@@ -41,7 +41,6 @@ class AirDropSession(BaseDropSession):
                 )
                 self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
                 refunded = True
-                drop_session.state = SessionState.WAITING_FOR_PAYMENT
                 raise NotEnoughFundsException("Not enough MOB in wallet to cover bonus coin")
             ###  This will stop us from sending an initial payment if bonus coins aren't available
         except (OutOfStockException, NotEnoughFundsException) as e:
