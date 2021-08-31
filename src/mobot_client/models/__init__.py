@@ -160,9 +160,6 @@ class Drop(models.Model):
 
     objects = DropManager()
 
-    class Meta:
-        base_manager_name = 'objects'
-
     def clean(self):
         assert self.start_time < self.end_time
         if self.drop_type == DropType.ITEM:
@@ -177,7 +174,7 @@ class Drop(models.Model):
 
     @cached_property
     def initial_coin_limit(self) -> int:
-        return sum(map(lambda coin: coin.number_available_at_start, self.bonus_coins(manager='objects').all()))
+        return sum(map(lambda coin: coin.number_available_at_start, self.bonus_coins.all()))
 
     def num_initial_sent(self) -> int:
         return self.drop_sessions(manager='initial_coin_sent_sessions').count()
@@ -198,9 +195,9 @@ class Drop(models.Model):
         if self.drop_type == DropType.AIRDROP:
             DropManager.logger.debug("Checking if there are coins available to give out...")
             active_drop_sessions_count = self.drop_sessions(manager='initial_coin_sent_sessions').count()
-            if settings.DEBUG:
-                DropManager.logger.debug(
-                f"There are {active_drop_sessions_count} sessions on this airdrop with an initial limit of {self.initial_coin_limit}")
+            DropManager.logger.debug(
+                f"There are {active_drop_sessions_count} sessions on this airdrop with an initial limit of {self.initial_coin_limit}"
+            )
             return active_drop_sessions_count < self.initial_coin_limit and self.coins_available() > 0
         else:
             return len(self.item.skus) > 0
@@ -255,7 +252,7 @@ class BonusCoin(models.Model):
     objects = models.Manager()
 
     class Meta:
-        base_manager_name = 'available'
+        base_manager_name = 'objects'
 
     def __str__(self):
         return f"BonusCoin ({self.amount_pmob} PMOB)"
