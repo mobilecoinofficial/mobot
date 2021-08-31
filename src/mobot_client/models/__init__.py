@@ -251,9 +251,6 @@ class BonusCoin(models.Model):
     # Manager that annotates available coins
     available = BonusCoinManager()
 
-    class Meta:
-        base_manager_name = 'objects'
-
     def __str__(self):
         return f"BonusCoin ({self.amount_pmob} PMOB)"
 
