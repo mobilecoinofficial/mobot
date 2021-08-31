@@ -73,7 +73,7 @@ LOGGING = {
     },
     'root': {
         'handlers': ['console'],
-        'level': 'DEBUG',
+        'level': os.environ.get("DJANGO_LOG_LEVEL", "INFO"),
     },
     "handlers": {
         "console": {
