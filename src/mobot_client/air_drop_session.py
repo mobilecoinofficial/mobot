@@ -91,7 +91,7 @@ class AirDropSession(BaseDropSession):
                     customer, source, ChatStrings.NOTIFICATIONS_ASK
                 )
                 drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED
-        drop_session.save(update_fields=['state'])
+        drop_session.save(update_fields=['state','bonus_coin_claimed'])
 
     def handle_airdrop_session_ready_to_receive(self, message, drop_session):
         """Ask if the customer is ready to receive MOB.
