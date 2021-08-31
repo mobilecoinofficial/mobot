@@ -179,6 +179,12 @@ class Drop(models.Model):
     def initial_coin_limit(self) -> int:
         return sum(map(lambda coin: coin.number_available_at_start, self.bonus_coins.all()))
 
+    def num_initial_sent(self) -> int:
+        return self.drop_sessions(manager='initial_coin_sent_sessions').count()
+
+    def initial_pmob_disbursed(self) -> int:
+        return self.num_initial_sent() * self.initial_coin_amount_pmob
+
     def coins_available(self) -> Union[int, str]:
         if self.drop_type == DropType.AIRDROP:
             return sum(map(lambda c: c['remaining'], self.bonus_coins(manager='available').values('remaining')))
