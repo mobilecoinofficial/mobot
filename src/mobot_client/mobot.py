@@ -206,7 +206,7 @@ class MOBot:
             bonus_coins = BonusCoin.available.filter(drop=active_drop)
             message_to_send = ChatStrings.COINS_SENT.format(
                 initial_num_sent=active_drop.num_initial_sent(),
-                total=active_drop.initial_pmob_disbursed(),
+                total=mc.utility.pmob2mob(active_drop.initial_pmob_disbursed()),
             )
             for bonus_coin in bonus_coins:
                 number_claimed = DropSession.objects.filter(
