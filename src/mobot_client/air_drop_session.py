@@ -3,8 +3,12 @@
 import random
 
 from decimal import Decimal
+
+from django.db import transaction
+
 from mobot_client.drop_session import BaseDropSession
 from mobot_client.models import (
+    Drop,
     DropSession,
     BonusCoin, SessionState, OutOfStockException,
 )
@@ -17,68 +21,71 @@ class AirDropSession(BaseDropSession):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def initial_coin_funds_available(self, drop: Drop) -> bool:
+        return self.payments.has_enough_funds_for_payment(drop.initial_coin_amount_pmob)
+
+    def bonus_coin_funds_available(self, drop_session: DropSession) -> bool:
+        return self.payments.has_enough_funds_for_payment(drop_session.bonus_coin_claimed.amount_pmob)
+
+    @transaction.atomic
     def handle_airdrop_payment(self, source, customer, amount_paid_mob, drop_session: DropSession):
-        """Handle bonus payment"""
-        if not self.minimum_coin_available(drop_session.drop):
+        try:
+            claimed_coin: BonusCoin = BonusCoin.available.claim_random_coin(drop_session)
+            if not self.bonus_coin_funds_available(drop_session):
+                self.messenger.log_and_send_message(
+                    customer,
+                    source,
+                    ChatStrings.AIRDROP_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
+                )
+                self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
+                drop_session.state = SessionState.WAITING_FOR_PAYMENT
+            ###  This will stop us from sending an initial payment if bonus coins aren't available
+        except OutOfStockException:
             self.messenger.log_and_send_message(
                 customer,
                 source,
-                ChatStrings.AIRDROP_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
+                ChatStrings.BONUS_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
             )
             self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
-            drop_session.state = SessionState.OUT_OF_MOB
-            drop_session.save()
         else:
-            try:
-                claimed_coin: BonusCoin = BonusCoin.available.claim_random_coin(drop_session)
-                ###  This will stop us from sending an initial payment if bonus coins aren't available
-            except OutOfStockException:
-                self.messenger.log_and_send_message(
-                    customer,
-                    source,
-                    ChatStrings.BONUS_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
-                )
-                self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
-            else:
-                initial_coin_amount_mob = mc.pmob2mob(
-                    drop_session.drop.initial_coin_amount_pmob
-                )
-                amount_in_mob = mc.pmob2mob(claimed_coin.amount_pmob)
-                amount_to_send_mob = (
-                        amount_in_mob
-                        + amount_paid_mob
-                        + mc.pmob2mob(self.payments.get_minimum_fee_pmob())
-                )
-                self.payments.send_mob_to_customer(customer, source, amount_to_send_mob, True)
+            initial_coin_amount_mob = mc.pmob2mob(
+                drop_session.drop.initial_coin_amount_pmob
+            )
+            amount_in_mob = mc.pmob2mob(claimed_coin.amount_pmob)
+            amount_to_send_mob = (
+                    amount_in_mob
+                    + amount_paid_mob
+                    + mc.pmob2mob(self.payments.get_minimum_fee_pmob())
+            )
+            self.payments.send_mob_to_customer(customer, source, amount_to_send_mob, True)
 
-                total_prize = Decimal(initial_coin_amount_mob + amount_in_mob)
+            total_prize = Decimal(initial_coin_amount_mob + amount_in_mob)
 
-                self.messenger.log_and_send_message(
-                    customer,
-                    source,
-                    ChatStrings.REFUND_SENT.format(amount=amount_to_send_mob.normalize(), total_prize=total_prize.normalize())
-                )
-                self.messenger.log_and_send_message(
-                    customer, source, ChatStrings.PRIZE.format(prize=total_prize.normalize())
-                )
-                self.messenger.log_and_send_message(
-                    customer,
-                    source,
-                    ChatStrings.AIRDROP_COMPLETED
-                )
+            self.messenger.log_and_send_message(
+                customer,
+                source,
+                ChatStrings.REFUND_SENT.format(amount=amount_to_send_mob.normalize(), total_prize=total_prize.normalize())
+            )
+            self.messenger.log_and_send_message(
+                customer, source, ChatStrings.PRIZE.format(prize=total_prize.normalize())
+            )
+            self.messenger.log_and_send_message(
+                customer,
+                source,
+                ChatStrings.AIRDROP_COMPLETED
+            )
 
-                if customer.has_store_preferences(store=self.store):
-                    self.messenger.log_and_send_message(
-                        customer, source, ChatStrings.BYE
-                    )
-                    drop_session.state = SessionState.COMPLETED
-                    drop_session.save()
-                else:
-                    self.messenger.log_and_send_message(
-                        customer, source, ChatStrings.NOTIFICATIONS_ASK
-                    )
-                    drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED
-                    drop_session.save()
+        if customer.has_store_preferences(store=self.store):
+            self.messenger.log_and_send_message(
+                customer, source, ChatStrings.BYE
+            )
+            drop_session.state = SessionState.COMPLETED
+        else:
+            self.messenger.log_and_send_message(
+                customer, source, ChatStrings.NOTIFICATIONS_ASK
+            )
+            drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED
+        drop_session.save(update_fields=['state'])
 
     def handle_airdrop_session_ready_to_receive(self, message, drop_session):
         """Ask if the customer is ready to receive MOB.
@@ -104,7 +111,7 @@ class AirDropSession(BaseDropSession):
                     ChatStrings.AIRDROP_OVER
                 )
                 drop_session.state = SessionState.CANCELLED
-            elif not self.minimum_coin_available(drop_session.drop):
+            elif not self.initial_coin_funds_available(drop_session.drop):
                 self.messenger.log_and_send_message(
                     drop_session.customer,
                     message.source,
@@ -227,7 +234,7 @@ class AirDropSession(BaseDropSession):
                 self.messenger.log_and_send_message(
                     customer, message.source, ChatStrings.OVER_QUOTA
                 )
-            elif not self.minimum_coin_available(drop):
+            elif not self.initial_coin_funds_available(drop):
                 self.messenger.log_and_send_message(
                     customer, message.source, ChatStrings.NO_COIN_LEFT
                 )

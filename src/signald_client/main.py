@@ -1,14 +1,15 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 # This code is copied from [pysignald](https://pypi.org/project/pysignald/) and modified to run locally with payments
 
+import threading
+import logging
+import re
 import signal
 import sys
-import threading
+
 from typing import List
 from concurrent.futures import ThreadPoolExecutor, Future, as_completed
 from collections import defaultdict
-import logging
-import re
 
 from signald import Signal as _Signal
 
@@ -19,7 +20,9 @@ RE_TYPE = type(re.compile(""))
 class Signal(_Signal):
     def __init__(self, *args, **kwargs):
         self._timeout = kwargs.get('timeout', 20)
+        # If we're interrupted, timeout to complete futures
         if kwargs.get('timeout'):
+            # Delete so it isn't passed to super().__init__
             del kwargs['timeout']
         super().__init__(*args, **kwargs)
         self.logger = logging.getLogger("SignalListener")
@@ -28,7 +31,7 @@ class Signal(_Signal):
         self._user_locks = defaultdict(lambda: threading.Lock())
         self._executor = ThreadPoolExecutor(max_workers=5)
         self._futures: List[Future] = []
-        # If we're interrupted, timeout to complete futures
+        self._run = True
 
     def isolated_handler(self, func):
         def isolated(*args, **kwargs):
@@ -121,22 +124,22 @@ class Signal(_Signal):
                     break
         self._user_locks[number].release()
 
-    def finish_processing(self, sig=None, frame=None):
+    def _stop_handler(self, sig, frame):
         if sig:
             self.logger.error(f"Interrupt called! Finishing message processing with a timeout of 20 seconds.")
         completed_futures = as_completed(self._futures, timeout=self._timeout)
         for future in completed_futures:
-            self.logger.info(f"Completed future {future}")
+            self.logger.debug(f"Completed future {future}")
         sys.exit(0)
 
-    def run_chat(self, auto_send_receipts=True):
+    def run_chat(self, auto_send_receipts=False):
         """
         Start the chat event loop.
         """
-        self.logger.info("Registering interrupt handler...")
-        signal.signal(signal.SIGINT, self.finish_processing)
-        signal.signal(signal.SIGQUIT, self.finish_processing)
-        for message in self.receive_messages():
-            self.logger.info(f"Received message from {message.source}: {message}")
-            processed_message_future = self._executor.submit(self._process, message, auto_send_receipts)
-            self._futures.append(processed_message_future)
+        self.logger.debug("Registering interrupt handler...")
+        signal.signal(signal.SIGINT, self._stop_handler)
+        signal.signal(signal.SIGQUIT, self._stop_handler)
+        messages_iterator = self.receive_messages()
+        while self._run:
+            message = next(messages_iterator)
+            self.logger.info(f"Receiving message \n {message}")
