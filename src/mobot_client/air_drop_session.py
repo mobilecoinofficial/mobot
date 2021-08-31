@@ -43,6 +43,7 @@ class AirDropSession(BaseDropSession):
                 raise NotEnoughFundsException("Not enough MOB in wallet to cover bonus coin")
             ###  This will stop us from sending an initial payment if bonus coins aren't available
         except (OutOfStockException, NotEnoughFundsException) as e:
+            self.logger.exception(f"Could not fulfill drop to customer {customer.phone_number}")
             self.messenger.log_and_send_message(
                 customer,
                 source,
