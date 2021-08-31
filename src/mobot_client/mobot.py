@@ -143,10 +143,15 @@ class MOBot:
 
     def handle_unsolicited_payment(self, customer: Customer, amount_paid_mob: Decimal):
         self.logger.warning("Could not find drop session for customer; Payment unsolicited!")
-        self.messenger.log_and_send_message(
-            customer, str(customer.phone_number), ChatStrings.UNSOLICITED_PAYMENT
-        )
-        self.payments.send_mob_to_customer(customer, str(customer.phone_number.as_e164), amount_paid_mob, False)
+        if mc.pmob2mob(self.minimum_fee_pmob) < amount_paid_mob:
+            self.messenger.log_and_send_message(
+                customer, str(customer.phone_number), ChatStrings.UNSOLICITED_PAYMENT
+            )
+            self.payments.send_mob_to_customer(customer, str(customer.phone_number.as_e164), amount_paid_mob, False)
+        else:
+            self.messenger.log_and_send_message(
+                customer, str(customer.phone_number), ChatStrings.UNSOLICITED_NOT_ENOUGH
+            )
 
     # Chat handlers defined in __init__ so they can be registered with the Signal instance
     def handle_payment(self, source, receipt):

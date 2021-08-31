@@ -47,6 +47,7 @@ Enable payments to receive {item_desc}
 More info on enabling payments here: https://support.signal.org/hc/en-us/articles/360057625692-In-app-Payments"""
 
     UNSOLICITED_PAYMENT = "MOBot here! You sent us an unsolicited payment. We're returning it minus a network fee to cover our costs. We can't promise to always be paying attention and return unsolicited payments, so we suggest only sending us payments when we request them"
+    UNSOLICITED_NOT_ENOUGH = "MOBot here!\n\nYou sent us an unsolicited payment that's less than the network fee, so we can't return it.\n\nWe suggest only sending us payments when we request them"
     STORE_CLOSED = "Hi! MOBot here.\n\nWe're currently closed.\n\nCome back on {date} at {time} for {desc}"
     STORE_CLOSED_SHORT = "Hi! MOBot here.\n\nWe're currently closed. Buh-Bye!"
 
