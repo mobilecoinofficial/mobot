@@ -162,7 +162,7 @@ class MOBot:
         if isinstance(source, dict):
             source = source["number"]
 
-        self.logger.info("received receipt", receipt)
+        self.logger.info(f"received receipt {receipt}")
         receipt = mc.utility.b64_receipt_to_full_service_receipt(receipt.receipt)
 
         while transaction_status == "TransactionPending":
