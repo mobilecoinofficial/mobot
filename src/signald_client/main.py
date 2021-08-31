@@ -1,8 +1,9 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 # This code is copied from [pysignald](https://pypi.org/project/pysignald/) and modified to run locally with payments
-
 import logging
 import re
+import signal
+import sys
 
 from signald import Signal as _Signal
 
@@ -16,6 +17,7 @@ class Signal(_Signal):
         self.logger = logging.getLogger("SignalListener")
         self._chat_handlers = []
         self._payment_handlers = []
+        self._run = True
 
     def isolated_handler(self, func):
         def isolated(*args, **kwargs):
@@ -53,11 +55,20 @@ class Signal(_Signal):
     def register_payment_handler(self, func):
         self.payment_handler(func)
 
+    def _stop_handler(self, sig, frame):
+        self.logger.error(f"SIGNAL {sig} CALLED! Finishing up current message...")
+        self._run = False
+        sys.exit(0)
+
     def run_chat(self, auto_send_receipts=False):
         """
         Start the chat event loop.
         """
-        for message in self.receive_messages():
+        signal.signal(signal.SIGINT, self._stop_handler)
+        signal.signal(signal.SIGQUIT, self._stop_handler)
+        messages_iterator = self.receive_messages()
+        while self._run:
+            message = next(messages_iterator)
             print("Receiving message")
             print(message)
 
@@ -105,3 +116,4 @@ class Signal(_Signal):
                 if stop:
                     # We don't want to continue matching things.
                     break
+        return
