@@ -314,6 +314,9 @@ class CustomerStorePreferences(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="customer_store_preferences", db_index=True)
     allows_contact = models.BooleanField()
 
+    def __str__(self):
+        return f"{self.customer}:{self.store}"
+
 
 class CustomerDropRefunds(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="drop_refunds", db_index=True)
