@@ -177,7 +177,7 @@ class Drop(models.Model):
 
     @cached_property
     def initial_coin_limit(self) -> int:
-        return sum(map(lambda coin: coin.number_available_at_start, self.bonus_coins.all()))
+        return sum(map(lambda coin: coin.number_available_at_start, self.bonus_coins(manager='objects').all()))
 
     def num_initial_sent(self) -> int:
         return self.drop_sessions(manager='initial_coin_sent_sessions').count()
@@ -187,7 +187,7 @@ class Drop(models.Model):
 
     def coins_available(self) -> Union[int, str]:
         if self.drop_type == DropType.AIRDROP:
-            return sum(map(lambda c: c['remaining'], self.bonus_coins(manager='available').values('remaining')))
+            return self.initial_coin_limit - self.num_initial_sent()
         else:
             return "N/A"
 
@@ -258,7 +258,7 @@ class BonusCoin(models.Model):
         return f"BonusCoin ({self.amount_pmob} PMOB)"
 
     def number_remaining(self) -> int:
-        return self.number_available_at_start - self.drop_sessions.count()
+        return self.number_available_at_start - self.drop_sessions(manager='completed_sessions').count()
 
     # Add as read-only property for Admin
     num_remaining = property(number_remaining)

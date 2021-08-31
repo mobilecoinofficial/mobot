@@ -218,7 +218,7 @@ class MOBot:
                     bonus_coin_claimed=bonus_coin
                 ).count()
                 message_to_send += (
-                    f"\n{number_claimed} / {bonus_coin.number_remaining()} - {mc.pmob2mob(bonus_coin.amount_pmob).normalize()} claimed"
+                    f"\n{number_claimed} / {bonus_coin.number_available_at_start} - {mc.pmob2mob(bonus_coin.amount_pmob).normalize()} claimed"
                 )
             self.messenger.log_and_send_message(customer, customer.phone_number.as_e164, message_to_send)
 

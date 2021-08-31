@@ -102,14 +102,14 @@ class AirDropSession(BaseDropSession):
                     message.source,
                     ChatStrings.AIRDROP_OVER
                 )
-                drop_session.state = SessionState.COMPLETED
+                drop_session.state = SessionState.CANCELLED
             elif not self.minimum_coin_available(drop_session.drop):
                 self.messenger.log_and_send_message(
                     drop_session.customer,
                     message.source,
                     ChatStrings.AIRDROP_OVER
                 )
-                drop_session.state = SessionState.COMPLETED
+                drop_session.state = SessionState.CANCELLED
             else:
                 amount_in_mob = mc.pmob2mob(drop_session.drop.initial_coin_amount_pmob)
                 value_in_currency = amount_in_mob * Decimal(
