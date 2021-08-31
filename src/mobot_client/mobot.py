@@ -123,7 +123,7 @@ class MOBot:
         if drop_to_advertise is not None:
             if not customer.matches_country_code_restriction(drop_to_advertise):
                 self.messenger.log_and_send_message(
-                    customer, customer.phone_number.as_e164, ChatStrings.COUNTRY_RESTRICTED
+                    customer, customer.phone_number, ChatStrings.COUNTRY_RESTRICTED
                 )
             else:
                 bst_time = drop_to_advertise.start_time.astimezone(
@@ -135,7 +135,7 @@ class MOBot:
                     desc=drop_to_advertise.pre_drop_description
                 )
                 self.messenger.log_and_send_message(
-                    customer, customer.phone_number.as_e164, response_message
+                    customer, customer.phone_number, response_message
                 )
                 return True
         else:
@@ -200,7 +200,7 @@ class MOBot:
         customer, _ = Customer.objects.get_or_create(phone_number=message.source['number'])
         message_to_send = ChatStrings.PLUS_SIGN_HELP
         message_to_send += f"\n{ChatStrings.PAY_HELP}"
-        self.messenger.log_and_send_message(customer, customer.phone_number.as_e164, message_to_send)
+        self.messenger.log_and_send_message(customer, customer.phone_number, message_to_send)
 
     def chat_router_coins(self, message, match):
         customer, _ = Customer.objects.get_or_create(phone_number=message.source['number'])
@@ -217,7 +217,7 @@ class MOBot:
                 message_to_send += (
                     f"\n{bonus_coin.number_claimed()} / {bonus_coin.number_available_at_start} - {mc.pmob2mob(bonus_coin.amount_pmob).normalize()} claimed"
                 )
-            self.messenger.log_and_send_message(customer, customer.phone_number.as_e164, message_to_send)
+            self.messenger.log_and_send_message(customer, customer.phone_number, message_to_send)
 
     def chat_router_items(self, message, match):
         active_drop = Drop.objects.get_active_drop()
