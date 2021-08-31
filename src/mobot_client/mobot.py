@@ -214,11 +214,8 @@ class MOBot:
                 total=mc.utility.pmob2mob(active_drop.initial_pmob_disbursed()),
             )
             for bonus_coin in bonus_coins:
-                number_claimed = DropSession.objects.filter(
-                    bonus_coin_claimed=bonus_coin
-                ).count()
                 message_to_send += (
-                    f"\n{number_claimed} / {bonus_coin.number_available_at_start} - {mc.pmob2mob(bonus_coin.amount_pmob).normalize()} claimed"
+                    f"\n{bonus_coin.number_claimed()} / {bonus_coin.number_available_at_start} - {mc.pmob2mob(bonus_coin.amount_pmob).normalize()} claimed"
                 )
             self.messenger.log_and_send_message(customer, customer.phone_number.as_e164, message_to_send)
 
