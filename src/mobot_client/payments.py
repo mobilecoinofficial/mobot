@@ -17,6 +17,10 @@ from mobot_client.models import (
 from mobot_client.chat_strings import ChatStrings
 
 
+class NotEnoughFundsException(Exception):
+    pass
+
+
 class Payments:
     """The Payments class handles the logic relevant to sending MOB and handling receipts."""
 
