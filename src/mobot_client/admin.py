@@ -58,7 +58,7 @@ class BonusCoinAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return self.model.objects.all()
-    
+
 
 class SkuAdmin(admin.ModelAdmin):
     readonly_fields = ('num_available',)
