@@ -30,6 +30,7 @@ class AirDropSession(BaseDropSession):
 
     @transaction.atomic
     def handle_airdrop_payment(self, source, customer, amount_paid_mob, drop_session: DropSession):
+        refunded = False
         try:
             claimed_coin: BonusCoin = BonusCoin.available.claim_random_coin(drop_session)
             if not self.bonus_coin_funds_available(drop_session):
@@ -39,17 +40,19 @@ class AirDropSession(BaseDropSession):
                     ChatStrings.AIRDROP_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
                 )
                 self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
+                refunded = True
                 drop_session.state = SessionState.WAITING_FOR_PAYMENT
                 raise NotEnoughFundsException("Not enough MOB in wallet to cover bonus coin")
             ###  This will stop us from sending an initial payment if bonus coins aren't available
         except (OutOfStockException, NotEnoughFundsException) as e:
             self.logger.exception(f"Could not fulfill drop to customer {customer.phone_number}")
-            self.messenger.log_and_send_message(
-                customer,
-                source,
-                ChatStrings.BONUS_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
-            )
-            self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
+            if not refunded:
+                self.messenger.log_and_send_message(
+                    customer,
+                    source,
+                    ChatStrings.BONUS_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
+                )
+                self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
         else:
             initial_coin_amount_mob = mc.pmob2mob(
                 drop_session.drop.initial_coin_amount_pmob
