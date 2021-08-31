@@ -41,11 +41,12 @@ class AirDropSession(BaseDropSession):
                 )
                 self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
                 refunded = True
-                drop_session.state = SessionState.WAITING_FOR_PAYMENT
+                # drop_session.state = SessionState.WAITING_FOR_PAYMENT
                 raise NotEnoughFundsException("Not enough MOB in wallet to cover bonus coin")
             ###  This will stop us from sending an initial payment if bonus coins aren't available
         except (OutOfStockException, NotEnoughFundsException) as e:
             self.logger.exception(f"Could not fulfill drop to customer {customer.phone_number}")
+            drop_session.state = SessionState.OUT_OF_STOCK
             if not refunded:
                 self.messenger.log_and_send_message(
                     customer,
@@ -81,16 +82,16 @@ class AirDropSession(BaseDropSession):
                 ChatStrings.AIRDROP_COMPLETED
             )
 
-        if customer.has_store_preferences(store=self.store):
-            self.messenger.log_and_send_message(
-                customer, source, ChatStrings.BYE
-            )
-            drop_session.state = SessionState.COMPLETED
-        else:
-            self.messenger.log_and_send_message(
-                customer, source, ChatStrings.NOTIFICATIONS_ASK
-            )
-            drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED
+            if customer.has_store_preferences(store=self.store):
+                self.messenger.log_and_send_message(
+                    customer, source, ChatStrings.BYE
+                )
+                drop_session.state = SessionState.COMPLETED
+            else:
+                self.messenger.log_and_send_message(
+                    customer, source, ChatStrings.NOTIFICATIONS_ASK
+                )
+                drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED
         drop_session.save(update_fields=['state'])
 
     def handle_airdrop_session_ready_to_receive(self, message, drop_session):
