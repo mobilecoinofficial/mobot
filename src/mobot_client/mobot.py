@@ -7,9 +7,8 @@ import pytz
 import logging
 from decimal import Decimal
 
-
-
 from django.utils import timezone
+from django.conf import settings
 
 from signald_client import Signal
 
@@ -46,17 +45,14 @@ class MOBot:
     def __init__(self):
         self.store: Store = ChatbotSettings.load().store
         self.logger = logging.getLogger(f"MOBot({self.store})")
-        signald_address = os.getenv("SIGNALD_ADDRESS", "127.0.0.1")
-        signald_port = os.getenv("SIGNALD_PORT", "15432")
+        signald_address = settings.SIGNALD_ADDRESS
+        signald_port = settings.SIGNALD_PORT
         self.signal = Signal(
             str(self.store.phone_number), socket_path=(signald_address, int(signald_port))
         )
         self.messenger = SignalMessenger(self.signal, self.store)
 
-        fullservice_address = os.getenv("FULLSERVICE_ADDRESS", "127.0.0.1")
-        fullservice_port = os.getenv("FULLSERVICE_PORT", "9090")
-        fullservice_url = f"http://{fullservice_address}:{fullservice_port}/wallet"
-        self.mcc = mc.Client(url=fullservice_url)
+        self.mcc = mc.Client(url=settings.FULLSERVICE_URL)
 
         all_accounts_response = self.mcc.get_all_accounts()
         self.account_id = next(iter(all_accounts_response))

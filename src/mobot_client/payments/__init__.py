@@ -39,6 +39,8 @@ class Payments:
     def get_payments_address(self, source):
         if isinstance(source, dict):
             source = source["number"]
+        else:
+            source = str(source)
 
         self.logger.info(f"Getting payment address for customer {source}")
         customer_signal_profile = self.signal.get_profile(source, True)
@@ -51,13 +53,16 @@ class Payments:
     def send_mob_to_customer(self, customer, source, amount_mob, cover_transaction_fee, memo="Refund"):
         if isinstance(source, dict):
             source = source["number"]
+        else:
+            source = str(source)
 
         if not cover_transaction_fee:
             amount_mob = amount_mob - Decimal(mc.pmob2mob(self.minimum_fee_pmob))
 
         self.logger.info(f"Sending {amount_mob} MOB to {source}. Cover_transaction_fee: {cover_transaction_fee}")
-
+        self.logger.info(f"Getting payment address for customer with # {source}")
         customer_payments_address = self.get_payments_address(source)
+
         if customer_payments_address is None:
             self.messenger.log_and_send_message(
                 customer,
