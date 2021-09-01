@@ -68,7 +68,7 @@ class Signal(_Signal):
     def register_payment_handler(self, func):
         self.payment_handler(func)
 
-    def _process(self, message, auto_send_receipts=False) -> bool:
+    def _process(self, message, auto_send_receipts=True) -> bool:
         number = message.source
         if isinstance(message.source, dict):
             number = message.source['number']
@@ -131,7 +131,7 @@ class Signal(_Signal):
             self.logger.debug(f"Completed future {future}")
         sys.exit(0)
 
-    def run_chat(self, auto_send_receipts=False):
+    def run_chat(self, auto_send_receipts=True):
         """
         Start the chat event loop.
         """
@@ -142,3 +142,4 @@ class Signal(_Signal):
         while self._run:
             message = next(messages_iterator)
             self.logger.info(f"Receiving message \n {message}")
+            self._executor.submit(self._process, message, auto_send_receipts)
