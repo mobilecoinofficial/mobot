@@ -30,6 +30,7 @@ class AirDropSession(BaseDropSession):
 
     @transaction.atomic
     def handle_airdrop_payment(self, source, customer, amount_paid_mob, drop_session: DropSession):
+        refunded = False
         try:
             claimed_coin: BonusCoin = BonusCoin.available.claim_random_coin(drop_session)
             if not self.bonus_coin_funds_available(drop_session):
@@ -39,16 +40,19 @@ class AirDropSession(BaseDropSession):
                     ChatStrings.AIRDROP_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
                 )
                 self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
-                drop_session.state = SessionState.WAITING_FOR_PAYMENT
+                refunded = True
                 raise NotEnoughFundsException("Not enough MOB in wallet to cover bonus coin")
             ###  This will stop us from sending an initial payment if bonus coins aren't available
         except (OutOfStockException, NotEnoughFundsException) as e:
-            self.messenger.log_and_send_message(
-                customer,
-                source,
-                ChatStrings.BONUS_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
-            )
-            self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
+            self.logger.exception(f"Could not fulfill drop to customer {customer.phone_number}")
+            drop_session.state = SessionState.OUT_OF_STOCK
+            if not refunded:
+                self.messenger.log_and_send_message(
+                    customer,
+                    source,
+                    ChatStrings.BONUS_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
+                )
+                self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
         else:
             initial_coin_amount_mob = mc.pmob2mob(
                 drop_session.drop.initial_coin_amount_pmob
@@ -77,17 +81,17 @@ class AirDropSession(BaseDropSession):
                 ChatStrings.AIRDROP_COMPLETED
             )
 
-        if customer.has_store_preferences(store=self.store):
-            self.messenger.log_and_send_message(
-                customer, source, ChatStrings.BYE
-            )
-            drop_session.state = SessionState.COMPLETED
-        else:
-            self.messenger.log_and_send_message(
-                customer, source, ChatStrings.NOTIFICATIONS_ASK
-            )
-            drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED
-        drop_session.save(update_fields=['state'])
+            if customer.has_store_preferences(store=self.store):
+                self.messenger.log_and_send_message(
+                    customer, source, ChatStrings.BYE
+                )
+                drop_session.state = SessionState.COMPLETED
+            else:
+                self.messenger.log_and_send_message(
+                    customer, source, ChatStrings.NOTIFICATIONS_ASK
+                )
+                drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED
+        drop_session.save(update_fields=['state','bonus_coin_claimed'])
 
     def handle_airdrop_session_ready_to_receive(self, message, drop_session):
         """Ask if the customer is ready to receive MOB.
