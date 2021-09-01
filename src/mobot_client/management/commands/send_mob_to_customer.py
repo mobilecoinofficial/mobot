@@ -80,15 +80,16 @@ class Command(BaseCommand):
         message_text = kwargs['text'].format(mob=mob)
 
         for customer in customers:
-            self.logger.info(f"Sending message {message_text} to customer {customer.phone_number}")
-            self.messenger.log_and_send_message(customer, str(customer.phone_number), message_text)
-            self.logger.info(f"Sending payment of {mob} to customer {customer.phone_number}")
+            customer_phone_number = str(customer.phone_number.as_e164)
+            #self.logger.info(f"Sending message {message_text} to customer {customer.phone_number}")
+            self.messenger.log_and_send_message(customer, customer_phone_number, message_text)
+            #self.logger.info(f"Sending payment of {mob} to customer {customer.phone_number}")
             try:
                 self.payments.send_mob_to_customer(customer=customer,
-                                                   source=str(customer.phone_number),
+                                                   source=customer_phone_number,
                                                    amount_mob=mob,
                                                    cover_transaction_fee=cover_fee,
                                                    memo=memo)
             except Exception as e:
-                self.logger.exception(f"Payment to Customer {customer.phone_number} of {mob} MOB failed!")
-            self.logger.info(f"Payment to customer {customer.phone_number} succeeded!")
+                self.logger.exception(f"Payment to Customer {customer.phone_number.as_e164} of {mob} MOB failed!")
+            self.logger.info(f"Payment to customer {customer.phone_number.as_e164} succeeded!")
