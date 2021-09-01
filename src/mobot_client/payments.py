@@ -43,7 +43,10 @@ class Payments:
         self.logger.info(f"Getting payment address for customer {source}")
         customer_signal_profile = self.signal.get_profile(source, True)
         self.logger.info(f"Got customer({source}) signal profile {customer_signal_profile}")
-        return customer_signal_profile.get("mobilecoin_address")
+        mobilecoin_address = customer_signal_profile.get('mobilecoin_address')
+        if not mobilecoin_address:
+            self.logger.warning(f"Found no MobileCoin payment address for {source.number}. Response: {customer_signal_profile}")
+        return mobilecoin_address
 
     def send_mob_to_customer(self, customer, source, amount_mob, cover_transaction_fee):
         if isinstance(source, dict):
