@@ -103,7 +103,6 @@ class AirDropSession(BaseDropSession):
                 or message.text.lower() == "cancel"
         ):
             drop_session.state = SessionState.CANCELLED
-            drop_session.save()
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 message.source,
