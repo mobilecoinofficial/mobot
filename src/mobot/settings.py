@@ -28,6 +28,11 @@ VAT_ID = os.environ.get('VAT_ID', "123")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', False)
+SIGNALD_ADDRESS = os.environ.get('SIGNALD_ADDRESS', '127.0.0.1')
+SIGNALD_PORT = os.environ.get('SIGNALD_PORT', 15432)
+FULLSERVICE_ADDRESS = os.getenv("FULLSERVICE_ADDRESS", "127.0.0.1")
+FULLSERVICE_PORT = os.getenv("FULLSERVICE_PORT", "9090")
+FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
 
 DATABASE = os.environ.get('DATABASE', 'sqlite')
 
