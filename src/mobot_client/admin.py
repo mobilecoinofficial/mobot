@@ -1,6 +1,8 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
 from django.contrib import admin
+
+from mobilecoin.utility import pmob2mob
 from .models import (
     Store,
     Customer,
@@ -14,6 +16,7 @@ from .models import (
     ChatbotSettings,
     Order,
     Sku,
+    BonusCoinQuerySet,
 )
 
 
@@ -22,14 +25,12 @@ class StoreAdmin(admin.ModelAdmin):
 
 
 class CustomerAdmin(admin.ModelAdmin):
-    model = Customer
     readonly_fields = ('has_active_drop_session', 'has_sessions_awaiting_payment',)
 
 
 class DropAdmin(admin.ModelAdmin):
-    model = Drop
-    readonly_fields = ('initial_coin_limit', 'currently_active', 'num_coins_remaining')
-    pass
+    list_display = ('__str__', 'is_active', 'coins_available')
+    readonly_fields = ('initial_coin_limit', 'is_active', 'coins_available')
 
 
 class ItemAdmin(admin.ModelAdmin):
@@ -45,8 +46,7 @@ class CustomerDropRefundsAdmin(admin.ModelAdmin):
 
 
 class DropSessionAdmin(admin.ModelAdmin):
-    def get_queryset(self, request):
-        return self.model.objects.all()
+    list_display = ('customer', 'created_at', 'state')
 
 
 class MessageAdmin(admin.ModelAdmin):
@@ -54,14 +54,16 @@ class MessageAdmin(admin.ModelAdmin):
 
 
 class BonusCoinAdmin(admin.ModelAdmin):
-    readonly_fields = ('num_claimed', 'num_remaining',)
+    list_display = ('__str__', 'number_remaining', 'amount_mob')
+    readonly_fields = ('number_claimed', 'number_remaining',)
 
-    def get_queryset(self, request):
-        return self.model.objects.all()
+    @admin.display(description='MOB')
+    def amount_mob(self, obj):
+        return f"{pmob2mob(obj.amount_pmob):.4f}"
 
 
 class SkuAdmin(admin.ModelAdmin):
-    readonly_fields = ('num_available',)
+    readonly_fields = ('number_available',)
 
     def get_queryset(self, request):
         return self.model.objects.all()

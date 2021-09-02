@@ -250,7 +250,7 @@ if you have any questions or issues"""
     TIMEOUT_REFUND = "Your session has expired. We will refund the amount you sent."
 
     ### Payment chat strings
-    COULD_NOT_GENERATE_RECEIPT = "Couldn't generate a receipt, please contact us if you didn't a payment!"
+    COULD_NOT_GENERATE_RECEIPT = "Couldn't generate a receipt, please contact us if you get didn't a payment!"
     WE_RECEIVED_MOB = "We received {amount_mob} MOB"
     PLUS_SIGN_HELP = "Whoops! Looks like you meant to hit the '+' button to the left of the text field."
     COINS_SENT = """{initial_num_sent} customers sent initial coins, totalling {total} MOB."""

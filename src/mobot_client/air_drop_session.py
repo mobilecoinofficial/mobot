@@ -28,11 +28,10 @@ class AirDropSession(BaseDropSession):
     def bonus_coin_funds_available(self, drop_session: DropSession) -> bool:
         return self.payments.has_enough_funds_for_payment(drop_session.bonus_coin_claimed.amount_pmob)
 
-    @transaction.atomic
     def handle_airdrop_payment(self, source, customer, amount_paid_mob, drop_session: DropSession):
         refunded = False
         try:
-            claimed_coin: BonusCoin = BonusCoin.available.claim_random_coin(drop_session)
+            claimed_coin: BonusCoin = BonusCoin.objects.claim_random_coin(drop_session)
             if not self.bonus_coin_funds_available(drop_session):
                 self.messenger.log_and_send_message(
                     customer,
@@ -45,7 +44,6 @@ class AirDropSession(BaseDropSession):
             ###  This will stop us from sending an initial payment if bonus coins aren't available
         except (OutOfStockException, NotEnoughFundsException) as e:
             self.logger.exception(f"Could not fulfill drop to customer {customer.phone_number}")
-            drop_session.state = SessionState.OUT_OF_STOCK
             if not refunded:
                 self.messenger.log_and_send_message(
                     customer,
@@ -86,12 +84,13 @@ class AirDropSession(BaseDropSession):
                     customer, source, ChatStrings.BYE
                 )
                 drop_session.state = SessionState.COMPLETED
+                drop_session.save()
             else:
                 self.messenger.log_and_send_message(
                     customer, source, ChatStrings.NOTIFICATIONS_ASK
                 )
                 drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED
-        drop_session.save(update_fields=['state','bonus_coin_claimed'])
+                drop_session.save()
 
     def handle_airdrop_session_ready_to_receive(self, message, drop_session):
         """Ask if the customer is ready to receive MOB.
