@@ -191,7 +191,7 @@ MOBot OUT. Buh-bye!"""
 'pay' - How to pay"""
 # 'terms' - Terms and conditions
 
-    APOLOGIES_HAVE_SOME_MOB = """MOBot here. So sorry for yesterday's technical difficulties
+    APOLOGIES_HAVE_SOME_MOB = """MOBot here. So sorry for yesterday's technical difficulties.
     
 We noticed that you received an initial airdop of coin, but weren't able to follow up for the bonus round.  We've just sent you a bonus to make good on that.
     
