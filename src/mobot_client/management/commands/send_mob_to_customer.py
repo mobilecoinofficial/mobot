@@ -25,7 +25,7 @@ class Command(BaseCommand):
         super().__init__(*args, **kwargs)
         store = ChatbotSettings.load().store
         signal = Signal(
-            store.phone_number, socket_path=(settings.SIGNALD_ADDRESS, int(settings.SIGNALD_PORT))
+            store.phone_number.as_e164, socket_path=(settings.SIGNALD_ADDRESS, int(settings.SIGNALD_PORT))
         )
         self.logger = getLogger("SendMobToCustomer")
         self.messenger = SignalMessenger(signal, store)
@@ -80,10 +80,8 @@ class Command(BaseCommand):
         message_text = kwargs['text'].format(mob=mob)
 
         for customer in customers:
-            customer_phone_number = str(customer.phone_number.as_e164)
-            #self.logger.info(f"Sending message {message_text} to customer {customer.phone_number}")
+            customer_phone_number = customer.phone_number.as_e164
             self.messenger.log_and_send_message(customer, customer_phone_number, message_text)
-            #self.logger.info(f"Sending payment of {mob} to customer {customer.phone_number}")
             try:
                 self.payments.send_mob_to_customer(customer=customer,
                                                    source=customer_phone_number,
