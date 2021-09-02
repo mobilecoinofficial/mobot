@@ -36,6 +36,9 @@ from mobot_client.chat_strings import ChatStrings
 from mobot_client.timeouts import Timeouts
 
 
+class ConfigurationException(Exception):
+    pass
+
 
 class MOBot:
     """
@@ -44,6 +47,8 @@ class MOBot:
 
     def __init__(self):
         self.store: Store = ChatbotSettings.load().store
+        if not self.store:
+            raise ConfigurationException("No store found!")
         self.logger = logging.getLogger(f"MOBot({self.store})")
         signald_address = settings.SIGNALD_ADDRESS
         signald_port = settings.SIGNALD_PORT
@@ -174,7 +179,7 @@ class MOBot:
 
         amount_paid_mob = mc.pmob2mob(receipt_status["txo"]["value_pmob"])
         customer, _ = Customer.objects.get_or_create(phone_number=source)
-        drop_session = customer.active_drop_sessions().filter(state=SessionState.WAITING_FOR_PAYMENT).first()
+        drop_session = customer.drop_sessions.filter(state=SessionState.WAITING_FOR_PAYMENT).first()
 
         if drop_session:
             self.logger.info(f"Found drop session {drop_session} awaiting payment")

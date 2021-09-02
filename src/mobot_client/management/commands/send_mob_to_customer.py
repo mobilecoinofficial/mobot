@@ -81,13 +81,13 @@ class Command(BaseCommand):
 
         for customer in customers:
             customer_phone_number = customer.phone_number.as_e164
-            self.messenger.log_and_send_message(customer, customer_phone_number, message_text)
             try:
                 self.payments.send_mob_to_customer(customer=customer,
                                                    source=customer_phone_number,
                                                    amount_mob=mob,
                                                    cover_transaction_fee=cover_fee,
                                                    memo=memo)
+                self.messenger.log_and_send_message(customer, customer_phone_number, message_text)
             except Exception as e:
                 self.logger.exception(f"Payment to Customer {customer.phone_number.as_e164} of {mob} MOB failed!")
             self.logger.info(f"Payment to customer {customer.phone_number.as_e164} succeeded!")

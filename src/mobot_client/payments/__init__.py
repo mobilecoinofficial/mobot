@@ -21,6 +21,10 @@ class NotEnoughFundsException(Exception):
     pass
 
 
+class PaymentException(Exception):
+    pass
+
+
 class Payments:
     """The Payments class handles the logic relevant to sending MOB and handling receipts."""
 
@@ -101,6 +105,7 @@ class Payments:
                 source,
                 ChatStrings.COULD_NOT_GENERATE_RECEIPT,
             )
+            raise PaymentException("Could not send payment")
 
     def submit_transaction(self, tx_proposal: dict, account_id: str):
         # retry up to 10 times in case there's some failure with a 1 sec timeout in between each

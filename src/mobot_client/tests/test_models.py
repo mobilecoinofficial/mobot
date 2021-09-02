@@ -1,5 +1,5 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
-
+import unittest
 from typing import List, Dict
 from collections import defaultdict
 from django.test import TestCase
@@ -67,58 +67,45 @@ class ModelTests(TestCase):
 
         print(f"Asserting {sku_to_sell_out} no longer in stock...")
         self.assertFalse(sku_to_sell_out.in_stock())
+        sold_out_session = DropSessionFactory.create(drop=drop)
+
+        with self.assertRaises(OutOfStockException):
+            sku_to_sell_out.order(sold_out_session)
         print(f"Testing to see if cancelling an order puts item back in stock")
         order.cancel()
         self.assertTrue(sku_to_sell_out.in_stock())
+        print(f"Trying to order previously sold-out session")
+        self.assertIsNotNone(sku_to_sell_out.order(sold_out_session))
         print(f"Cancelled orders are available!")
 
-    def test_airdrop_inventory(self):
+    def test_claim_coin(self):
         drop = DropFactory.create(drop_type=DropType.AIRDROP)
-        print("Minting 3 BonusCoins")
-        coins = BonusCoinFactory.create_batch(size=3, drop=drop, number_available_at_start=10)
-        # Make sure we don't give out initial coins when there are no bonuses left
-        self.assertEqual(drop.initial_coin_limit, 30)
-        sessions_by_coin: Dict[BonusCoin, List[DropSession]] = defaultdict(list)
-        sessions = DropSessionFactory.create_batch(size=10, drop=drop)
+        coin = BonusCoinFactory.create(drop=drop, number_available_at_start=1)
+        session = DropSessionFactory.create(drop=drop)
+        self.assertEqual(coin.number_remaining(), coin.number_available_at_start)
+        claimed = BonusCoin.objects.claim_random_coin(drop_session=session)
+        session.save()
+        self.assertEqual(coin.number_remaining(), coin.number_available_at_start - 1)
+        new_session = DropSessionFactory.create(drop=drop)
+        with self.assertRaises(OutOfStockException):
+            second_claimed = BonusCoin.objects.claim_random_coin(drop_session=session)
+            session.save()
+        self.assertEqual(BonusCoin.objects.available_coins().filter(drop=drop).count(), 0)
+
+    def test_claim_multiple(self):
+        drop = DropFactory.create(drop_type=DropType.AIRDROP)
+        coin = BonusCoinFactory.create_batch(size=2, drop=drop, number_available_at_start=1)
+        session1 = DropSessionFactory.create(drop=drop)
+        session2 = DropSessionFactory.create(drop=drop)
         self.assertTrue(drop.under_quota())
-
-        for session in sessions:
-            coin = BonusCoin.available.claim_random_coin(session)
-            print(f"Session {session.id} claimed coin {coin}")
-            sessions_by_coin[coin].append(session)
-
-        for coin, sessions in sessions_by_coin.items():
-            print(f"Ensuring coin {coin.id} has been updated to show new availability...")
-            print(f"Number of sessions claiming coin: {len(sessions)} Number available: {coin.number_remaining()}")
-            self.assertEqual(coin.number_remaining(), coin.number_available_at_start - len(sessions))
-
-        coins_available = sum(map(lambda c: c.number_remaining(), coins))
-        print(f"Before clearing inventory, we had {coins_available} coins available")
-        print(f"Before clearing inventory, drop.under_quota evaluated to {drop.under_quota()}")
-        print("Making 100 sessions, clearing out inventory")
-        more_sessions = DropSessionFactory.create_batch(size=25, drop=drop)
-        coins_claimed = 0
-        sessions_with_coins = []
-
-        for num, session in enumerate(more_sessions):
-            if coins_claimed < coins_available:
-                self.assertTrue(session.drop.under_quota())
-                self.assertEqual(session.drop.coins_available(), coins_available - coins_claimed)
-                coin = BonusCoin.available.claim_random_coin(session)
-                print(f"Coin {coin} claimed!")
-                coins_claimed += 1
-                sessions_with_coins.append(session)
-            else:
-                with self.assertRaises(OutOfStockException):
-                    BonusCoin.available.claim_random_coin(session)
-                self.assertFalse(session.drop.under_quota())
-
-        print("Asserting drop is over quota")
+        claimed1 = BonusCoin.objects.claim_random_coin(session1)
+        claimed2 = BonusCoin.objects.claim_random_coin(session2)
+        session1.save()
+        session2.save()
+        self.assertEqual(BonusCoin.objects.available_coins().count(), 0)
         self.assertFalse(drop.under_quota())
-        print(f"drop.under_quota() evaluated to {drop.under_quota()}")
-
-        self.assertEqual(coins_claimed, coins_available)
-        print(f"{coins_claimed} coins claimed by remaining sessions")
+        with self.assertRaises(OutOfStockException):
+            BonusCoin.objects.claim_random_coin(session1)
 
     def test_active_drop_sessions_found_for_customer(self):
         customer = CustomerFactory.create()
@@ -178,3 +165,14 @@ class ModelTests(TestCase):
         self.assertFalse(customer.has_store_preferences(store))
         prefs = CustomerStorePreferences.objects.create(store=store, customer=customer, allows_contact=True)
         self.assertTrue(customer.has_store_preferences(store))
+
+    def test_customer_country_code_validity(self):
+        drop = DropFactory.create(number_restriction="+44")
+        us_customer: Customer = CustomerFactory.create(phone_number="+18054412655")
+        uk_customer: Customer = CustomerFactory.create(phone_number="+447975777666")
+        self.assertTrue(uk_customer.matches_country_code_restriction(drop))
+        self.assertFalse(us_customer.matches_country_code_restriction(drop))
+
+    def test_find_active_sessions(self):
+        session = DropSessionFactory.create(state=SessionState.READY)
+
