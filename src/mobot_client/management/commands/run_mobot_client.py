@@ -1,7 +1,7 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
 """
-The entrypoint for the Django runserver command.
+The entrypoint for the running MOBot.
 """
 
 from django.core.management.base import BaseCommand
