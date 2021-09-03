@@ -16,7 +16,6 @@ from .models import (
     ChatbotSettings,
     Order,
     Sku,
-    BonusCoinQuerySet,
 )
 
 
@@ -25,7 +24,8 @@ class StoreAdmin(admin.ModelAdmin):
 
 
 class CustomerAdmin(admin.ModelAdmin):
-    readonly_fields = ('has_active_drop_session', 'has_sessions_awaiting_payment',)
+    list_display = ('phone_number', 'has_active_drop_session', 'has_sessions_awaiting_payment', 'has_fulfilled_drop_session', 'state')
+    readonly_fields = ('has_active_drop_session', 'has_sessions_awaiting_payment', 'has_fulfilled_drop_session')
 
 
 class DropAdmin(admin.ModelAdmin):
@@ -46,7 +46,7 @@ class CustomerDropRefundsAdmin(admin.ModelAdmin):
 
 
 class DropSessionAdmin(admin.ModelAdmin):
-    list_display = ('customer', 'created_at', 'state')
+    list_display = ('__str__', 'customer', 'created_at', 'state')
 
 
 class MessageAdmin(admin.ModelAdmin):

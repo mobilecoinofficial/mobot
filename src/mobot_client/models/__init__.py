@@ -264,15 +264,32 @@ class Customer(models.Model):
     def has_active_drop_session(self) -> bool:
         return self.drop_sessions.count() > 0
 
+    def state(self) -> Optional[SessionState]:
+        if active_session := self.active_drop_sessions().first():
+            return active_session.get_state_display()
+        else:
+            return None
+
     def sessions_awaiting_payment(self):
-        return self.active_drop_sessions().filter(state=SessionState.WAITING_FOR_PAYMENT)
+        return DropSession.objects.awaiting_payment_sessions()
 
     @property
     def has_sessions_awaiting_payment(self):
         return self.sessions_awaiting_payment().count() > 0
 
+    def fulfilled_drop_sessions(self):
+        return DropSession.objects.sold_sessions().filter(customer=self)
+
+    @property
+    def has_fulfilled_drop_session(self):
+        return self.fulfilled_drop_sessions().count() > 0
+
     def completed_drop_sessions(self):
         return DropSession.objects.completed_sessions().filter(customer=self)
+
+    @property
+    def has_completed_session(self):
+        return self.fulfilled_drop_sessions().count() > 0
 
     def errored_sessions(self):
         return DropSession.objects.errored_sessions().filter(customer=self)
@@ -282,7 +299,7 @@ class Customer(models.Model):
         return DropSession.objects.sold_sessions().filter(customer=self)
 
     def has_completed_drop(self, drop: Drop) -> bool:
-        completed_drop = self.completed_drop_sessions().filter(drop=drop).first()
+        completed_drop = self.fulfilled_drop_sessions().filter(drop=drop).first()
         return completed_drop is not None
 
     def has_completed_drop_with_error(self, drop: Drop) -> bool:
@@ -328,18 +345,31 @@ class DropSessionQuerySet(models.QuerySet):
             drop__start_time__lte=timezone.now(),
             drop__end_time__gte=timezone.now())
 
+    def awaiting_payment_sessions(self):
+        return self.filter(
+            state=SessionState.WAITING_FOR_PAYMENT,
+            drop__start_time__lte=timezone.now(),
+            drop__end_time__gte=timezone.now(),
+        )
+
     def errored_sessions(self):
         return self.filter(
-            state__gt=SessionState.COMPLETED
+            state__gt=SessionState.COMPLETED,
+            drop__start_time__lte=timezone.now(),
+            drop__end_time__gte=timezone.now(),
         )
 
     def completed_sessions(self):
         return self.filter(
-            state=SessionState.COMPLETED
+            state=SessionState.COMPLETED,
+            drop__start_time__lte=timezone.now(),
+            drop__end_time__gte=timezone.now(),
         )
 
     def sold_sessions(self):
-        return self.filter(state__in=(SessionState.ALLOW_CONTACT_REQUESTED, SessionState.COMPLETED))
+        return self.filter(state__in=(SessionState.ALLOW_CONTACT_REQUESTED, SessionState.COMPLETED),
+                           drop__start_time__lte=timezone.now(),
+                           drop__end_time__gte=timezone.now())
 
 
 class DropSessionManager(models.Manager.from_queryset(DropSessionQuerySet)):

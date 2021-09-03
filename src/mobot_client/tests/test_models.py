@@ -145,8 +145,7 @@ class ModelTests(TestCase):
         errored_session = DropSessionFactory.create(customer=customer, state=SessionState.OUT_OF_STOCK)
         print(f"Made session {errored_session} with OUT OF STOCK error")
         self.assertEqual(customer.errored_sessions().count(), 1)
-        self.assertEqual(customer.completed_drop_sessions().count(), 5)
-        self.assertEqual(customer.successful_sessions().count(), 5)
+        self.assertEqual(customer.fulfilled_drop_sessions().count(), 5)
         self.assertEqual(customer.errored_sessions().first().drop.pk, errored_session.drop.pk)
         self.assertTrue(customer.has_completed_drop_with_error(errored_session.drop))
 
