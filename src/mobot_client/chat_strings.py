@@ -191,6 +191,14 @@ MOBot OUT. Buh-bye!"""
 'pay' - How to pay"""
 # 'terms' - Terms and conditions
 
+    APOLOGIES_HAVE_SOME_MOB = """MOBot here. So sorry for yesterday's technical difficulties.
+    
+We noticed that you received an initial airdop of coin, but weren't able to follow up for the bonus round.  We've just sent you a bonus to make good on that.
+    
+Please enjoy an addition {mob} MOB to bring your total to ~ £10 worth of MOB
+    
+MOBot OUT. Enjoy!"""
+
     PAYMENT_REQUEST = "Order now by sending {price} MOB using Signal Payments"
     PAY = """1. Select the attachment (+) icon below and then select Pay
 2. Enter the amount to send ({amount} MOB)
@@ -242,7 +250,7 @@ if you have any questions or issues"""
     TIMEOUT_REFUND = "Your session has expired. We will refund the amount you sent."
 
     ### Payment chat strings
-    COULD_NOT_GENERATE_RECEIPT = "Couldn't generate a receipt, please contact us if you didn't a payment!"
+    COULD_NOT_GENERATE_RECEIPT = "Couldn't generate a receipt, please contact us if you get didn't a payment!"
     WE_RECEIVED_MOB = "We received {amount_mob} MOB"
     PLUS_SIGN_HELP = "Whoops! Looks like you meant to hit the '+' button to the left of the text field."
     COINS_SENT = """{initial_num_sent} customers sent initial coins, totalling {total} MOB."""

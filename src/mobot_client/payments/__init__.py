@@ -5,19 +5,25 @@ from decimal import Decimal
 import threading
 import logging
 
-import mobilecoin as mc
 
+import mobilecoin as mc
+from signald_client import Signal
+
+from mobot_client.logger import SignalMessenger
 from mobot_client.models import (
     SessionState,
     Store,
     DropSession,
 )
-
-
 from mobot_client.chat_strings import ChatStrings
+from mobot_client.payments.client import MCClient
 
 
 class NotEnoughFundsException(Exception):
+    pass
+
+
+class PaymentException(Exception):
     pass
 
 
@@ -25,11 +31,11 @@ class Payments:
     """The Payments class handles the logic relevant to sending MOB and handling receipts."""
 
     def __init__(
-            self, mobilecoin_client, minimum_fee_pmob, account_id, store: Store, messenger, signal
+            self, mobilecoin_client: MCClient, store: Store, messenger: SignalMessenger, signal: Signal
     ):
         self.mcc = mobilecoin_client
-        self.minimum_fee_pmob = minimum_fee_pmob
-        self.account_id = account_id
+        self.minimum_fee_pmob = mobilecoin_client.minimum_fee_pmob
+        self.account_id = mobilecoin_client.account_id
         self.store = store
         self.signal = signal
         self.messenger = messenger
@@ -39,6 +45,8 @@ class Payments:
     def get_payments_address(self, source):
         if isinstance(source, dict):
             source = source["number"]
+        else:
+            source = str(source)
 
         self.logger.info(f"Getting payment address for customer {source}")
         customer_signal_profile = self.signal.get_profile(source, True)
@@ -48,16 +56,19 @@ class Payments:
             self.logger.warning(f"Found no MobileCoin payment address for {source.number}. Response: {customer_signal_profile}")
         return mobilecoin_address
 
-    def send_mob_to_customer(self, customer, source, amount_mob, cover_transaction_fee):
+    def send_mob_to_customer(self, customer, source, amount_mob, cover_transaction_fee, memo="Refund"):
         if isinstance(source, dict):
             source = source["number"]
+        else:
+            source = str(source)
 
         if not cover_transaction_fee:
             amount_mob = amount_mob - Decimal(mc.pmob2mob(self.minimum_fee_pmob))
 
         self.logger.info(f"Sending {amount_mob} MOB to {source}. Cover_transaction_fee: {cover_transaction_fee}")
-
+        self.logger.info(f"Getting payment address for customer with # {source}")
         customer_payments_address = self.get_payments_address(source)
+
         if customer_payments_address is None:
             self.messenger.log_and_send_message(
                 customer,
@@ -66,10 +77,10 @@ class Payments:
             )
         elif amount_mob > 0:
             self.send_mob_to_address(
-                source, self.account_id, amount_mob, customer_payments_address
+                source, self.account_id, amount_mob, customer_payments_address, memo=memo
             )
 
-    def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str):
+    def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund"):
         # customer_payments_address is b64 encoded, but full service wants a b58 address
         customer_payments_address = mc.utility.b64_public_address_to_b58_wrapper(
             customer_payments_address
@@ -88,7 +99,7 @@ class Payments:
             except Exception:
                 print("TxOut did not land yet, id: " + txo_id)
             else:
-                self.send_payment_receipt(source, tx_proposal)
+                self.send_payment_receipt(source, tx_proposal, memo)
                 return
             time.sleep(1.0)
         else:
@@ -96,6 +107,7 @@ class Payments:
                 source,
                 ChatStrings.COULD_NOT_GENERATE_RECEIPT,
             )
+            raise PaymentException("Could not send payment")
 
     def submit_transaction(self, tx_proposal: dict, account_id: str):
         # retry up to 10 times in case there's some failure with a 1 sec timeout in between each
@@ -107,12 +119,12 @@ class Payments:
 
         return list_of_txos[0]["txo_id_hex"]
 
-    def send_payment_receipt(self, source: str, tx_proposal: dict):
+    def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund"):
         receiver_receipt = self.create_receiver_receipt(tx_proposal)
         receiver_receipt = mc.utility.full_service_receipt_to_b64_receipt(
             receiver_receipt
         )
-        resp = self.signal.send_payment_receipt(source, receiver_receipt, "Refund")
+        resp = self.signal.send_payment_receipt(source, receiver_receipt, memo)
         self.logger.info(f"Send receipt {receiver_receipt} to {source}: {resp}")
 
     def create_receiver_receipt(self, tx_proposal: dict):
