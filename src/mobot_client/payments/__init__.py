@@ -5,16 +5,18 @@ from decimal import Decimal
 import threading
 import logging
 
-import mobilecoin as mc
 
+import mobilecoin as mc
+from signald_client import Signal
+
+from mobot_client.logger import SignalMessenger
 from mobot_client.models import (
     SessionState,
     Store,
     DropSession,
 )
-
-
 from mobot_client.chat_strings import ChatStrings
+from mobot_client.payments.client import MCClient
 
 
 class NotEnoughFundsException(Exception):
@@ -29,11 +31,11 @@ class Payments:
     """The Payments class handles the logic relevant to sending MOB and handling receipts."""
 
     def __init__(
-            self, mobilecoin_client, minimum_fee_pmob, account_id, store: Store, messenger, signal
+            self, mobilecoin_client: MCClient, store: Store, messenger: SignalMessenger, signal: Signal
     ):
         self.mcc = mobilecoin_client
-        self.minimum_fee_pmob = minimum_fee_pmob
-        self.account_id = account_id
+        self.minimum_fee_pmob = mobilecoin_client.minimum_fee_pmob
+        self.account_id = mobilecoin_client.account_id
         self.store = store
         self.signal = signal
         self.messenger = messenger

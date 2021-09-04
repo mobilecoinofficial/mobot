@@ -10,6 +10,7 @@ from decimal import Decimal
 from django.utils import timezone
 from django.conf import settings
 
+from mobot_client.payments.client import MCClient
 from signald_client import Signal
 
 from mobot_client.logger import SignalMessenger
@@ -19,10 +20,8 @@ from mobot_client.models import (
     Drop,
     CustomerStorePreferences,
     BonusCoin,
-    ChatbotSettings,
-    Message,
     Order,
-    Sku, SessionState, SessionState, DropType, OrderStatus, Store,
+    Sku, SessionState, DropType, OrderStatus, Store,
 )
 
 from mobot_client.drop_session import (
@@ -45,46 +44,30 @@ class MOBot:
     MOBot is the container which holds all of the business logic relevant to a Drop.
     """
 
-    def __init__(self):
-        self.store: Store = ChatbotSettings.load().store
+    def __init__(self, bot_name: str, bot_avatar_filename: str, store: Store, signal: Signal, mcc: MCClient):
+        self.store: Store = store
         if not self.store:
             raise ConfigurationException("No store found!")
         self.logger = logging.getLogger(f"MOBot({self.store})")
-        signald_address = settings.SIGNALD_ADDRESS
-        signald_port = settings.SIGNALD_PORT
-        self.signal = Signal(
-            str(self.store.phone_number), socket_path=(signald_address, int(signald_port))
-        )
+        self.signal = signal
         self.messenger = SignalMessenger(self.signal, self.store)
 
-        self.mcc = mc.Client(url=settings.FULLSERVICE_URL)
-
-        all_accounts_response = self.mcc.get_all_accounts()
-        self.account_id = next(iter(all_accounts_response))
-        account_obj = all_accounts_response[self.account_id]
-        self.public_address = account_obj["main_address"]
-
-        get_network_status_response = self.mcc.get_network_status()
-        self.minimum_fee_pmob = int(get_network_status_response["fee_pmob"])
+        self.mcc = mcc
+        self.public_address = mcc.public_address
+        self.minimum_fee_pmob = mcc.minimum_fee_pmob
 
         self.payments = Payments(
-            self.mcc,
-            self.minimum_fee_pmob,
-            self.account_id,
-            self.store,
-            self.messenger,
-            self.signal,
+            mobilecoin_client=self.mcc,
+            store=self.store,
+            messenger=self.messenger,
+            signal=signal
         )
-
-        self.drop = DropSession(self.store, self.payments, self.messenger)
 
         # self.timeouts = Timeouts(self.messenger, self.payments, schedule=30, idle_timeout=60, cancel_timeout=300)
 
-        bot_name = ChatbotSettings.load().name
-        bot_avatar_filename = ChatbotSettings.load().avatar_filename
         self.logger.info(f"bot_avatar_filename {bot_avatar_filename}")
         b64_public_address = mc.utility.b58_wrapper_to_b64_public_address(
-            self.public_address
+            self.mcc.public_address
         )
 
         resp = self.signal.set_profile(
@@ -154,7 +137,6 @@ class MOBot:
                 customer, str(customer.phone_number), ChatStrings.UNSOLICITED_NOT_ENOUGH
             )
 
-    # Chat handlers defined in __init__ so they can be registered with the Signal instance
     def handle_payment(self, source, receipt):
         self.logger.info(f"Received payment from {source}")
         receipt_status = None
@@ -168,7 +150,7 @@ class MOBot:
 
         while transaction_status == "TransactionPending":
             receipt_status = self.mcc.check_receiver_receipt_status(
-                self.public_address, receipt
+                self.mcc.public_address, receipt
             )
             transaction_status = receipt_status["receipt_transaction_status"]
             self.logger.info(f"Waiting for {receipt}, current status {receipt_status}")
