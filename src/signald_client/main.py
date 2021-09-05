@@ -133,7 +133,7 @@ class Signal(_Signal):
 
     def run_chat(self, auto_send_receipts=True):
         """
-        Start the chat event loop.
+        Start the chat.
         """
         self.logger.debug("Registering interrupt handler...")
         signal.signal(signal.SIGINT, self._stop_handler)

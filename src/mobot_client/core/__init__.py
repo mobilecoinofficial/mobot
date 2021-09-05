@@ -1,39 +1,22 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
-
-import os
-import pytz
 import logging
 from decimal import Decimal
 
-
 import mobilecoin as mc
-from django.utils import timezone
-from django.conf import settings
-
-from mobot_client.payments.client import MCClient
-from signald_client import Signal
-
-from mobot_client.logger import SignalMessenger
-from mobot_client.models import (
-    Customer,
-    DropSession,
-    Drop,
-    CustomerStorePreferences,
-    BonusCoin,
-    Order,
-    Sku, SessionState, DropType, OrderStatus, Store,
-)
-
-from mobot_client.drop_session import (
-    BaseDropSession,
-)
+import pytz
 
 from mobot_client.air_drop_session import AirDropSession
-from mobot_client.item_drop_session import ItemDropSession
-from mobot_client.payments import Payments
 from mobot_client.chat_strings import ChatStrings
-from mobot_client.timeouts import Timeouts
+
+from mobot_client.core.listener import MobotListener
+from mobot_client.drop_session import BaseDropSession
+from mobot_client.item_drop_session import ItemDropSession
+from mobot_client.logger import SignalMessenger
+from mobot_client.models import Store, Customer, SessionState, DropType, Drop, BonusCoin, Sku, Order, OrderStatus, \
+    CustomerStorePreferences, DropSession
+from mobot_client.payments import MCClient, Payments
+from signald_client import Signal
 
 
 class ConfigurationException(Exception):
@@ -45,8 +28,8 @@ class MOBot:
     MOBot is the container which holds all of the business logic relevant to a Drop.
     """
 
-
     def __init__(self, bot_name: str, bot_avatar_filename: str, store: Store, signal: Signal, mcc: MCClient):
+        self._running = True
         self.store: Store = store
         if not self.store:
             raise ConfigurationException("No store found!")
@@ -57,6 +40,7 @@ class MOBot:
         self.mcc = mcc
         self.public_address = mcc.public_address
         self.minimum_fee_pmob = mcc.minimum_fee_pmob
+        self.listener = MobotListener()
 
         self.payments = Payments(
             mobilecoin_client=self.mcc,
@@ -79,7 +63,7 @@ class MOBot:
         if resp.get("error"):
             assert False, resp
 
-        self.signal.register_payment_handler(self.handle_payment)
+        self.signal.register_handler("", self.listener.receive_message)
         self.signal.register_handler("\+", self.chat_router_plus)
         self.signal.register_handler("coins", self.chat_router_coins)
         self.signal.register_handler("items", self.chat_router_items)
@@ -286,8 +270,7 @@ class MOBot:
         customer, _ = Customer.objects.get_or_create(
             phone_number=message.source["number"]
         )
-        
-        self.messenger.log_received(message, customer, self.store)
+
         # see if there is an active airdrop session
         active_drop_session: DropSession = customer.active_drop_sessions().first()
 
@@ -332,4 +315,8 @@ class MOBot:
         # t.setDaemon(True)
         # t.start()
         self.logger.info("Now running MOBot chat")
+
+        while self._running:
+
+
         self.signal.run_chat(True)

@@ -9,7 +9,7 @@ from django.conf import settings
 
 
 from mobot_client.models import ChatbotSettings
-from mobot_client.mobot import MOBot
+from mobot_client.core import MOBot
 from signald_client import Signal
 
 from mobot_client.payments import MCClient

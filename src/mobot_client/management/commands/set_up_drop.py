@@ -4,19 +4,14 @@
 Set up a test drop, run the drop
 """
 import pytz
-from typing import Optional
 from argparse import ArgumentParser
 from dateutil.parser import parse
 from django.utils import timezone
 from datetime import timedelta, datetime
-from logging import getLogger
 from copy import copy
-from mobot_client.models import Drop, ChatbotSettings, Store, DropType
-from mobot_client.tests.factories import DropFactory, StoreFactory
-
+from mobot_client.models import Drop, Store, DropType
 
 from django.core.management.base import BaseCommand
-from mobot_client.mobot import MOBot
 
 
 def parse_duration(duration_string: str) -> timedelta:

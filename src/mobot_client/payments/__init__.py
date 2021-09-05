@@ -13,7 +13,7 @@ from mobot_client.logger import SignalMessenger
 from mobot_client.models import (
     SessionState,
     Store,
-    DropSession,
+    DropSession, Payment,
 )
 from mobot_client.chat_strings import ChatStrings
 from mobot_client.payments.client import MCClient
@@ -56,7 +56,7 @@ class Payments:
             self.logger.warning(f"Found no MobileCoin payment address for {source.number}. Response: {customer_signal_profile}")
         return mobilecoin_address
 
-    def send_mob_to_customer(self, customer, source, amount_mob, cover_transaction_fee, memo="Refund"):
+    def send_mob_to_customer(self, customer, source, amount_mob, cover_transaction_fee, memo="Refund") -> Payment:
         if isinstance(source, dict):
             source = source["number"]
         else:
@@ -76,6 +76,10 @@ class Payments:
                 ChatStrings.PAYMENTS_DEACTIVATED.format(number=self.store.phone_number),
             )
         elif amount_mob > 0:
+            Payment.objects.create(
+                customer=customer,
+                amount_pmob=mc.mob2pmob(amount_mob),
+            )
             self.send_mob_to_address(
                 source, self.account_id, amount_mob, customer_payments_address, memo=memo
             )
