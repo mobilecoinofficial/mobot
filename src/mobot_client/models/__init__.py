@@ -498,7 +498,7 @@ class MessageQuerySet(models.QuerySet):
 
 
 class MessageManager(models.Manager):
-    def create_from_signal(self, store: Store, message: SignalMessage, mcc: MCClient, callback: Optional[Callable] = None) -> Message:
+    def create_from_signal(self, store: Store, mcc: MCClient, message: SignalMessage, callback: Optional[Callable] = None) -> Message:
         if isinstance(message.source, dict):
             source = message.source['number']
         else:

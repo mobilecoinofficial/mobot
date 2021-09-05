@@ -1,10 +1,15 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
 import logging
+import threading
+from collections import defaultdict
+
+import pytz
+import re
+
 from decimal import Decimal
 
 import mobilecoin as mc
-import pytz
 
 from mobot_client.air_drop_session import AirDropSession
 from mobot_client.chat_strings import ChatStrings
@@ -14,7 +19,7 @@ from mobot_client.drop_session import BaseDropSession
 from mobot_client.item_drop_session import ItemDropSession
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import Store, Customer, SessionState, DropType, Drop, BonusCoin, Sku, Order, OrderStatus, \
-    CustomerStorePreferences, DropSession
+    CustomerStorePreferences, DropSession, Message
 from mobot_client.payments import MCClient, Payments
 from signald_client import Signal
 
@@ -29,7 +34,10 @@ class MOBot:
     """
 
     def __init__(self, bot_name: str, bot_avatar_filename: str, store: Store, signal: Signal, mcc: MCClient):
-        self._running = True
+        self._run = True
+        self._chat_handlers = []
+        self._payment_handlers = []
+        self._user_locks = defaultdict(lambda: threading.Lock())
         self.store: Store = store
         if not self.store:
             raise ConfigurationException("No store found!")
@@ -40,7 +48,7 @@ class MOBot:
         self.mcc = mcc
         self.public_address = mcc.public_address
         self.minimum_fee_pmob = mcc.minimum_fee_pmob
-        self.listener = MobotListener()
+        self.listener = MobotListener(mcc=mcc, signal_client=signal)
 
         self.payments = Payments(
             mobilecoin_client=self.mcc,
@@ -63,29 +71,34 @@ class MOBot:
         if resp.get("error"):
             assert False, resp
 
-        self.signal.register_handler("", self.listener.receive_message)
-        self.signal.register_handler("\+", self.chat_router_plus)
-        self.signal.register_handler("coins", self.chat_router_coins)
-        self.signal.register_handler("items", self.chat_router_items)
-        self.signal.register_handler("unsubscribe", self.unsubscribe_handler)
-        self.signal.register_handler("subscribe", self.subscribe_handler)
-        self.signal.register_handler("", self.default_handler)
+        self._register_payment_handler(self.handle_payment)
+        self._register_handler("\+", self.chat_router_plus)
+        self._register_handler("coins", self.chat_router_coins)
+        self._register_handler("items", self.chat_router_items)
+        self._register_handler("unsubscribe", self.unsubscribe_handler)
+        self._register_handler("subscribe", self.subscribe_handler)
+        self._register_handler("", self.default_handler)
 
-    def register_handler(self, regex, func):
-        def isolated_handler(message, match):
+    def _isolated_handler(self, func):
+        def isolated(*args, **kwargs):
             try:
-                func(message, match)
+                func(*args, **kwargs)
             except Exception as e:
-                self.logger.exception(f"Chat exception from message {message}!")
-        self.signal.register_handler(regex, isolated_handler)
+                self.logger.exception(f"Chat exception while processing: --- {func.__name__}({args}, {kwargs})\n")
+        return isolated
 
-    def register_payment_handler(self, regex, func):
-        def isolated_handler(message, match):
-            try:
-                func(message, match)
-            except Exception as e:
-                self.logger.exception(f"Chat exception from message {message}!")
-        self.signal.register_handler(regex, isolated_handler)
+    def _register_handler(self, regex, func, order=100):
+        self.logger.info(f"Registering chat handler for {regex if regex else 'default'}")
+        regex = re.compile(regex, re.I)
+
+        self._chat_handlers.append((order, regex, self._isolated_handler(func)))
+        # Use only the first value to sort so that declaration order doesn't change.
+        self._chat_handlers.sort(key=lambda x: x[0])
+
+    def _register_payment_handler(self, func):
+        isolated = self._isolated_handler(func)
+        self._payment_handlers.append(isolated)
+        return isolated
 
     def maybe_advertise_drop(self, customer):
         self.logger.info("Checking for advertising drop")
@@ -308,6 +321,17 @@ class MOBot:
                 else:
                     raise Exception("Unknown drop type")
 
+    def _find_handler(self, message: Message):
+        for _, regex, func in self._chat_handlers:
+            match = re.search(regex, message.text)
+            if not match:
+                continue
+        filtered = next(filter(lambda _, match, func: re.search(match)))
+                
+    def _process(self, message: Message):
+        chat_handler = self._find_handler(message)
+        
+
 
     def run_chat(self):
         # self.logger.info("Starting timeouts thread")
@@ -315,8 +339,6 @@ class MOBot:
         # t.setDaemon(True)
         # t.start()
         self.logger.info("Now running MOBot chat")
-
-        while self._running:
-
-
-        self.signal.run_chat(True)
+        messages = self.listener.listen()
+        while self._run:
+            message = next(messages)
