@@ -23,16 +23,15 @@ from mobot_client.models import (
     Order,
     Sku, SessionState, DropType, OrderStatus, Store,
 )
-
 from mobot_client.drop_session import (
     BaseDropSession,
 )
-
 from mobot_client.air_drop_session import AirDropSession
 from mobot_client.item_drop_session import ItemDropSession
 from mobot_client.payments import Payments
 from mobot_client.chat_strings import ChatStrings
 from mobot_client.timeouts import Timeouts
+from mobot_client.utils import TimerFactory
 
 
 class ConfigurationException(Exception):
@@ -43,12 +42,12 @@ class MOBot:
     """
     MOBot is the container which holds all of the business logic relevant to a Drop.
     """
-
     def __init__(self, bot_name: str, bot_avatar_filename: str, store: Store, signal: Signal, mcc: MCClient):
         self.store: Store = store
         if not self.store:
             raise ConfigurationException("No store found!")
-        self.logger = logging.getLogger(f"MOBot({self.store})")
+        self.logger = logging.getLogger("MOBot")
+        self.timers = TimerFactory("MOBot", self.logger)
         self.signal = signal
         self.messenger = SignalMessenger(self.signal, self.store)
 
@@ -84,22 +83,6 @@ class MOBot:
         self.signal.register_handler("unsubscribe", self.unsubscribe_handler)
         self.signal.register_handler("subscribe", self.subscribe_handler)
         self.signal.register_handler("", self.default_handler)
-
-    def register_handler(self, regex, func):
-        def isolated_handler(message, match):
-            try:
-                func(message, match)
-            except Exception as e:
-                self.logger.exception(f"Chat exception from message {message}!")
-        self.signal.register_handler(regex, isolated_handler)
-
-    def register_payment_handler(self, regex, func):
-        def isolated_handler(message, match):
-            try:
-                func(message, match)
-            except Exception as e:
-                self.logger.exception(f"Chat exception from message {message}!")
-        self.signal.register_handler(regex, isolated_handler)
 
     def maybe_advertise_drop(self, customer):
         self.logger.info("Checking for advertising drop")
@@ -138,45 +121,46 @@ class MOBot:
             )
 
     def handle_payment(self, source, receipt):
-        self.logger.info(f"Received payment from {source}")
-        receipt_status = None
-        transaction_status = "TransactionPending"
+        with self.timers.get_timer("handle_payment"):
+            self.logger.info(f"Received payment from {source}")
+            receipt_status = None
+            transaction_status = "TransactionPending"
 
-        if isinstance(source, dict):
-            source = source["number"]
+            if isinstance(source, dict):
+                source = source["number"]
 
-        self.logger.info(f"received receipt {receipt}")
-        receipt = mc.utility.b64_receipt_to_full_service_receipt(receipt.receipt)
+            self.logger.info(f"received receipt {receipt}")
+            receipt = mc.utility.b64_receipt_to_full_service_receipt(receipt.receipt)
 
-        while transaction_status == "TransactionPending":
-            receipt_status = self.mcc.check_receiver_receipt_status(
-                self.mcc.public_address, receipt
-            )
-            transaction_status = receipt_status["receipt_transaction_status"]
-            self.logger.info(f"Waiting for {receipt}, current status {receipt_status}")
-
-        if transaction_status != "TransactionSuccess":
-            self.logger.error(f"failed {transaction_status}")
-            return "The transaction failed!"
-
-        amount_paid_mob = mc.pmob2mob(receipt_status["txo"]["value_pmob"])
-        customer, _ = Customer.objects.get_or_create(phone_number=source)
-        drop_session = customer.drop_sessions.filter(state=SessionState.WAITING_FOR_PAYMENT).first()
-
-        if drop_session:
-            self.logger.info(f"Found drop session {drop_session} awaiting payment")
-            if drop_session.drop.drop_type == DropType.AIRDROP:
-                air_drop = AirDropSession(self.store, self.payments, self.messenger)
-                air_drop.handle_airdrop_payment(
-                    source, customer, amount_paid_mob, drop_session
+            while transaction_status == "TransactionPending":
+                receipt_status = self.mcc.check_receiver_receipt_status(
+                    self.mcc.public_address, receipt
                 )
-            elif drop_session.drop.drop_type == DropType.ITEM:
-                item_drop = ItemDropSession(self.store, self.payments, self.messenger)
-                item_drop.handle_item_payment(
-                    amount_paid_mob, drop_session
-                )
-        else:
-            self.handle_unsolicited_payment(customer, amount_paid_mob)
+                transaction_status = receipt_status["receipt_transaction_status"]
+                self.logger.info(f"Waiting for {receipt}, current status {receipt_status}")
+
+            if transaction_status != "TransactionSuccess":
+                self.logger.error(f"failed {transaction_status}")
+                return "The transaction failed!"
+
+            amount_paid_mob = mc.pmob2mob(receipt_status["txo"]["value_pmob"])
+            customer, _ = Customer.objects.get_or_create(phone_number=source)
+            drop_session = customer.drop_sessions.filter(state=SessionState.WAITING_FOR_PAYMENT).first()
+
+            if drop_session:
+                self.logger.info(f"Found drop session {drop_session} awaiting payment")
+                if drop_session.drop.drop_type == DropType.AIRDROP:
+                    air_drop = AirDropSession(self.store, self.payments, self.messenger)
+                    air_drop.handle_airdrop_payment(
+                        source, customer, amount_paid_mob, drop_session
+                    )
+                elif drop_session.drop.drop_type == DropType.ITEM:
+                    item_drop = ItemDropSession(self.store, self.payments, self.messenger)
+                    item_drop.handle_item_payment(
+                        amount_paid_mob, drop_session
+                    )
+            else:
+                self.handle_unsolicited_payment(customer, amount_paid_mob)
 
     def chat_router_plus(self, message, match):
         self.logger.debug(message)
