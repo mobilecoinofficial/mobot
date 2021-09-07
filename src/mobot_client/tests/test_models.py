@@ -1,5 +1,5 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
-import unittest
+import logging
 from typing import List, Dict
 from collections import defaultdict
 from django.test import TestCase
@@ -22,6 +22,7 @@ factory.random.reseed_random('mobot cleanup')
 class ModelTests(TestCase):
 
     def test_items_available(self):
+        logger = logging.getLogger()
         store = StoreFactory.create()
         item = ItemFactory.create(store=store)
         drop = DropFactory.create(drop_type=DropType.ITEM, store=store, item=item)
