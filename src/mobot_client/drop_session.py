@@ -69,7 +69,7 @@ class BaseDropSession:
             drop_session.state = SessionState.COMPLETED
             drop_session.save()
             self.messenger.log_and_send_message(
-                drop_session.customer, message.source, ChatStrings.BYE
+                drop_session.customer, ChatStrings.BYE
             )
             return
 
@@ -81,14 +81,13 @@ class BaseDropSession:
             drop_session.state = SessionState.COMPLETED
             drop_session.save()
             self.messenger.log_and_send_message(
-                drop_session.customer, message.source, ChatStrings.BYE
+                drop_session.customer,ChatStrings.BYE
             )
             return
 
         if message.text.lower() == "p" or message.text.lower() == "privacy":
             self.messenger.log_and_send_message(
                 drop_session.customer,
-                message.source,
                 ChatStrings.PRIVACY_POLICY_REPROMPT.format(url=self.store.privacy_policy_url)
             )
             return
@@ -96,14 +95,12 @@ class BaseDropSession:
         if message.text.lower() == "help":
             self.messenger.log_and_send_message(
                 drop_session.customer,
-                message.source,
                 ChatStrings.HELP
             )
             return
 
         self.messenger.log_and_send_message(
             drop_session.customer,
-            message.source,
             ChatStrings.HELP
         )
 
@@ -112,7 +109,6 @@ class BaseDropSession:
         drop_session.save()
         self.messenger.log_and_send_message(
             drop_session.customer,
-            message.source,
             ChatStrings.SESSION_CANCELLED
         )
 
@@ -120,6 +116,5 @@ class BaseDropSession:
         privacy_policy_url = drop_session.drop.store.privacy_policy_url
         self.messenger.log_and_send_message(
             drop_session.customer,
-            message.source,
             ChatStrings.PRIVACY_POLICY.format(url=privacy_policy_url),
         )

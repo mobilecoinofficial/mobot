@@ -31,9 +31,10 @@ class MobotListener:
         self._timeout = settings.SIGNALD_PROCESS_TIMEOUT
         self._signal.register_handler("", self.receive_message)
 
-    @staticmethod
-    def receive_message(self, signal_message: SignalMessage) -> Message:
-        return Message.objects.create_from_signal(self._store, self._mcc, signal_message)
+    def receive_message(self, signal_message: SignalMessage, *args) -> Message:
+        self._logger.info(f"Listener received from signal: {signal_message}")
+        message = Message.objects.create_from_signal(self._store, self._mcc, signal_message)
+        self._logger.info(f"Listener logged to database {message}")
 
     def _messages(self) -> QuerySet[Message]:
         return Message.objects.not_processing()
@@ -47,13 +48,9 @@ class MobotListener:
             self._logger.debug(f"Completed future {future}")
         sys.exit(0)
 
-    def listen(self) -> Iterator[Message]:
+    def listen(self, break_on_stop=False) -> Iterator[Message]:
         self._logger.debug("Registering interrupt handler...")
         signal.signal(signal.SIGINT, self._stop_handler)
         signal.signal(signal.SIGQUIT, self._stop_handler)
-        messages_iterator = self._signal.receive_messages()
-        while self._run:
-            message = next(messages_iterator)
-            self._logger.info(f"Receiving message \n {message}")
-            if received := self._messages().first():
-                yield received
+        self._signal.register_handler("", self.receive_message)
+        self._signal.run_chat(True, break_on_stop=break_on_stop)

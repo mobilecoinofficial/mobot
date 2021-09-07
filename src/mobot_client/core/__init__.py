@@ -1,5 +1,5 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
-
+import concurrent.futures
 import logging
 import threading
 from collections import defaultdict
@@ -19,7 +19,7 @@ from mobot_client.drop_session import BaseDropSession
 from mobot_client.item_drop_session import ItemDropSession
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import Store, Customer, SessionState, DropType, Drop, BonusCoin, Sku, Order, OrderStatus, \
-    CustomerStorePreferences, DropSession, Message
+    CustomerStorePreferences, DropSession, Message, Payment
 from mobot_client.payments import MCClient, Payments
 from signald_client import Signal
 
@@ -72,12 +72,12 @@ class MOBot:
             assert False, resp
 
         self._register_payment_handler(self.handle_payment)
-        self._register_handler("\+", self.chat_router_plus)
-        self._register_handler("coins", self.chat_router_coins)
-        self._register_handler("items", self.chat_router_items)
-        self._register_handler("unsubscribe", self.unsubscribe_handler)
-        self._register_handler("subscribe", self.subscribe_handler)
-        self._register_handler("", self.default_handler)
+        self._chat_handler("\+", self.chat_router_plus)
+        self._chat_handler("coins", self.chat_router_coins)
+        self._chat_handler("items", self.chat_router_items)
+        self._chat_handler("unsubscribe", self.unsubscribe_handler)
+        self._chat_handler("subscribe", self.subscribe_handler)
+        self._chat_handler("", self.default_handler)
 
     def _isolated_handler(self, func):
         def isolated(*args, **kwargs):
@@ -87,7 +87,7 @@ class MOBot:
                 self.logger.exception(f"Chat exception while processing: --- {func.__name__}({args}, {kwargs})\n")
         return isolated
 
-    def _register_handler(self, regex, func, order=100):
+    def _chat_handler(self, regex, func, order=100):
         self.logger.info(f"Registering chat handler for {regex if regex else 'default'}")
         regex = re.compile(regex, re.I)
 
@@ -100,13 +100,14 @@ class MOBot:
         self._payment_handlers.append(isolated)
         return isolated
 
-    def maybe_advertise_drop(self, customer):
+    def maybe_advertise_drop(self, message: Message):
+        customer = message.customer
         self.logger.info("Checking for advertising drop")
         drop_to_advertise = BaseDropSession.get_advertising_drop()
         if drop_to_advertise is not None:
             if not customer.matches_country_code_restriction(drop_to_advertise):
                 self.messenger.log_and_send_message(
-                    customer, customer.phone_number, ChatStrings.COUNTRY_RESTRICTED
+                    customer, ChatStrings.COUNTRY_RESTRICTED
                 )
             else:
                 bst_time = drop_to_advertise.start_time.astimezone(
@@ -118,25 +119,28 @@ class MOBot:
                     desc=drop_to_advertise.pre_drop_description
                 )
                 self.messenger.log_and_send_message(
-                    customer, customer.phone_number, response_message
+                    customer, response_message
                 )
                 return True
         else:
             return False
 
-    def handle_unsolicited_payment(self, customer: Customer, amount_paid_mob: Decimal):
+    def handle_unsolicited_payment(self, message: Message):
+        customer = message.customer
+        amount_paid_mob = mc.pmob2mob(message.payment.amount_pmob)
         self.logger.warning("Could not find drop session for customer; Payment unsolicited!")
         if mc.pmob2mob(self.minimum_fee_pmob) < amount_paid_mob:
             self.messenger.log_and_send_message(
-                customer, str(customer.phone_number), ChatStrings.UNSOLICITED_PAYMENT
+                customer, ChatStrings.UNSOLICITED_PAYMENT
             )
-            self.payments.send_mob_to_customer(customer, str(customer.phone_number.as_e164), amount_paid_mob, False)
+            self.payments.send_mob_to_customer(customer, amount_paid_mob, False)
         else:
             self.messenger.log_and_send_message(
-                customer, str(customer.phone_number), ChatStrings.UNSOLICITED_NOT_ENOUGH
+                customer, ChatStrings.UNSOLICITED_NOT_ENOUGH
             )
 
-    def handle_payment(self, source, receipt):
+    def handle_payment(self, payment: Payment):
+        source = str(payment.customer.phone_number)
         self.logger.info(f"Received payment from {source}")
         receipt_status = None
         transaction_status = "TransactionPending"
@@ -144,8 +148,8 @@ class MOBot:
         if isinstance(source, dict):
             source = source["number"]
 
-        self.logger.info(f"received receipt {receipt}")
-        receipt = mc.utility.b64_receipt_to_full_service_receipt(receipt.receipt)
+        self.logger.info(f"received receipt {payment.receipt}")
+        receipt = payment.receipt
 
         while transaction_status == "TransactionPending":
             receipt_status = self.mcc.check_receiver_receipt_status(
@@ -159,7 +163,7 @@ class MOBot:
             return "The transaction failed!"
 
         amount_paid_mob = mc.pmob2mob(receipt_status["txo"]["value_pmob"])
-        customer, _ = Customer.objects.get_or_create(phone_number=source)
+        customer = payment.customer
         drop_session = customer.drop_sessions.filter(state=SessionState.WAITING_FOR_PAYMENT).first()
 
         if drop_session:
@@ -177,14 +181,14 @@ class MOBot:
         else:
             self.handle_unsolicited_payment(customer, amount_paid_mob)
 
-    def chat_router_plus(self, message, match):
+    def chat_router_plus(self, message: Message):
         self.logger.debug(message)
         customer, _ = Customer.objects.get_or_create(phone_number=message.source['number'])
         message_to_send = ChatStrings.PLUS_SIGN_HELP
         message_to_send += f"\n{ChatStrings.PAY_HELP}"
         self.messenger.log_and_send_message(customer, customer.phone_number, message_to_send)
 
-    def chat_router_coins(self, message, match):
+    def chat_router_coins(self, message: Message):
         customer, _ = Customer.objects.get_or_create(phone_number=message.source['number'])
         active_drop = Drop.objects.get_active_drop()
         if not active_drop:
@@ -201,7 +205,7 @@ class MOBot:
                 )
             self.messenger.log_and_send_message(customer, customer.phone_number, message_to_send)
 
-    def chat_router_items(self, message, match):
+    def chat_router_items(self, message: Message):
         active_drop = Drop.objects.get_active_drop()
         if active_drop is None:
             return "No active drop to check on items"
@@ -215,15 +219,13 @@ class MOBot:
             )
         return message_to_send
 
-    def unsubscribe_handler(self, message, _match):
-        customer, _is_new = Customer.objects.get_or_create(
-            phone_number=message.source["number"]
-        )
+    def unsubscribe_handler(self, message: Message):
+        customer = message.customer
         store_preferences = customer.store_preferences(self.store)
         if store_preferences:
             if not store_preferences.allows_contact:
                 self.messenger.log_and_send_message(
-                    customer, message.source, ChatStrings.NOTIFICATIONS_OFF
+                    customer, ChatStrings.NOTIFICATIONS_OFF
                 )
         else:
             store_preferences = CustomerStorePreferences.objects.create(
@@ -327,11 +329,11 @@ class MOBot:
             if not match:
                 continue
         filtered = next(filter(lambda _, match, func: re.search(match)))
+        return filtered
                 
     def _process(self, message: Message):
         chat_handler = self._find_handler(message)
-        
-
+        return chat_handler(message)
 
     def run_chat(self):
         # self.logger.info("Starting timeouts thread")
@@ -339,6 +341,5 @@ class MOBot:
         # t.setDaemon(True)
         # t.start()
         self.logger.info("Now running MOBot chat")
-        messages = self.listener.listen()
-        while self._run:
-            message = next(messages)
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            pool.submit(self.listener.listen)

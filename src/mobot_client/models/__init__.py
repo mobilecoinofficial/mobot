@@ -23,7 +23,6 @@ from mobot_client.models.states import SessionState
 from mobot_client.models.states import SessionState
 import mobilecoin as mc
 
-from mobot_client.payments import MCClient
 
 
 class SessionException(Exception):
@@ -476,7 +475,7 @@ class PaymentStatus(models.TextChoices):
 
 
 class PaymentManager(models.Manager):
-    def create_from_signal(self, message: SignalMessage, mcc: MCClient, callback: Optional[Callable]) -> Payment:
+    def create_from_signal(self, message: SignalMessage, mcc: "mobot_client.payments.MCClient", callback: Optional[Callable]) -> Payment:
         return mcc.process_receipt(message.source, message.payment.receipt, callback)
 
 
@@ -486,8 +485,8 @@ class Payment(models.Model):
     receipt = models.TextField(default=None, blank=True, null=True, help_text="Full-service receipt")
     created_at = models.DateTimeField(auto_now_add=True)
     processed = models.DateTimeField(blank=True, null=True, help_text="The date a payment was processed, if it was.")
-    last_updated = models.DateTimeField(auto_now=True, help="Time of last update")
-    status = models.SmallIntegerField(choices=PaymentStatus.choices, default=PaymentStatus.PENDING, help="Status of payment")
+    last_updated = models.DateTimeField(auto_now=True, help_text="Time of last update")
+    status = models.SmallIntegerField(choices=PaymentStatus.choices, default=PaymentStatus.PENDING, help_text="Status of payment")
     ### Custom Manager that adds a thread to check status ###
     objects = PaymentManager()
 
@@ -497,14 +496,14 @@ class MessageQuerySet(models.QuerySet):
         return self.filter(processing=False).order_by('date').all()
 
 
-class MessageManager(models.Manager):
-    def create_from_signal(self, store: Store, mcc: MCClient, message: SignalMessage, callback: Optional[Callable] = None) -> Message:
+class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
+    def create_from_signal(self, store: Store, mcc: "mobot_client.payments.MCClient", message: SignalMessage, callback: Optional[Callable] = None) -> Message:
         if isinstance(message.source, dict):
             source = message.source['number']
         else:
             source = message.source
 
-        customer = Customer.objects.get_or_create(phone_number=source)
+        customer, _ = Customer.objects.get_or_create(phone_number=source)
         payment = None
         if message.payment:
             payment = Payment.objects.create_from_signal(message, mcc, callback)
@@ -528,10 +527,13 @@ class Message(models.Model):
     processing = models.BooleanField(default=False)
     processed = models.DateTimeField(blank=True, db_index=True, null=True, help_text="The time at which a payment was processed")
     direction = models.PositiveIntegerField(choices=MessageDirection.choices)
-    payment = models.OneToOneField(Payment, null=True, blank=True, help="Attached payment, if it exists", related_name='message')
+    payment = models.OneToOneField(Payment, on_delete=models.CASCADE, null=True, blank=True, help_text="Attached payment, if it exists", related_name='message')
 
     ### Custom manager to create from signal and process payment ###
-    objects = MessageManager.from_queryset(MessageQuerySet)
+    objects = MessageManager()
+
+    class Meta:
+        ordering = ['date', '-processing', 'processed']
 
 
 class MobotResponse(models.Model):
@@ -541,8 +543,6 @@ class MobotResponse(models.Model):
     response_message = models.OneToOneField(Message, on_delete=models.CASCADE, null=True, blank=True, related_name='response')
     response_payment = models.OneToOneField(Payment, on_delete=models.CASCADE, null=True, blank=True, related_name='response')
     created_at = models.DateTimeField(auto_now_add=True)
-    # processed is the time at which an outgoing payment/message gets a receipt
-    processed = models.DateTimeField(blank=True, null=True)
 
 
 # ------------------------------------------------------------------------------------------

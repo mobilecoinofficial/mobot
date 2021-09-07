@@ -56,23 +56,19 @@ class Payments:
             self.logger.warning(f"Found no MobileCoin payment address for {source.number}. Response: {customer_signal_profile}")
         return mobilecoin_address
 
-    def send_mob_to_customer(self, customer, source, amount_mob, cover_transaction_fee, memo="Refund") -> Payment:
-        if isinstance(source, dict):
-            source = source["number"]
-        else:
-            source = str(source)
+    def send_mob_to_customer(self, customer, amount_mob, cover_transaction_fee, memo="Refund") -> Payment:
+        phone_number = str(customer.phone_number)
 
         if not cover_transaction_fee:
             amount_mob = amount_mob - Decimal(mc.pmob2mob(self.minimum_fee_pmob))
 
-        self.logger.info(f"Sending {amount_mob} MOB to {source}. Cover_transaction_fee: {cover_transaction_fee}")
-        self.logger.info(f"Getting payment address for customer with # {source}")
-        customer_payments_address = self.get_payments_address(source)
+        self.logger.info(f"Sending {amount_mob} MOB to {phone_number}. Cover_transaction_fee: {cover_transaction_fee}")
+        self.logger.info(f"Getting payment address for customer with # {phone_number}")
+        customer_payments_address = self.get_payments_address(phone_number)
 
         if customer_payments_address is None:
             self.messenger.log_and_send_message(
                 customer,
-                source,
                 ChatStrings.PAYMENTS_DEACTIVATED.format(number=self.store.phone_number),
             )
         elif amount_mob > 0:
@@ -81,7 +77,7 @@ class Payments:
                 amount_pmob=mc.mob2pmob(amount_mob),
             )
             self.send_mob_to_address(
-                source, self.account_id, amount_mob, customer_payments_address, memo=memo
+                phone_number, self.account_id, amount_mob, customer_payments_address, memo=memo
             )
 
     def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund"):
@@ -166,7 +162,6 @@ class Payments:
             self.logger.warning("Refunding customer their payment minus transaction fees")
             self.messenger.log_and_send_message(
                 customer,
-                source,
                 ChatStrings.NOT_ENOUGH_REFUND.format(amount_paid=refund_amount.normalize())
             )
             self.send_mob_to_customer(customer, source, amount_paid_mob, False)
@@ -174,7 +169,6 @@ class Payments:
             self.logger.warning("Not Refunding. Payment not enough to cover transaction fees for refund.")
             self.messenger.log_and_send_message(
                 customer,
-                source,
                 ChatStrings.NOT_ENOUGH
             )
 
@@ -184,7 +178,6 @@ class Payments:
         net_excess = mc.pmob2mob(mc.mob2pmob(excess) - self.minimum_fee_pmob)
         self.messenger.log_and_send_message(
             drop_session.customer,
-            drop_session.customer.phone_number.as_e164,
             ChatStrings.EXCESS_PAYMENT.format(refund=net_excess.normalize())
         )
         self.send_mob_to_customer(drop_session.customer, drop_session.customer.phone_number.as_e164, excess, False)
@@ -193,14 +186,12 @@ class Payments:
         customer = drop_session.customer
         self.messenger.log_and_send_message(
             customer,
-            customer.phone_number.as_e164,
             ChatStrings.WE_RECEIVED_MOB.format(mob=amount_paid_mob.normalize())
         )
 
     def handle_out_of_stock(self, amount_paid_mob: Decimal, drop_session: DropSession):
         self.messenger.log_and_send_message(
             drop_session.customer,
-            drop_session.customer.phone_number.as_e164,
             ChatStrings.OUT_OF_STOCK_REFUND
         )
         self.send_mob_to_customer(drop_session.customer,
