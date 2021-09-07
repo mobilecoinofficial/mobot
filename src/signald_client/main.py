@@ -113,7 +113,8 @@ class Signal(_Signal):
                     if group_id:
                         self.send_group_message(recipient_group_id=group_id, text=reply)
                     else:
-                        self.send_message(recipient=message.source['number'], text=reply)
+                        if reply is not None:
+                            self.send_message(recipient=message.source['number'], text=reply)
                 except Exception as e:
                     print(e)
                     raise
@@ -131,15 +132,20 @@ class Signal(_Signal):
             self.logger.debug(f"Completed future {future}")
         sys.exit(0)
 
-    def run_chat(self, auto_send_receipts=True):
+    def run_chat(self, auto_send_receipts=True, break_on_stop=False):
         """
         Start the chat.
         """
         self.logger.debug("Registering interrupt handler...")
+        signal.signal(signal.SIGTERM, self._stop_handler)
         signal.signal(signal.SIGINT, self._stop_handler)
         signal.signal(signal.SIGQUIT, self._stop_handler)
         messages_iterator = self.receive_messages()
         while self._run:
-            message = next(messages_iterator)
-            self.logger.info(f"Receiving message \n {message}")
-            self._executor.submit(self._process, message, auto_send_receipts)
+            try:
+                message = next(messages_iterator)
+                self.logger.info(f"Receiving message \n {message}")
+                self._executor.submit(self._process, message, auto_send_receipts)
+            except StopIteration:
+                if break_on_stop:
+                    break
