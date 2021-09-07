@@ -1,6 +1,6 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 # This code is copied from [pysignald](https://pypi.org/project/pysignald/) and modified to run locally with payments
-
+import concurrent.futures
 import threading
 import logging
 import re
@@ -157,4 +157,6 @@ class Signal(_Signal):
             except StopIteration:
                 if break_on_stop:
                     self._run = False
-                    break
+                    self._executor.shutdown(wait=True)
+            except Exception as e:
+                self.logger.exception("Signal got exception")

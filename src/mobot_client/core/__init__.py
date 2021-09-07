@@ -56,12 +56,17 @@ class MOBot:
         self.minimum_fee_pmob = mcc.minimum_fee_pmob
         self.listener = MobotListener(mcc=mcc, signal_client=signal, store=self.store)
         self._listener_thread = None
+        self._thread_count = 0
+        self._number_processed = 0
+        self._thread_lock = threading.Lock()
         self.payments = Payments(
             mobilecoin_client=self.mcc,
             store=self.store,
             messenger=self.messenger,
             signal=signal
         )
+        self._futures = []
+
 
         # self.timeouts = Timeouts(self.messenger, self.payments, schedule=30, idle_timeout=60, cancel_timeout=300)
 
@@ -328,13 +333,14 @@ class MOBot:
                     raise Exception("Unknown drop type")
 
     def _find_handler(self, message: Message) -> Callable:
-        filtered = next(filter(lambda handler: re.search(handler[1], message.text), self._chat_handlers))
+        filtered = list(filter(lambda handler: re.search(handler[1], message.text), self._chat_handlers))[0]
         _, _, func = filtered
         return func
 
     def _process(self, message: Message):
         with self.messenger.message_context(message) as ctx:
             chat_handler = self._find_handler(message)
+            self.logger.info(f"Found handler {chat_handler}")
             try:
                 result = chat_handler(message)
                 message.processed = timezone.now()
@@ -344,10 +350,10 @@ class MOBot:
                 message.status = MessageStatus.ERROR
                 ProcessingError.objects.create(
                     message=message,
-                    text=traceback.format_exc(),
+                    text=str(e),
                 )
 
-    def run_chat(self, break_on_stop=False):
+    def run_chat(self, break_on_stop=False, break_after=0):
         # self.logger.info("Starting timeouts thread")
         # t = threading.Thread(target=self.timeouts.process_timeouts, args=(), kwargs={})
         # t.setDaemon(True)
@@ -358,13 +364,23 @@ class MOBot:
             self.logger.info("Launching listener thread...")
             self._listener_thread = pool.submit(self.listener.listen, break_on_stop)
             while self._run:
-                if not self.signal.is_running():
-                    break
                 self.logger.info("Looking for message...")
                 if message := Message.objects.get_message():
+                    self._number_processed += 1
                     self.logger.info(f"Mobot got a message from the queue! Processing... {message}")
-                    pool.submit(self._process, message)
+                    self._futures.append(pool.submit(self._process, message))
+                if break_after:
+                    if self._number_processed >= break_after:
+                        self.logger.info(f"Processed {self._number_processed} messages before quitting")
+                        break
+                if not self.signal.is_running():
+                    self.logger.info("Breaking because signal is done")
+                    break
                 else:
-                    self.logger.debug("Sleeping while waiting for new messages...")
+                    self.logger.info("Sleeping while waiting for new messages...")
                     time.sleep(1)
-            pool.shutdown()
+            self.logger.warning("Shutting down!")
+            processing = concurrent.futures.as_completed(self._futures)
+            for future in processing:
+                future.result()
+

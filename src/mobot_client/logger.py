@@ -19,7 +19,7 @@ class SignalMessenger:
         self._context.message = message
         yield self._context
         del self._context.message
-        yield
+
 
     def log_and_send_message(self, customer, text, attachments=[]) -> MobotResponse:
         if hasattr(self._context, 'message'):
@@ -49,6 +49,7 @@ class SignalMessenger:
             return response
         except Exception as e:
             print(e)
+            raise e
             return e
 
     @staticmethod

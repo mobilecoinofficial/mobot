@@ -16,7 +16,7 @@ from signald.types import Message as SignalMessage, Payment as SignalPayment
 
 from mobot_client.core import MOBot
 from mobot_client.tests.factories import StoreFactory, CustomerFactory
-from mobot_client.models import Message, MessageDirection, Payment, PaymentStatus, Store, Customer
+from mobot_client.models import Message, MessageDirection, Payment, PaymentStatus, Store, Customer, MobotResponse
 from mobot_client.core.listener import MobotListener
 from mobot_client.payments import MCClient
 from signald_client import Signal
@@ -102,5 +102,8 @@ class ListenerTest(LiveServerTestCase):
     def test_mobot_gets_message_from_queue(self):
         signal = self.signal(messages=[(self.customer.phone_number, "HI MOBOT")])
         mobot = MOBot(bot_name="MOBot", bot_avatar_filename="icon.png", store=self.store, signal=signal, mcc=self.mcc)
-        mobot.run_chat(break_on_stop=True)
+        mobot.run_chat(break_on_stop=True, break_after=1)
+        print(MobotResponse.objects.count())
+        responses = MobotResponse.objects.filter(incoming_message__customer=self.customer).all()
+        print(responses.count())
 

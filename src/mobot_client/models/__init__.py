@@ -519,11 +519,6 @@ class MessageQuerySet(models.QuerySet):
 
 class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
     def create_from_signal(self, store: Store, mcc: "mobot_client.payments.MCClient", customer: Customer, message: SignalMessage, callback: Optional[Callable] = None) -> Message:
-        if isinstance(message.source, dict):
-            source = message.source['number']
-        else:
-            source = message.source
-
         payment = None
         if message.payment:
             payment = Payment.objects.create_from_signal(message, mcc, callback)
