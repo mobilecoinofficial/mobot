@@ -161,7 +161,7 @@ else:
             'NAME': os.path.join(DB_ROOT, 'db.sqlite3'),
             'OPTIONS': {
                 'timeout': 20,
-            }
+            },
         }
     }
     CACHES = {

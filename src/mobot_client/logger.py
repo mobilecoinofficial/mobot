@@ -1,5 +1,7 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 import logging
+import threading
+from contextlib import contextmanager
 from typing import Optional
 
 from mobot_client.models import Message, MessageDirection, MobotResponse
@@ -10,8 +12,22 @@ class SignalMessenger:
         self.signal = signal
         self.store = store
         self.logger = logging.getLogger("SignalMessenger")
+        self._context = threading.local()
 
-    def log_and_send_message(self, customer, text, incoming: Optional[Message] = None, attachments=[]) -> MobotResponse:
+    @contextmanager
+    def message_context(self, message: Message):
+        self._context.message = message
+        yield self._context
+        del self._context.message
+        yield
+
+    def log_and_send_message(self, customer, text, attachments=[]) -> MobotResponse:
+        if hasattr(self._context, 'message'):
+            incoming = self._context.message
+            self.logger.info(f"Sending response to message {incoming}: {text}")
+        else:
+            incoming = None
+
         phone_number = customer.phone_number.as_e164
 
         response_message = Message(

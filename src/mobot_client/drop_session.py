@@ -4,7 +4,8 @@ import logging
 from django.utils import timezone
 
 from mobot_client.chat_strings import ChatStrings
-from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku, SessionState
+from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku, SessionState, Message
+
 
 class BaseDropSession:
     def __init__(self, store, payments, messenger):
@@ -61,7 +62,7 @@ class BaseDropSession:
         except (Exception,):
             return False
 
-    def handle_drop_session_allow_contact_requested(self, message, drop_session):
+    def handle_drop_session_allow_contact_requested(self, message: Message, drop_session: DropSession):
         if message.text.lower() in ("y", "yes"):
             CustomerStorePreferences.objects.create(
                 customer=drop_session.customer, store=self.store, allows_contact=True
@@ -69,7 +70,7 @@ class BaseDropSession:
             drop_session.state = SessionState.COMPLETED
             drop_session.save()
             self.messenger.log_and_send_message(
-                drop_session.customer, ChatStrings.BYE
+                drop_session.customer, ChatStrings.BYE, message
             )
             return
 
@@ -81,14 +82,14 @@ class BaseDropSession:
             drop_session.state = SessionState.COMPLETED
             drop_session.save()
             self.messenger.log_and_send_message(
-                drop_session.customer,ChatStrings.BYE
+                drop_session.customer, ChatStrings.BYE
             )
             return
 
         if message.text.lower() == "p" or message.text.lower() == "privacy":
             self.messenger.log_and_send_message(
                 drop_session.customer,
-                ChatStrings.PRIVACY_POLICY_REPROMPT.format(url=self.store.privacy_policy_url)
+                ChatStrings.PRIVACY_POLICY_REPROMPT.format(url=self.store.privacy_policy_url),
             )
             return
 

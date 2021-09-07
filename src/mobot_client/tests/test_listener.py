@@ -10,10 +10,11 @@ from typing import Iterator, Tuple
 from unittest.mock import AsyncMock, Mock, MagicMock, patch, create_autospec
 
 from django.utils import timezone
-from django.test import TestCase
+from django.test import LiveServerTestCase
 from phonenumbers import PhoneNumber, parse
 from signald.types import Message as SignalMessage, Payment as SignalPayment
 
+from mobot_client.core import MOBot
 from mobot_client.tests.factories import StoreFactory, CustomerFactory
 from mobot_client.models import Message, MessageDirection, Payment, PaymentStatus, Store, Customer
 from mobot_client.core.listener import MobotListener
@@ -21,12 +22,15 @@ from mobot_client.payments import MCClient
 from signald_client import Signal
 
 
-class ListenerTest(TestCase):
+class ListenerTest(LiveServerTestCase):
 
-    def setUp(self) -> None:
+    @patch('mobot_client.payments.MCClient', autospec=True)
+    def setUp(self, mcc: MCClient) -> None:
         self.store: Store = StoreFactory.create()
         self.customer: Customer = CustomerFactory.create()
         self.logger = logging.getLogger('ListenerTest')
+        self.mcc = mcc
+        self._mock_patch_mcc(mcc)
 
     def _mock_signal_messages(self, messages: Iterator[Tuple[PhoneNumber, str]]):
         for (number, text) in messages:
@@ -39,12 +43,13 @@ class ListenerTest(TestCase):
             )
 
     def signal(self, messages: Iterator[Tuple[PhoneNumber, str]] = []) -> Signal:
-        signal = Signal(str(self.store.phone_number))
+        signal = Signal(str(self.store.phone_number), multithreaded=False)
         with patch('socket.socket', autospec=True) as sock:
             signal._get_socket = create_autospec(signal._get_socket, return_value=sock)
         signal.sent_messages = []
+        signal.set_profile = MagicMock(return_value={})
 
-        def store_sent(recipient, text, block=None, attachment=None):
+        def store_sent(recipient, text, block=None, attachments=None):
             signal.sent_messages.append((recipient, text))
 
         signal.send_message = create_autospec(signal.send_message, return_value=None, side_effect=store_sent)
@@ -68,26 +73,34 @@ class ListenerTest(TestCase):
             },
         }
 
-    def _mock_mcc(self, mcc: MCClient) -> MCClient:
+    def _mock_patch_mcc(self, mcc: MCClient) -> MCClient:
         mcc.logger = self.logger
         mcc.public_address = "foo"
         mcc.submit_transaction.return_value = random.randint(0, 10000000000000000)
         mcc.get_txo.return_value = "Happy"
+        mcc.account_id = "12345"
         mcc.build_transaction.return_value = "proposal"
         mcc.create_receiver_receipts.return_value = ["receipt1", "receipt2"]
+        mcc.minimum_fee_pmob = 40000
         return mcc
-
 
     @patch('mobot_client.payments.MCClient', autospec=True)
     def test_listener(self, mcc: MCClient):
-        self._mock_mcc(mcc)
-        signal = self.signal(messages=[(str(self.customer.phone_number), message) for message in ["Hello", "World"]])
+        self._mock_patch_mcc(mcc)
+        signal = self.signal(messages=[(self.customer.phone_number, message) for message in ["Hello", "World"]])
         listener = MobotListener(mcc, signal, self.store)
         signal.run_chat(True, break_on_stop=True)
-        self.assertEqual(Message.objects.count(), 2)
+        # Give ourselves time to insert
+        signal.finish_processing()
+        self.assertEqual(Message.objects.all().count(), 2)
         messages = list(Message.objects.all())
         for message in messages:
             self.assertEqual(message.customer, self.customer)
         self.assertEqual(messages[0].text, "Hello")
         self.assertEqual(messages[1].text, "World")
+
+    def test_mobot_gets_message_from_queue(self):
+        signal = self.signal(messages=[(self.customer.phone_number, "HI MOBOT")])
+        mobot = MOBot(bot_name="MOBot", bot_avatar_filename="icon.png", store=self.store, signal=signal, mcc=self.mcc)
+        mobot.run_chat(break_on_stop=True)
 

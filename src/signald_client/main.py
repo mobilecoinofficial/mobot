@@ -7,9 +7,11 @@ import re
 import signal
 import sys
 
-from typing import List
+from typing import List, Dict
 from concurrent.futures import ThreadPoolExecutor, Future, as_completed
 from collections import defaultdict
+
+from django.conf import settings
 
 from signald import Signal as _Signal
 
@@ -19,24 +21,29 @@ RE_TYPE = type(re.compile(""))
 
 class Signal(_Signal):
     def __init__(self, *args, **kwargs):
-        self._timeout = kwargs.get('timeout', 20)
+        self._timeout = kwargs.pop('timeout', 20)
+        self._multithreaded = kwargs.pop('multithreaded', True)
         # If we're interrupted, timeout to complete futures
-        if kwargs.get('timeout'):
-            # Delete so it isn't passed to super().__init__
-            del kwargs['timeout']
+
         super().__init__(*args, **kwargs)
         self.logger = logging.getLogger("SignalListener")
         self._chat_handlers = []
         self._payment_handlers = []
         self._user_locks = defaultdict(lambda: threading.Lock())
         self._executor = ThreadPoolExecutor(max_workers=5)
-        self._futures: List[Future] = []
+        self._count_cond = threading.Condition()
+        self._thread_count = 0
         self._run = True
 
     def isolated_handler(self, func):
         def isolated(*args, **kwargs):
             try:
+                with self._count_cond:
+                    self._thread_count += 1
                 func(*args, **kwargs)
+                with self._count_cond:
+                    self._thread_count -= 1
+                    self._count_cond.notify()
             except Exception as e:
                 self.logger.exception(f"Chat exception while processing: --- {func.__name__}({args}, {kwargs})\n")
         return isolated
@@ -124,28 +131,30 @@ class Signal(_Signal):
                     break
         self._user_locks[number].release()
 
-    def _stop_handler(self, sig, frame):
-        if sig:
-            self.logger.error(f"Interrupt called! Finishing message processing with a timeout of 20 seconds.")
-        completed_futures = as_completed(self._futures, timeout=self._timeout)
-        for future in completed_futures:
-            self.logger.debug(f"Completed future {future}")
-        sys.exit(0)
+    def finish_processing(self):
+        with self._count_cond:
+            while self._thread_count:
+                self._count_cond.wait()
+
+    def is_running(self):
+        return self._run
 
     def run_chat(self, auto_send_receipts=True, break_on_stop=False):
         """
         Start the chat.
         """
         self.logger.debug("Registering interrupt handler...")
-        signal.signal(signal.SIGTERM, self._stop_handler)
-        signal.signal(signal.SIGINT, self._stop_handler)
-        signal.signal(signal.SIGQUIT, self._stop_handler)
         messages_iterator = self.receive_messages()
         while self._run:
             try:
                 message = next(messages_iterator)
                 self.logger.info(f"Receiving message \n {message}")
-                self._executor.submit(self._process, message, auto_send_receipts)
+                if self._multithreaded:
+                    self._executor.submit(self._process, message, auto_send_receipts)
+                else:
+                    self._process(message, auto_send_receipts)
+
             except StopIteration:
                 if break_on_stop:
+                    self._run = False
                     break

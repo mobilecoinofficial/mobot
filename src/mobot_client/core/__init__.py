@@ -2,6 +2,11 @@
 import concurrent.futures
 import logging
 import threading
+import time
+from typing import Callable
+
+import traceback
+
 from collections import defaultdict
 
 import pytz
@@ -10,6 +15,7 @@ import re
 from decimal import Decimal
 
 import mobilecoin as mc
+from django.utils import timezone
 
 from mobot_client.air_drop_session import AirDropSession
 from mobot_client.chat_strings import ChatStrings
@@ -19,7 +25,7 @@ from mobot_client.drop_session import BaseDropSession
 from mobot_client.item_drop_session import ItemDropSession
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import Store, Customer, SessionState, DropType, Drop, BonusCoin, Sku, Order, OrderStatus, \
-    CustomerStorePreferences, DropSession, Message, Payment
+    CustomerStorePreferences, DropSession, Message, Payment, ProcessingError, MessageStatus
 from mobot_client.payments import MCClient, Payments
 from signald_client import Signal
 
@@ -48,8 +54,8 @@ class MOBot:
         self.mcc = mcc
         self.public_address = mcc.public_address
         self.minimum_fee_pmob = mcc.minimum_fee_pmob
-        self.listener = MobotListener(mcc=mcc, signal_client=signal)
-
+        self.listener = MobotListener(mcc=mcc, signal_client=signal, store=self.store)
+        self._listener_thread = None
         self.payments = Payments(
             mobilecoin_client=self.mcc,
             store=self.store,
@@ -67,7 +73,7 @@ class MOBot:
         resp = self.signal.set_profile(
             bot_name, b64_public_address, bot_avatar_filename, True
         )
-        self.logger.info("set profile response", resp)
+        self.logger.info(f"set profile response {resp}")
         if resp.get("error"):
             assert False, resp
 
@@ -279,12 +285,10 @@ class MOBot:
         else:
             raise Exception("Unknown Drop Type")
 
-    def default_handler(self, message, match):
+    def default_handler(self, message: Message):
         # Store the message
         self.logger.info(f"\033[1;33m NOW ROUTING CHAT\033[0m {message}")
-        customer, _ = Customer.objects.get_or_create(
-            phone_number=message.source["number"]
-        )
+        customer = message.customer
 
         # see if there is an active airdrop session
         active_drop_session: DropSession = customer.active_drop_sessions().first()
@@ -298,9 +302,9 @@ class MOBot:
                 self.handle_new_drop_session(customer, message, active_drop)
             else:
                 self.logger.warning(f"No active drops; Sending Store Closed message to customer {customer}")
-                if not self.maybe_advertise_drop(customer):
+                if not self.maybe_advertise_drop(message):
                     self.messenger.log_and_send_message(
-                        customer, message.source, ChatStrings.STORE_CLOSED_SHORT
+                        customer, ChatStrings.STORE_CLOSED_SHORT
                     )
         else:
             self.logger.info(f"Found a drop session for customer {customer} of type {active_drop_session.drop.drop_type}")
@@ -323,23 +327,44 @@ class MOBot:
                 else:
                     raise Exception("Unknown drop type")
 
-    def _find_handler(self, message: Message):
-        for _, regex, func in self._chat_handlers:
-            match = re.search(regex, message.text)
-            if not match:
-                continue
-        filtered = next(filter(lambda _, match, func: re.search(match)))
-        return filtered
-                
-    def _process(self, message: Message):
-        chat_handler = self._find_handler(message)
-        return chat_handler(message)
+    def _find_handler(self, message: Message) -> Callable:
+        filtered = next(filter(lambda handler: re.search(handler[1], message.text), self._chat_handlers))
+        _, _, func = filtered
+        return func
 
-    def run_chat(self):
+    def _process(self, message: Message):
+        with self.messenger.message_context(message) as ctx:
+            chat_handler = self._find_handler(message)
+            try:
+                result = chat_handler(message)
+                message.processed = timezone.now()
+                message.save()
+            except Exception as e:
+                self.logger.exception("Processing message failed!")
+                message.status = MessageStatus.ERROR
+                ProcessingError.objects.create(
+                    message=message,
+                    text=traceback.format_exc(),
+                )
+
+    def run_chat(self, break_on_stop=False):
         # self.logger.info("Starting timeouts thread")
         # t = threading.Thread(target=self.timeouts.process_timeouts, args=(), kwargs={})
         # t.setDaemon(True)
         # t.start()
-        self.logger.info("Now running MOBot chat")
+        self.logger.info("Now running MOBot chat...")
+        self.logger.info("Starting signal...")
         with concurrent.futures.ThreadPoolExecutor() as pool:
-            pool.submit(self.listener.listen)
+            self.logger.info("Launching listener thread...")
+            self._listener_thread = pool.submit(self.listener.listen, break_on_stop)
+            while self._run:
+                if not self.signal.is_running():
+                    break
+                self.logger.info("Looking for message...")
+                if message := Message.objects.get_message():
+                    self.logger.info(f"Mobot got a message from the queue! Processing... {message}")
+                    pool.submit(self._process, message)
+                else:
+                    self.logger.debug("Sleeping while waiting for new messages...")
+                    time.sleep(1)
+            pool.shutdown()

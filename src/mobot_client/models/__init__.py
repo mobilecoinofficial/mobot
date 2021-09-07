@@ -497,19 +497,33 @@ class Payment(models.Model):
     objects = PaymentManager()
 
 
+class MessageStatus(models.IntegerChoices):
+    ERROR = -1
+    NOT_PROCESSED = 0
+    PROCESSING = 1
+    PROCESSED = 2
+
+
 class MessageQuerySet(models.QuerySet):
-    def not_processing(self):
-        return self.filter(processing=False).order_by('date').all()
+    def not_processing(self) -> models.QuerySet:
+        return self.filter(status=MessageStatus.NOT_PROCESSED, direction=MessageDirection.RECEIVED).order_by('date', '-payment').all()
+
+    @transaction.atomic
+    def get_message(self):
+        if message := self.not_processing().select_for_update().first():
+            message.status = MessageStatus.PROCESSING
+            message.processing = timezone.now()
+            message.save()
+            return message
 
 
 class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
-    def create_from_signal(self, store: Store, mcc: "mobot_client.payments.MCClient", message: SignalMessage, callback: Optional[Callable] = None) -> Message:
+    def create_from_signal(self, store: Store, mcc: "mobot_client.payments.MCClient", customer: Customer, message: SignalMessage, callback: Optional[Callable] = None) -> Message:
         if isinstance(message.source, dict):
             source = message.source['number']
         else:
             source = message.source
 
-        customer, _ = Customer.objects.get_or_create(phone_number=source)
         payment = None
         if message.payment:
             payment = Payment.objects.create_from_signal(message, mcc, callback)
@@ -530,16 +544,26 @@ class Message(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     text = models.TextField()
     date = models.DateTimeField(auto_now_add=True)
-    processing = models.BooleanField(default=False)
-    processed = models.DateTimeField(blank=True, db_index=True, null=True, help_text="The time at which a payment was processed")
-    direction = models.PositiveIntegerField(choices=MessageDirection.choices)
+    status = models.SmallIntegerField(choices=MessageStatus.choices, default=MessageStatus.NOT_PROCESSED)
+    processing = models.DateTimeField(blank=True, null=True, help_text="The time we started processing a message")
+    processed = models.DateTimeField(blank=True, db_index=True, null=True, help_text="The time at which a message was finished processing")
+    direction = models.PositiveIntegerField(choices=MessageDirection.choices, db_index=True)
     payment = models.OneToOneField(Payment, on_delete=models.CASCADE, null=True, blank=True, help_text="Attached payment, if it exists", related_name='message')
 
     ### Custom manager to create from signal and process payment ###
     objects = MessageManager()
 
     class Meta:
-        ordering = ['date', '-processing', 'processed']
+        ordering = ['date', '-payment', '-processing', 'processed']
+
+    def __str__(self):
+        text_oneline = self.text.replace("\n", " ||| ")
+        return f'Message: customer: {self.customer} - {self.direction} --- {text_oneline}'
+
+
+class ProcessingError(models.Model):
+    message = models.ForeignKey(Message, on_delete=models.CASCADE)
+    text = models.TextField()
 
 
 class MobotResponse(models.Model):

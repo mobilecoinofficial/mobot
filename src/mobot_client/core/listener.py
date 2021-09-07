@@ -12,8 +12,9 @@ from signald.types import Message as SignalMessage
 from signald_client import Signal
 from django.conf import settings
 from django.db.models import QuerySet
+from django.db import transaction
 
-from mobot_client.models import Message, Store
+from mobot_client.models import Message, Store, Customer, MessageStatus
 from mobot_client.payments import MCClient
 
 
@@ -31,9 +32,18 @@ class MobotListener:
         self._timeout = settings.SIGNALD_PROCESS_TIMEOUT
         self._signal.register_handler("", self.receive_message)
 
+    @transaction.atomic
     def receive_message(self, signal_message: SignalMessage, *args) -> Message:
         self._logger.info(f"Listener received from signal: {signal_message}")
-        message = Message.objects.create_from_signal(self._store, self._mcc, signal_message)
+        if isinstance(signal_message.source, dict):
+            number = signal_message.source['number']
+        else:
+            number = signal_message.source
+        customer, _ = Customer.objects.get_or_create(phone_number=number)
+        message = Message.objects.create_from_signal(store=self._store,
+                                                     mcc=self._mcc,
+                                                     customer=customer,
+                                                     message=signal_message)
         self._logger.info(f"Listener logged to database {message}")
 
     def _messages(self) -> QuerySet[Message]:
@@ -48,9 +58,5 @@ class MobotListener:
             self._logger.debug(f"Completed future {future}")
         sys.exit(0)
 
-    def listen(self, break_on_stop=False) -> Iterator[Message]:
-        self._logger.debug("Registering interrupt handler...")
-        signal.signal(signal.SIGINT, self._stop_handler)
-        signal.signal(signal.SIGQUIT, self._stop_handler)
-        self._signal.register_handler("", self.receive_message)
+    def listen(self, break_on_stop=False):
         self._signal.run_chat(True, break_on_stop=break_on_stop)
