@@ -177,7 +177,10 @@ class Drop(models.Model):
 
     @cached_property
     def initial_coin_limit(self) -> int:
-        return self.bonus_coins.aggregate(Sum('number_available_at_start'))['number_available_at_start__sum']
+        if bonus_coins := self.bonus_coins.aggregate(Sum('number_available_at_start'))['number_available_at_start__sum']:
+            return bonus_coins
+        else:
+            return 0
 
     def num_initial_sent(self) -> int:
         return DropSession.objects.initial_coin_sent_sessions().filter(drop=self).count()
@@ -186,7 +189,10 @@ class Drop(models.Model):
         return BonusCoin.objects.with_available().filter(drop=self).aggregate(Sum('num_claimed_sessions'))['num_claimed_sessions__sum']
 
     def bonus_pmob_disbursed(self) -> int:
-        return BonusCoin.objects.with_available().filter(drop=self).aggregate(Sum('pmob_claimed'))['pmob_claimed__sum']
+        if self.bonus_coins.count():
+            return BonusCoin.objects.with_available().filter(drop=self).aggregate(Sum('pmob_claimed'))['pmob_claimed__sum']
+        else:
+            return 0
 
     def initial_pmob_disbursed(self) -> int:
         return self.num_initial_sent() * self.initial_coin_amount_pmob
