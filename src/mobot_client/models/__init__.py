@@ -223,7 +223,7 @@ class Drop(models.Model):
 class BonusCoinQuerySet(models.QuerySet):
     def with_available(self):
         return self.annotate(
-            num_claimed_sessions=models.Count('drop_sessions', filter=Q(drop_sessions__state=SessionState.ALLOW_CONTACT_REQUESTED))) \
+            num_claimed_sessions=models.Count('drop_sessions', filter=Q(drop_sessions__state__in=[SessionState.ALLOW_CONTACT_REQUESTED, SessionState.COMPLETED]))) \
             .filter(num_claimed_sessions__lt=F('number_available_at_start')) \
             .annotate(remaining=F('number_available_at_start') - F('num_claimed_sessions'),
                       pmob_claimed=F('num_claimed_sessions') * F('amount_pmob'))
@@ -415,7 +415,6 @@ class DropSession(models.Model):
     objects = DropSessionManager()
 
     class Meta:
-        unique_together = ('customer', 'drop')
         ordering = ('-state', '-updated')
 
     def is_active(self) -> bool:
