@@ -167,11 +167,25 @@ class ModelTests(TestCase):
         self.assertTrue(customer.has_store_preferences(store))
 
     def test_customer_country_code_validity(self):
-        drop = DropFactory.create(number_restriction="+44")
+        drop_single = DropFactory.create(number_restriction="+44")
+        drop_none = DropFactory.create(number_restriction="")
+        drop_list = DropFactory.create(number_restriction="+44,+49")
+
         us_customer: Customer = CustomerFactory.create(phone_number="+18054412655")
         uk_customer: Customer = CustomerFactory.create(phone_number="+447975777666")
-        self.assertTrue(uk_customer.matches_country_code_restriction(drop))
-        self.assertFalse(us_customer.matches_country_code_restriction(drop))
+        de_customer: Customer = CustomerFactory.create(phone_number="+4915735985797")
+
+        self.assertTrue(uk_customer.matches_country_code_restriction(drop_single))
+        self.assertTrue(uk_customer.matches_country_code_restriction(drop_none))
+        self.assertTrue(uk_customer.matches_country_code_restriction(drop_list))
+        
+        self.assertFalse(us_customer.matches_country_code_restriction(drop_single))
+        self.assertTrue(us_customer.matches_country_code_restriction(drop_none))
+        self.assertFalse(us_customer.matches_country_code_restriction(drop_list))
+
+        self.assertFalse(de_customer.matches_country_code_restriction(drop_single))
+        self.assertTrue(de_customer.matches_country_code_restriction(drop_none))
+        self.assertTrue(de_customer.matches_country_code_restriction(drop_list))
 
     def test_find_active_sessions(self):
         session = DropSessionFactory.create(state=SessionState.READY)
