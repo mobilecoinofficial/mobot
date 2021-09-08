@@ -496,7 +496,9 @@ class Payment(models.Model):
     processed = models.DateTimeField(blank=True, null=True, help_text="The date a payment was processed, if it was.")
     last_updated = models.DateTimeField(auto_now=True, help_text="Time of last update")
     status = models.SmallIntegerField(choices=PaymentStatus.choices, default=PaymentStatus.PENDING, help_text="Status of payment")
-    ### Custom Manager that adds a thread to check status ###
+    txo_id = models.CharField(max_length=255, null=True, blank=True)
+
+    ### Custom Manager ###
     objects = PaymentManager()
 
 

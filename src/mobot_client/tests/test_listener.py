@@ -5,6 +5,7 @@ import json
 import socket
 import time
 from datetime import datetime
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Iterator, Tuple
 from unittest.mock import AsyncMock, Mock, MagicMock, patch, create_autospec
@@ -22,6 +23,14 @@ from mobot_client.payments import MCClient
 from signald_client import Signal
 
 
+@dataclass
+class TestMessage:
+    text: str
+    payment: SignalPayment
+    phone_number: PhoneNumber
+    timestamp: float
+
+
 class ListenerTest(LiveServerTestCase):
 
     @patch('mobot_client.payments.MCClient', autospec=True)
@@ -32,13 +41,13 @@ class ListenerTest(LiveServerTestCase):
         self.mcc = mcc
         self._mock_patch_mcc(mcc)
 
-    def _mock_signal_messages(self, messages: Iterator[Tuple[PhoneNumber, str]]):
-        for (number, text) in messages:
+    def _mock_signal_messages(self, messages: Iterator[TestMessage]):
+        for test_message in messages:
             time.sleep(0.3)
             yield SignalMessage(
-                text=text,
-                username=str(number),
-                source=dict(number=str(number)),
+                text=test_message.text,
+                username=str(test_message.phone_number),
+                source=dict(number=str(test_message.phone_number)),
                 timestamp=timezone.now().timestamp(),
             )
 
@@ -103,7 +112,8 @@ class ListenerTest(LiveServerTestCase):
         signal = self.signal(messages=[(self.customer.phone_number, "HI MOBOT")])
         mobot = MOBot(bot_name="MOBot", bot_avatar_filename="icon.png", store=self.store, signal=signal, mcc=self.mcc)
         mobot.run_chat(break_on_stop=True, break_after=1)
-        print(MobotResponse.objects.count())
         responses = MobotResponse.objects.filter(incoming_message__customer=self.customer).all()
-        print(responses.count())
+        self.assertEqual(responses.count(), 1)
 
+    def test_mobot_gets_message_with_payment(self):
+        signal = self.signal(messages=[(self.customer.phone_number)])
