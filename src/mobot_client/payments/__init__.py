@@ -64,6 +64,10 @@ class Payments:
 
         if not cover_transaction_fee:
             amount_mob = amount_mob - Decimal(mc.pmob2mob(self.minimum_fee_pmob))
+        else:
+            # covering transaction fee includes reimbursing the user for the transaction
+            # fee that they spent sending us the original transaction that we are refunding
+            amount_mob = amount_mob + Decimal(mc.pmob2mob(self.minimum_fee_pmob))
 
         self.logger.info(f"Sending {amount_mob} MOB to {source}. Cover_transaction_fee: {cover_transaction_fee}")
         self.logger.info(f"Getting payment address for customer with # {source}")
