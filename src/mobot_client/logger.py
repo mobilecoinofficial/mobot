@@ -26,7 +26,7 @@ class SignalMessenger:
         try:
             self.signal.send_message(phone_number, text, attachments=attachments)
         except Exception as e:
-            print(e)
+            self.logger.exception(f"Error sending message to customer {customer}: {text}")
 
     @staticmethod
     def log_received(message, customer, store):
