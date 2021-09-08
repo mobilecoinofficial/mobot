@@ -7,7 +7,7 @@ import time
 from datetime import datetime
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Iterator, Tuple
+from typing import Iterator, Tuple, Optional
 from unittest.mock import AsyncMock, Mock, MagicMock, patch, create_autospec
 
 from django.utils import timezone
@@ -26,9 +26,9 @@ from signald_client import Signal
 @dataclass
 class TestMessage:
     text: str
-    payment: SignalPayment
+    payment: Optional[int]
     phone_number: PhoneNumber
-    timestamp: float
+    timestamp: float = timezone.now().timestamp()
 
 
 class ListenerTest(LiveServerTestCase):
@@ -43,7 +43,8 @@ class ListenerTest(LiveServerTestCase):
 
     def _mock_signal_messages(self, messages: Iterator[TestMessage]):
         for test_message in messages:
-            time.sleep(0.3)
+            if not test_message.timestamp:
+                time.sleep(0.3)
             yield SignalMessage(
                 text=test_message.text,
                 username=str(test_message.phone_number),
@@ -96,7 +97,7 @@ class ListenerTest(LiveServerTestCase):
     @patch('mobot_client.payments.MCClient', autospec=True)
     def test_listener(self, mcc: MCClient):
         self._mock_patch_mcc(mcc)
-        signal = self.signal(messages=[(self.customer.phone_number, message) for message in ["Hello", "World"]])
+        signal = self.signal(messages=[TestMessage(phone_number=self.customer.phone_number, text=message, payment=None) for message in ["Hello", "World"]])
         listener = MobotListener(mcc, signal, self.store)
         signal.run_chat(True, break_on_stop=True)
         # Give ourselves time to insert
@@ -109,11 +110,8 @@ class ListenerTest(LiveServerTestCase):
         self.assertEqual(messages[1].text, "World")
 
     def test_mobot_gets_message_from_queue(self):
-        signal = self.signal(messages=[(self.customer.phone_number, "HI MOBOT")])
+        signal = self.signal(messages=[TestMessage(phone_number=self.customer.phone_number, text="HI MOBOT")])
         mobot = MOBot(bot_name="MOBot", bot_avatar_filename="icon.png", store=self.store, signal=signal, mcc=self.mcc)
         mobot.run_chat(break_on_stop=True, break_after=1)
         responses = MobotResponse.objects.filter(incoming_message__customer=self.customer).all()
         self.assertEqual(responses.count(), 1)
-
-    def test_mobot_gets_message_with_payment(self):
-        signal = self.signal(messages=[(self.customer.phone_number)])
