@@ -208,7 +208,7 @@ class AirDropSession(BaseDropSession):
             self.handle_drop_session_allow_contact_requested(message, drop_session)
 
     def handle_no_active_airdrop_drop_session(self, customer, message, drop):
-        if False and customer.has_completed_drop(drop):
+        if customer.has_completed_drop(drop):
             self.messenger.log_and_send_message(
                 customer,
                 message.source,
