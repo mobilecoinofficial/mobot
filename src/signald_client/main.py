@@ -1,5 +1,6 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 # This code is copied from [pysignald](https://pypi.org/project/pysignald/) and modified to run locally with payments
+import json.decoder
 import logging
 import re
 import signal
@@ -67,7 +68,11 @@ class Signal(_Signal):
         signal.signal(signal.SIGQUIT, self._stop_handler)
         messages_iterator = self.receive_messages()
         while self._run:
-            message = next(messages_iterator)
+            try:
+                message = next(messages_iterator)
+            except json.decoder.JSONDecodeError as e:
+                self.logger.exception("Got an error attempting to get a message from signal!")
+                continue
             print("Receiving message")
             print(message)
 
