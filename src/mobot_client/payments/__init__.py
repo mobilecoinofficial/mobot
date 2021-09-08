@@ -17,6 +17,7 @@ from mobot_client.models import (
 )
 from mobot_client.chat_strings import ChatStrings
 from mobot_client.payments.client import MCClient
+from mobot_client.utils import TimerFactory
 
 
 class NotEnoughFundsException(Exception):
@@ -41,6 +42,9 @@ class Payments:
         self.messenger = messenger
         self.logger = logging.getLogger("MOBot.Payments")
         self._transaction_lock = threading.Lock()
+        self.timers = TimerFactory("Payments", self.logger)
+        with self.timers.get_timer("Startup"):
+            self.logger.info("Payments started")
 
     def get_payments_address(self, source):
         if isinstance(source, dict):
@@ -57,28 +61,29 @@ class Payments:
         return mobilecoin_address
 
     def send_mob_to_customer(self, customer, source, amount_mob, cover_transaction_fee, memo="Refund"):
-        if isinstance(source, dict):
-            source = source["number"]
-        else:
-            source = str(source)
+        with self.timers.get_timer("send_mob_to_customer"):
+            if isinstance(source, dict):
+                source = source["number"]
+            else:
+                source = str(source)
 
-        if not cover_transaction_fee:
-            amount_mob = amount_mob - Decimal(mc.pmob2mob(self.minimum_fee_pmob))
+            if not cover_transaction_fee:
+                amount_mob = amount_mob - Decimal(mc.pmob2mob(self.minimum_fee_pmob))
 
-        self.logger.info(f"Sending {amount_mob} MOB to {source}. Cover_transaction_fee: {cover_transaction_fee}")
-        self.logger.info(f"Getting payment address for customer with # {source}")
-        customer_payments_address = self.get_payments_address(source)
+            self.logger.info(f"Sending {amount_mob} MOB to {source}. Cover_transaction_fee: {cover_transaction_fee}")
+            self.logger.info(f"Getting payment address for customer with # {source}")
+            customer_payments_address = self.get_payments_address(source)
 
-        if customer_payments_address is None:
-            self.messenger.log_and_send_message(
-                customer,
-                source,
-                ChatStrings.PAYMENTS_DEACTIVATED.format(number=self.store.phone_number),
-            )
-        elif amount_mob > 0:
-            self.send_mob_to_address(
-                source, self.account_id, amount_mob, customer_payments_address, memo=memo
-            )
+            if customer_payments_address is None:
+                self.messenger.log_and_send_message(
+                    customer,
+                    source,
+                    ChatStrings.PAYMENTS_DEACTIVATED.format(number=self.store.phone_number),
+                )
+            elif amount_mob > 0:
+                self.send_mob_to_address(
+                    source, self.account_id, amount_mob, customer_payments_address, memo=memo
+                )
 
     def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund"):
         # customer_payments_address is b64 encoded, but full service wants a b58 address
@@ -86,16 +91,19 @@ class Payments:
             customer_payments_address
         )
 
-        self._transaction_lock.acquire(blocking=True)
-        tx_proposal = self.mcc.build_transaction(
-            account_id, amount_in_mob, customer_payments_address
-        )
-        txo_id = self.submit_transaction(tx_proposal, account_id)
+        with self.timers.get_timer("acquire_lock"):
+            self._transaction_lock.acquire(blocking=True)
+            with self.timers.get_timer("build_and_send_transaction"):
+                tx_proposal = self.mcc.build_transaction(
+                    account_id, amount_in_mob, customer_payments_address
+                )
+                txo_id = self.submit_transaction(tx_proposal, account_id)
         self._transaction_lock.release()
 
         for _ in range(10):
             try:
-                self.mcc.get_txo(txo_id)
+                with self.timers.get_timer("get_txo"):
+                    self.mcc.get_txo(txo_id)
             except Exception:
                 print("TxOut did not land yet, id: " + txo_id)
             else:
@@ -111,13 +119,14 @@ class Payments:
 
     def submit_transaction(self, tx_proposal: dict, account_id: str):
         # retry up to 10 times in case there's some failure with a 1 sec timeout in between each
-        transaction_log = self.mcc.submit_transaction(tx_proposal, account_id)
-        list_of_txos = transaction_log["output_txos"]
+        with self.timers.get_timer("submit_transaction"):
+            transaction_log = self.mcc.submit_transaction(tx_proposal, account_id)
+            list_of_txos = transaction_log["output_txos"]
 
-        if len(list_of_txos) > 1:
-            raise ValueError("Found more than one txout for this chat bot-initiated transaction.")
+            if len(list_of_txos) > 1:
+                raise ValueError("Found more than one txout for this chat bot-initiated transaction.")
 
-        return list_of_txos[0]["txo_id_hex"]
+            return list_of_txos[0]["txo_id_hex"]
 
     def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund"):
         receiver_receipt = self.create_receiver_receipt(tx_proposal)
@@ -137,9 +146,10 @@ class Payments:
         return receiver_receipts[0]
 
     def get_unspent_pmob(self) -> int:
-        account_amount_response = self.mcc.get_balance_for_account(self.account_id)
-        unspent_pmob = int(account_amount_response["unspent_pmob"])
-        return unspent_pmob
+        with self.timers.get_timer("get_unspent_pmob"):
+            account_amount_response = self.mcc.get_balance_for_account(self.account_id)
+            unspent_pmob = int(account_amount_response["unspent_pmob"])
+            return unspent_pmob
 
     def has_enough_funds_for_payment(self, payment_amount: int) -> bool:
         """Return a bool to check if we can pay out the desired amount"""
