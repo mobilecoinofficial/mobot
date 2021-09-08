@@ -76,13 +76,14 @@ class MOBot:
         if resp.get("error"):
             assert False, resp
 
-        self.signal.register_payment_handler(self.handle_payment)
-        self.signal.register_handler("\+", self.chat_router_plus)
-        self.signal.register_handler("coins", self.chat_router_coins)
-        self.signal.register_handler("items", self.chat_router_items)
-        self.signal.register_handler("unsubscribe", self.unsubscribe_handler)
-        self.signal.register_handler("subscribe", self.subscribe_handler)
-        self.signal.register_handler("", self.default_handler)
+        with self.timers.get_timer("Register_handlers"):
+            self.signal.register_payment_handler(self.handle_payment)
+            self.signal.register_handler("\+", self.chat_router_plus)
+            self.signal.register_handler("coins", self.chat_router_coins)
+            self.signal.register_handler("items", self.chat_router_items)
+            self.signal.register_handler("unsubscribe", self.unsubscribe_handler)
+            self.signal.register_handler("subscribe", self.subscribe_handler)
+            self.signal.register_handler("", self.default_handler)
 
     def maybe_advertise_drop(self, customer):
         self.logger.info("Checking for advertising drop")

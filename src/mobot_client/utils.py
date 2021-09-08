@@ -25,4 +25,5 @@ class TimerFactory(object):
                 end = self.timer()
                 self.elapsed_secs = end - self.start
                 self._logger.info(f"Timing complete for {self.name}: {self.elapsed_secs} SECONDS")
+
         return Timer()
