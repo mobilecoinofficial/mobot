@@ -93,6 +93,7 @@ class MOBot:
                 self.messenger.log_and_send_message(
                     customer, customer.phone_number, ChatStrings.COUNTRY_RESTRICTED
                 )
+                return True
             else:
                 bst_time = drop_to_advertise.start_time.astimezone(
                     pytz.timezone(drop_to_advertise.timezone)
@@ -112,10 +113,10 @@ class MOBot:
     def handle_unsolicited_payment(self, customer: Customer, amount_paid_mob: Decimal):
         self.logger.warning("Could not find drop session for customer; Payment unsolicited!")
         if mc.pmob2mob(self.minimum_fee_pmob) < amount_paid_mob:
+            self.payments.send_mob_to_customer(customer, str(customer.phone_number.as_e164), amount_paid_mob, False)
             self.messenger.log_and_send_message(
                 customer, str(customer.phone_number), ChatStrings.UNSOLICITED_PAYMENT
             )
-            self.payments.send_mob_to_customer(customer, str(customer.phone_number.as_e164), amount_paid_mob, False)
         else:
             self.messenger.log_and_send_message(
                 customer, str(customer.phone_number), ChatStrings.UNSOLICITED_NOT_ENOUGH
