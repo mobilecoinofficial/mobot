@@ -52,7 +52,7 @@ class Payments:
         return mobilecoin_address
 
     def send_mob_to_customer(self, customer, source, amount_mob, cover_transaction_fee):
-        with self.timers.get_timer("send_mob_to_customer"):
+        with self.timers.get_timer("send_mob_to_customer") as ctx:
             if isinstance(source, dict):
                 source = source["number"]
 
@@ -74,36 +74,37 @@ class Payments:
                 )
 
     def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str):
+        with self.timers.get_timer("send_mob_to_address"):
         # customer_payments_address is b64 encoded, but full service wants a b58 address
-        self.logger.info(f"Sending {amount_in_mob} MOB to {source}")
-        customer_payments_address = mc.utility.b64_public_address_to_b58_wrapper(
-            customer_payments_address
-        )
-        with self.timers.get_timer("acquire_payment_lock"):
-            self._transaction_lock.acquire(blocking=True)
-            tx_proposal = self.mcc.build_transaction(
-                account_id, amount_in_mob, customer_payments_address
+            self.logger.info(f"Sending {amount_in_mob} MOB to {source}")
+            customer_payments_address = mc.utility.b64_public_address_to_b58_wrapper(
+                customer_payments_address
             )
-            txo_id = self.submit_transaction(tx_proposal, account_id)
-            self._transaction_lock.release()
-
-        with self.timers.get_timer("allow_transaction_to_land"):
-            for _ in range(10):
-                try:
-                    with self.timers.get_timer("get_txo"):
-                        self.mcc.get_txo(txo_id)
-                except Exception:
-                    self.logger.exception(f"TxOut did not land yet, id: {txo_id}")
-                else:
-                    self.send_payment_receipt(source, tx_proposal)
-                    return
-                self.logger.warning(f"Did not get TXO for {txo_id}. Sleeping!")
-                time.sleep(1.0)
-            else:
-                self.signal.send_message(
-                    source,
-                    ChatStrings.COULD_NOT_GENERATE_RECEIPT,
+            with self.timers.get_timer("acquire_payment_lock"):
+                self._transaction_lock.acquire(blocking=True)
+                tx_proposal = self.mcc.build_transaction(
+                    account_id, amount_in_mob, customer_payments_address
                 )
+                txo_id = self.submit_transaction(tx_proposal, account_id)
+                self._transaction_lock.release()
+
+            with self.timers.get_timer("allow_transaction_to_land"):
+                for _ in range(10):
+                    try:
+                        with self.timers.get_timer("get_txo"):
+                            self.mcc.get_txo(txo_id)
+                    except Exception:
+                        self.logger.exception(f"TxOut did not land yet, id: {txo_id}")
+                    else:
+                        self.send_payment_receipt(source, tx_proposal)
+                        return
+                    self.logger.warning(f"Did not get TXO for {txo_id}. Sleeping!")
+                    time.sleep(1.0)
+                else:
+                    self.signal.send_message(
+                        source,
+                        ChatStrings.COULD_NOT_GENERATE_RECEIPT,
+                    )
 
     def submit_transaction(self, tx_proposal: dict, account_id: str):
         # retry up to 10 times in case there's some failure with a 1 sec timeout in between each
