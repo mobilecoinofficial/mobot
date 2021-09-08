@@ -129,7 +129,7 @@ class AirDropSession(BaseDropSession):
                 value_in_currency = amount_in_mob * Decimal(
                     drop_session.drop.conversion_rate_mob_to_currency
                 )
-                print(f"Sending customer {drop_session.customer} initial coin amount...")
+                self.logger.info(f"Sending customer {drop_session.customer} initial coin amount...")
                 self.payments.send_mob_to_customer(drop_session.customer, message.source, amount_in_mob, True)
                 self.messenger.log_and_send_message(
                     drop_session.customer,
@@ -155,7 +155,7 @@ class AirDropSession(BaseDropSession):
         drop_session.save()
 
     def handle_drop_session_waiting_for_bonus_transaction(self, message, drop_session):
-        print("----------------WAITING FOR BONUS TRANSACTION------------------")
+        self.logger.info("----------------WAITING FOR BONUS TRANSACTION------------------")
         if message.text.lower() == "help":
             self.messenger.log_and_send_message(
                 drop_session.customer,
