@@ -53,7 +53,7 @@ class Payments:
         self.logger.info(f"Got customer({source}) signal profile {customer_signal_profile}")
         mobilecoin_address = customer_signal_profile.get('mobilecoin_address')
         if not mobilecoin_address:
-            self.logger.warning(f"Found no MobileCoin payment address for {source.number}. Response: {customer_signal_profile}")
+            self.logger.warning(f"Found no MobileCoin payment address for {source}. Response: {customer_signal_profile}")
         return mobilecoin_address
 
     def send_mob_to_customer(self, customer, amount_mob, cover_transaction_fee, memo="Refund") -> Payment:

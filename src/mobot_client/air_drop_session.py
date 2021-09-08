@@ -212,7 +212,7 @@ class AirDropSession(BaseDropSession):
             if customer_payments_address is None:
                 self.messenger.log_and_send_message(
                     customer,
-                    ChatStrings.PAYMENTS_ENABLED_HELP.format(item_desc=drop.description),
+                    ChatStrings.PAYMENTS_ENABLED_HELP.format(item_desc=drop.pre_drop_description),
                 )
             elif not drop.under_quota():
                 self.logger.warn(f"{drop} has run out of coins")

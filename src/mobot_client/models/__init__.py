@@ -151,7 +151,7 @@ class Drop(models.Model):
     start_time = models.DateTimeField(db_index=True)
     end_time = models.DateTimeField(db_index=True)
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='drops', db_index=True, null=True, blank=True)
-    number_restriction = models.CharField(default="+44", max_length=4)
+    number_restriction = models.CharField(default="+44", max_length=255, blank=True)
     timezone = models.CharField(default="UTC", max_length=255)
     initial_coin_amount_pmob = models.PositiveIntegerField(default=0)
     conversion_rate_mob_to_currency = models.FloatField(default=1.0)
@@ -280,8 +280,11 @@ class Customer(models.Model):
     received_sticker_pack = models.BooleanField(default=False)
 
     def matches_country_code_restriction(self, drop: Drop) -> bool:
-        return f"+{self.phone_number.country_code}" == drop.number_restriction
-
+        if not drop.number_restriction.strip():
+            return True
+        else:
+            return f"+{self.phone_number.country_code}" in [s.strip() for s in drop.number_restriction.split(',')]
+            
     def active_drop_sessions(self):
         return DropSession.objects.active_drop_sessions().filter(customer=self)
 
