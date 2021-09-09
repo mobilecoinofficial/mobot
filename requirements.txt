@@ -10,7 +10,7 @@ pyzt
 googlemaps
 protobuf==3.17.3
 
-git+https://gitlab.com/mobilecoin/pysignald.git@f88a7ccaac0300645d4e46a5539620b74df38274#egg=pysignald
+git+https://gitlab.com/mobilecoin/pysignald.git@a020f2a9ddfa8233a3b6b86f980538b950d94b5e#egg=pysignald
 django-extensions==3.1.3
 aenum==3.1.0
 django-phonenumber-field[phonenumberslite]==2.1.0
