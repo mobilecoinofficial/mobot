@@ -349,7 +349,7 @@ class ItemDropSession(BaseDropSession):
         drop = drop_session.drop
         customer = drop_session.customer
         available_options = drop.item.skus.all()
-        if available_options.count() == 0:
+        if not available_options.exists():
             self.messenger.log_and_send_message(
                 customer, message.source, ChatStrings.OUT_OF_STOCK
             )
