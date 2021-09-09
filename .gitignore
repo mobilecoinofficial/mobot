@@ -138,6 +138,5 @@ dmypy.json
 .prod.dns.json
 
 manage.py
-src/migrations/**
 signald.db
 .envrc
