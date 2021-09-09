@@ -21,6 +21,7 @@ class Signal(_Signal):
         self._run = True
 
     def isolated_handler(self, func):
+        '''Wrap a function so that it's executed within a try-except block'''
         def isolated(*args, **kwargs):
             try:
                 func(*args, **kwargs)
@@ -29,6 +30,7 @@ class Signal(_Signal):
         return isolated
 
     def register_handler(self, regex, func, order=100):
+        '''Register a handler that runs when a regex matches, with a priority defined by lower order = higher priority'''
         self.logger.info(f"Registering chat handler for {regex if regex else 'default'}")
         if not isinstance(regex, RE_TYPE):
             regex = re.compile(regex, re.I)
