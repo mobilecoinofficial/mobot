@@ -11,9 +11,9 @@ from django.db.models import F, Q, Sum
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.db import transaction
+from django.contrib import admin
 from phonenumber_field.modelfields import PhoneNumberField
 
-from mobot_client.models.states import SessionState
 from mobot_client.models.states import SessionState
 import mobilecoin as mc
 
@@ -176,9 +176,11 @@ class Drop(models.Model):
         else:
             return 0
 
+    @admin.display(description='Initial Payments')
     def num_initial_sent(self) -> int:
         return DropSession.objects.initial_coin_sent_sessions().filter(drop=self).count()
 
+    @admin.display(description='Bonus Payments')
     def num_bonus_sent(self) -> int:
         return BonusCoin.objects.with_available().filter(drop=self).aggregate(Sum('num_claimed_sessions'))[
             'num_claimed_sessions__sum']
@@ -284,6 +286,7 @@ class Customer(models.Model):
     def active_drop_sessions(self):
         return DropSession.objects.active_drop_sessions().filter(customer=self)
 
+    @admin.display(description='Active')
     def has_active_drop_session(self) -> bool:
         return self.drop_sessions.count() > 0
 
@@ -296,6 +299,7 @@ class Customer(models.Model):
     def sessions_awaiting_payment(self):
         return DropSession.objects.awaiting_payment_sessions()
 
+    @admin.display(description='Awaiting Payment')
     def has_session_awaiting_payment(self):
         return self.sessions_awaiting_payment().count() > 0
 
@@ -304,6 +308,7 @@ class Customer(models.Model):
     def fulfilled_drop_sessions(self):
         return DropSession.objects.sold_sessions().filter(customer=self)
 
+    @admin.display(description='Fulfilled')
     def has_fulfilled_drop_session(self):
         return self.fulfilled_drop_sessions().count() > 0
 
