@@ -1,7 +1,45 @@
 # coding: utf-8
 import sys
+import json
+
 from signald_client import Signal
 
+
+class DebugSignal(Signal):
+
+    def _send_command(self, payload: dict, block: bool = False):
+        print(f"Sending command: {payload}")
+        s = self._get_socket()
+        msg_id = self._get_id()
+        payload["id"] = msg_id
+        s.recv(1024)  # Flush the buffer.
+        s.send(json.dumps(payload).encode("utf8") + b"\n")
+
+        if not block:
+            return
+
+        response_data = {}
+        response = s.recv(4 * 1024)
+        for line in response.split(b"\n"):
+            if msg_id.encode("utf8") not in line:
+                continue
+            try:
+                data = json.loads(line)
+
+                if data.get("id") != msg_id:
+                    continue
+
+                if data["type"] == "unexpected_error":
+                    raise ValueError("unexpected error occurred")
+
+                if data.get("error_type") == "RequestValidationFailure":
+                    raise ValueError(data.get("error"))
+
+                response_data = data
+            except json.decoder.JSONDecodeError as e:
+                print(f"Got a bad JSON response: {line}")
+
+        return response_data
 
 MOBOT = "+447401150900"
 def trust_with_logging(signal):
