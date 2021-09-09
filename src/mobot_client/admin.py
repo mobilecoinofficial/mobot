@@ -1,5 +1,4 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
-from pprint import PrettyPrinter
 from django.contrib import admin
 
 from mobilecoin.utility import pmob2mob
@@ -17,9 +16,6 @@ from .models import (
     Order,
     Sku,
 )
-
-
-pp = PrettyPrinter()
 
 
 class StoreAdmin(admin.ModelAdmin):
