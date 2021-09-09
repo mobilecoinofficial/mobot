@@ -23,9 +23,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', "123")
+GMAPS_CLIENT_KEY = os.environ.get('GMAPS_CLIENT_KEY')
+VAT_ID = os.environ.get('VAT_ID', "123")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', False)
+SIGNALD_ADDRESS = os.environ.get('SIGNALD_ADDRESS', '127.0.0.1')
+SIGNALD_PORT = os.environ.get('SIGNALD_PORT', 15432)
+FULLSERVICE_ADDRESS = os.getenv("FULLSERVICE_ADDRESS", "127.0.0.1")
+FULLSERVICE_PORT = os.getenv("FULLSERVICE_PORT", "9090")
+FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
 
 DATABASE = os.environ.get('DATABASE', 'sqlite')
 
@@ -55,6 +62,31 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'mobot.urls'
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {name} --- {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} --- {message}",
+            "style": "{",
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': os.environ.get("DJANGO_LOG_LEVEL", "INFO"),
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+}
 
 TEMPLATES = [
     {

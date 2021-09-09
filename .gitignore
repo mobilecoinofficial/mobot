@@ -104,6 +104,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.idea
 env/
 venv/
 ENV/
@@ -136,5 +137,6 @@ dmypy.json
 .stage.dns.json
 .prod.dns.json
 
-.idea/
 manage.py
+signald.db
+.envrc

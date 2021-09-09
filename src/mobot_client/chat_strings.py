@@ -47,6 +47,7 @@ Enable payments to receive {item_desc}
 More info on enabling payments here: https://support.signal.org/hc/en-us/articles/360057625692-In-app-Payments"""
 
     UNSOLICITED_PAYMENT = "MOBot here! You sent us an unsolicited payment. We're returning it minus a network fee to cover our costs. We can't promise to always be paying attention and return unsolicited payments, so we suggest only sending us payments when we request them"
+    UNSOLICITED_NOT_ENOUGH = "MOBot here!\n\nYou sent us an unsolicited payment that's less than the network fee, so we can't return it.\n\nWe suggest only sending us payments when we request them"
     STORE_CLOSED = "Hi! MOBot here.\n\nWe're currently closed.\n\nCome back on {date} at {time} for {desc}"
     STORE_CLOSED_SHORT = "Hi! MOBot here.\n\nWe're currently closed. Buh-Bye!"
 
@@ -68,7 +69,7 @@ Please contact customer service at {number}"""
 
     AIRDROP_RESPONSE = """We've sent you {amount} MOB (~{symbol}{value:.2f}). 
 
-Send us 0.01 MOB, and we'll send it back, plus more! 
+Send us 0.001 MOB, and we'll send it back, plus more! 
 You could end up with as much as £50 of MOB"""
     AIRDROP_SUMMARY = (
         "You've received your initial MOB, tried making a payment, "
@@ -97,7 +98,7 @@ You could end up with as much as £50 of MOB"""
     AIRDROP_INSTRUCTIONS = (
         "Here's how our MOB airdrop works:\n\n"
         "1. We send you some MOB to fund your wallet. It will be approx £3 worth\n"
-        "2. Give sending MOB a try by giving us back a tiny bit, say 0.01 MOB\n"
+        "2. Give sending MOB a try by giving us back a tiny bit, say 0.001 MOB\n"
         "3. We'll send you a random BONUS airdrop. You could receive as much as £50 in MOB"
         "\n\nWhether you get £5 or £50, it’s yours to keep and spend however you like"
     )
@@ -108,16 +109,18 @@ Sorry 😭"""
 
     AIRDROP_SOLD_OUT_REFUND = """Thank you for sending {amount} MOB! 
 
-Unfortunately, we ran out of MOB to distribute 😭. 
+Unfortunately, we ran out of MOB to distribute 😭.
+
 We're returning your MOB and the network fee."""
     BONUS_SOLD_OUT_REFUND = """Thank you for sending {amount} MOB!
 
-Unfortunately, we ran out of bonuses 😭. 
+Unfortunately, we ran out of bonuses 😭.
+
 We're returning your MOB and the network fee."""
 
     AIRDROP_INITIALIZE = """Great! We've just sent you {amount} MOB (~{symbol}{value:.2f})
 
-Send us 0.01 MOB, and we'll send it back, plus more!
+Send us 0.001 MOB, and we'll send it back, plus more!
 
 You could end up with as much as £50 of MOB"""
 
@@ -131,8 +134,8 @@ To give others a chance, we're only allowing one MOB airdrop per person"""
     NOTIFICATIONS_ASK = "Would you like to receive alerts for future drops?"
 
     PAY_HELP = """To see your balance and send a payment:
-1. Select the attachment icon and select Pay
-2. Enter the amount you want to send (e.g. 0.01 MOB)
+1. Select the attachment (+) icon and select Payment
+2. Enter the amount you want to send (e.g. 0.001 MOB)
 3. Tap Pay
 4. Tap Confirm Payment
 """
@@ -190,6 +193,14 @@ MOBot OUT. Buh-bye!"""
 'pay' - How to pay"""
 # 'terms' - Terms and conditions
 
+    APOLOGIES_HAVE_SOME_MOB = """MOBot here. So sorry for yesterday's technical difficulties.
+    
+We noticed that you received an initial airdop of coin, but weren't able to follow up for the bonus round.  We've just sent you a bonus to make good on that.
+    
+Please enjoy an addition {mob} MOB to bring your total to ~ £10 worth of MOB
+    
+MOBot OUT. Enjoy!"""
+
     PAYMENT_REQUEST = "Order now by sending {price} MOB using Signal Payments"
     PAY = """1. Select the attachment (+) icon below and then select Pay
 2. Enter the amount to send ({amount} MOB)
@@ -239,3 +250,9 @@ if you have any questions or issues"""
     TIMEOUT = "Your session is about to timeout. Send any message to continue."
     TIMEOUT_CANCELLED = "Your session has expired."
     TIMEOUT_REFUND = "Your session has expired. We will refund the amount you sent."
+
+    ### Payment chat strings
+    COULD_NOT_GENERATE_RECEIPT = "Couldn't generate a receipt, please contact us if you get didn't a payment!"
+    WE_RECEIVED_MOB = "We received {amount_mob} MOB"
+    PLUS_SIGN_HELP = "Whoops! Looks like you meant to hit the '+' button to the left of the text field."
+    COINS_SENT = """{initial_num_sent} customers sent initial coins, totalling {total} MOB."""
