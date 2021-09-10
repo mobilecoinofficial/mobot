@@ -23,7 +23,7 @@ class StoreAdmin(admin.ModelAdmin):
 
 
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('phone_number', 'has_active_drop_sessions', 'has_session_awaiting_payment', 'has_fulfilled_drop_session', 'state')
+    list_display = ('phone_number', 'has_active_drop_session', 'has_session_awaiting_payment', 'has_fulfilled_drop_session', 'state')
     readonly_fields = ('has_active_drop_session', 'has_session_awaiting_payment', 'has_fulfilled_drop_session')
 
     # Leaving this separate, as it's just for display in admin
@@ -91,7 +91,7 @@ class DropAdmin(admin.ModelAdmin):
     inlines = [
         BonusCoinInline
     ]
-    list_display = ('name', 'store', 'is_active', 'num_initial_sent', 'num_bonus_payments', 'total_spent',)
+    list_display = ('name', 'store', 'is_active', 'num_initial_sent', 'num_bonus_sent', 'total_spent',)
     readonly_fields = ('initial_coin_limit', 'is_active', 'initial_coins_available', 'bonus_coins_available_display', 'total_spent')
 
     @admin.display(description='Bonus Coins')
