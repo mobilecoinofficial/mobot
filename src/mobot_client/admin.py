@@ -24,7 +24,7 @@ class StoreAdmin(admin.ModelAdmin):
 
 class CustomerAdmin(admin.ModelAdmin):
     list_display = ('phone_number', 'has_active_drop_sessions', 'has_session_awaiting_payment', 'has_fulfilled_drop_session', 'state')
-    readonly_fields = ('has_active', 'has_awaiting_payment', 'has_fulfilled')
+    readonly_fields = ('has_active_drop_session', 'has_session_awaiting_payment', 'has_fulfilled_drop_session')
 
     # Leaving this separate, as it's just for display in admin
     @admin.display(description='State')
