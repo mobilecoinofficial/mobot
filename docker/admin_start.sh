@@ -7,4 +7,6 @@ python manage.py createcachetable
 
 python manage.py migrate
 
-/usr/local/bin/python manage.py check_migration && uwsgi --ini /app/uwsgi.ini
+python manage.py check_migration
+
+uwsgi --ini /app/uwsgi.ini

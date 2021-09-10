@@ -13,4 +13,9 @@ SIGNALD_ADDRESS=signald
 FULLSERVICE_ADDRESS=full-service
 DEBUG=True
 SECRET_KEY=badlocaldevsecretkey
+<<<<<<< Updated upstream
 ALLOWED_HOSTS=10.200.0.8,mobot.local
+=======
+ALLOWED_HOSTS=10.200.0.8,mobot.local,127.0.0.1,localhost
+STORE_NUMBER=+12034058799
+>>>>>>> Stashed changes
