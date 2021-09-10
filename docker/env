@@ -13,4 +13,4 @@ SIGNALD_ADDRESS=signald
 FULLSERVICE_ADDRESS=full-service
 DEBUG=True
 SECRET_KEY=badlocaldevsecretkey
-ALLOWED_HOSTS=10.200.0.8,mobot.local
+ALLOWED_HOSTS=10.200.0.8,localhost,127.0.0.1
