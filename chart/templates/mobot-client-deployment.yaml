@@ -35,8 +35,6 @@ spec:
         args:
         - /usr/local/bin/mobot_client_start.sh
         env:
-        - name: STORE_NUMBER
-          value: "+{{ . }}"
         - name: DATABASE
           value: postgresql
         - name: DATABASE_HOST

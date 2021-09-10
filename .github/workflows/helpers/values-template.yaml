@@ -1,0 +1,15 @@
+mobotAdmin:
+  image:
+    tag: %TAG%
+
+mobotClient:
+  image:
+    tag: %TAG%
+
+signald:
+  image:
+    tag: v1.12.1
+
+full-service:
+  image:
+    tag: v1.0.1
