@@ -6,9 +6,8 @@ ARG SECRET_KEY=bogus
 RUN  addgroup --system --gid 1000 app \
   && adduser --system --ingroup app --uid 1000 app \
   && mkdir -p /signald \
-  && mkdir -p /signald/attachments \
-  && chown app:app /signald \
-  && chown app:app /signald/attachments
+  && chown app:app /signald
+
 
 RUN  apt-get update \
   && apt-get upgrade -y \

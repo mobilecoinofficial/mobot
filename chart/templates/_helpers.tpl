@@ -105,24 +105,3 @@ Mobot Secret Name
   {{- end }}
 {{- end }}
 
-{{/*
-Mobot Store Numbers
-*/}}
-{{- define "chart.mobotStoreNumbers" -}}
-  {{- if .Values.mobotConfig.configMap.external }}
-{"numbers": {{ (lookup "v1" "ConfigMap" .Release.Namespace .Values.mobotConfig.configMap.name ).data.STORE_NUMBERS }}}
-  {{- else }}
-{"numbers": {{ .Values.mobotConfig.storeNumbers | toJson }}}
-  {{- end }}
-{{- end }}
-
-{{/*
-Mobot Hostname
-*/}}
-{{- define "chart.mobotHostname" -}}
-  {{- if .Values.mobotConfig.configMap.external }}
-    {{- (lookup "v1" "ConfigMap" .Release.Namespace .Values.mobotConfig.configMap.name ).data.HOSTNAME }}
-  {{- else }}
-    {{- .Values.mobotConfig.hostname }}
-  {{- end }}
-{{- end }}
