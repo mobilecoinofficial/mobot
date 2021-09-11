@@ -91,7 +91,7 @@ For testing, we build and run locally, using the Signal staging network, and the
    for values.) 
 
    ```shell
-   nc 0.0.0.0 15432 # (or on MacOS, nc localhost 15432)
+   nc localhost 15432
    
    # Response:
    {"type":"version","data":{"name":"signald","version":"0.14.0+git2021-08-03r9da1afeb.8","branch":"","commit":""}}
@@ -244,7 +244,7 @@ These are the instructions for creating an AirDrop for Coins.
 | `DEBUG` | django - debug value |
 | `SECRET_KEY` | django - secret key value |
 | `ALLOWED_HOSTS` | django - Allowed request `Host` header values |
-| `STORE_NUMBER` | run_mobot_client - signal phone number |
+
 
 
 ### Running with docker-compose
@@ -252,7 +252,7 @@ These are the instructions for creating an AirDrop for Coins.
 This compose file has been set up to run in production mode. 
 
 ```
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose up --build
+DOCKER_BUILDKIT=1 docker-compose up --build
 ```
 
 This will start up:
@@ -277,18 +277,7 @@ docker-compose exec admin python manage.py createsuperuser
 
 #### Admin Portal
 
-The docker compose uses static IP addresses in the 10.200.0.0/24 range. 
-
-The portal can be reached at http://10.200.0.8:8000/admin/
-
-Bonus add a `/etc/hosts` entry to `mobot.local` and browse to a more friendly address:
-
-```
-10.200.0.8 mobot.local
-```
-
-http://mobot.local:8000/admin/
-
+The portal can be reached at http://localhost:8000/admin/
 
 #### Subscribing a number
 
@@ -324,7 +313,7 @@ http://mobot.local:8000/admin/
 
 Pushes to `develop` will build an image with a 'sha-12345678' type tag. Chart with new deployed to staging.
 
-Pushes to `main` will build an image with a semver `0.0.0` type tag. Chart with new tagged container will be deployed to production.
+Pushes to `main` will build an image with a semver `v0.0.0` type tag. Chart with new tagged container will be deployed to production.
 
 ### Auto Tagging
 
@@ -336,22 +325,13 @@ By default pushes to `main` will automatically bump the latest `patch`. To bump 
 
 **Configuration Values**
 
-Variables for CI/CD and configuration are defined in GitHub Secrets for this repo. These values are not actually secrets, but I wanted a way to change values without having to commit new code.
-
-A template for the Helm chart values is in `.github/workflows/helpers/vaules.template.yaml`
-
-| Variable | Description | Location |
-| --- | --- | --- |
-| `mobotConfig.storeNumbers` | List of store signal phone numbers | values.yaml file saved in `<environment>_VALUES` variable, GitHub Secrets |
-| `mobotConfig.hostname` | FQDN for ingress and django admin portal | values.yaml file saved in `<environment>_VALUES` variable, GitHub Secrets |
+No extra configuration values are needed
 
 **Secret Values**
 
-Secrets are predefined for the deployment environment via Terraform configuration.  Actual values are specified in variables attached to the `tf-cloud` workspace and passed down as variables to child workspaces in Terraform Cloud.
-
 | Variable | Location |
 | --- | --- |
-| `SECRET_KEY` | `<environment>_mobot_secret_key` variable in Terraform |
+| `SECRET_KEY` | Auto generated and provisioned for the environment. |
 
 ## UnitTests
 
