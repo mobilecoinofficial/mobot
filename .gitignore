@@ -104,11 +104,15 @@ celerybeat.pid
 # Environments
 .env
 .venv
+<<<<<<< HEAD
 .idea/**/workspace.xml
 .idea/**/tasks.xml
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
+=======
+.idea
+>>>>>>> dev
 env/
 venv/
 ENV/
@@ -142,6 +146,9 @@ dmypy.json
 .prod.dns.json
 
 manage.py
+<<<<<<< HEAD
 src/migrations/**
+=======
+>>>>>>> dev
 signald.db
 .envrc

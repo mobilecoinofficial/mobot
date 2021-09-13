@@ -1,5 +1,6 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 import unittest
+import logging
 from typing import List, Dict
 from collections import defaultdict
 from django.test import TestCase
@@ -22,6 +23,8 @@ factory.random.reseed_random('mobot cleanup')
 class ModelTests(TestCase):
 
     def test_items_available(self):
+        '''Make sure inventory availability is what's expected, and sold-out logic is correctly applied'''
+        logger = logging.getLogger()
         store = StoreFactory.create()
         item = ItemFactory.create(store=store)
         drop = DropFactory.create(drop_type=DropType.ITEM, store=store, item=item)
@@ -79,6 +82,7 @@ class ModelTests(TestCase):
         print(f"Cancelled orders are available!")
 
     def test_claim_coin(self):
+        '''Test that we're only able to claim a BonusCoin once'''
         drop = DropFactory.create(drop_type=DropType.AIRDROP)
         coin = BonusCoinFactory.create(drop=drop, number_available_at_start=1)
         session = DropSessionFactory.create(drop=drop)
@@ -93,6 +97,7 @@ class ModelTests(TestCase):
         self.assertEqual(BonusCoin.objects.available_coins().filter(drop=drop).count(), 0)
 
     def test_claim_multiple(self):
+        '''Test several bonus coins to ensure random selection is able to find all available BonusCoins'''
         drop = DropFactory.create(drop_type=DropType.AIRDROP)
         coin = BonusCoinFactory.create_batch(size=2, drop=drop, number_available_at_start=1)
         session1 = DropSessionFactory.create(drop=drop)
@@ -108,6 +113,7 @@ class ModelTests(TestCase):
             BonusCoin.objects.claim_random_coin(session1)
 
     def test_active_drop_sessions_found_for_customer(self):
+        '''Ensure that customers with old drop sessions don't find themselves unable to participate in current drops'''
         customer = CustomerFactory.create()
         new_session = DropSessionFactory.create(customer=customer)
         old_session = OldDropSessionFactory.create(customer=customer, state=SessionState.ALLOW_CONTACT_REQUESTED)
@@ -130,6 +136,7 @@ class ModelTests(TestCase):
         self.assertEqual(customer.active_drop_sessions().count(), 0)
 
     def test_customer_has_completed_drop(self):
+        '''Test that the has_completed_drop method returns as expected'''
         session = DropSessionFactory.create()
         customer = session.customer
         self.assertFalse(customer.has_completed_drop(session.drop))
@@ -138,6 +145,10 @@ class ModelTests(TestCase):
         self.assertTrue(customer.has_completed_drop(session.drop))
 
     def test_find_completed_and_errored_drops(self):
+        '''
+        Test that we're able to find drops in different states and that customer convenience methods return correct
+        results
+        '''
         customer = CustomerFactory.create()
         print("Making 5 completed sessions...")
         print(f"Made sessions {list(DropSessionFactory.create_batch(size=5, customer=customer, state=SessionState.COMPLETED))}")
@@ -159,6 +170,7 @@ class ModelTests(TestCase):
         self.assertEqual(Drop.objects.get_active_drop().pk, active_drop.pk)
 
     def test_customer_store_preferences_found(self):
+        '''Test the customer.has_store_preferences method'''
         store = StoreFactory.create()
         customer = CustomerFactory.create()
         self.assertFalse(customer.has_store_preferences(store))
@@ -166,6 +178,7 @@ class ModelTests(TestCase):
         self.assertTrue(customer.has_store_preferences(store))
 
     def test_customer_country_code_validity(self):
+        '''Customer phone numbers outside of country code restrictions should not be valid for drops'''
         drop_single = DropFactory.create(number_restriction="+44")
         drop_none = DropFactory.create(number_restriction="")
         drop_list = DropFactory.create(number_restriction="+44,+49")
@@ -185,7 +198,4 @@ class ModelTests(TestCase):
         self.assertFalse(de_customer.matches_country_code_restriction(drop_single))
         self.assertTrue(de_customer.matches_country_code_restriction(drop_none))
         self.assertTrue(de_customer.matches_country_code_restriction(drop_list))
-
-    def test_find_active_sessions(self):
-        session = DropSessionFactory.create(state=SessionState.READY)
 

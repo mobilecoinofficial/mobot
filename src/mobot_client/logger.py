@@ -3,22 +3,27 @@ import logging
 import threading
 from contextlib import contextmanager
 from typing import Optional
+from dataclasses import dataclass
 
 from mobot_client.models import Message, MessageDirection, MobotResponse
 
 
 class SignalMessenger:
+    CTX = threading.local()
     def __init__(self, signal, store):
         self.signal = signal
         self.store = store
         self.logger = logging.getLogger("SignalMessenger")
-        self._context = threading.local()
+        self._context = SignalMessenger.CTX
 
     @contextmanager
     def message_context(self, message: Message):
         self._context.message = message
         yield self._context
         del self._context.message
+
+    def send_message(self, text, attachments=[]):
+        """Send a message, logging its response"""
 
 
     def log_and_send_message(self, customer, text, attachments=[]) -> MobotResponse:

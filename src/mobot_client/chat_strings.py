@@ -68,8 +68,7 @@ Please contact customer service at {number}"""
 'pay' - How to pay"""
 
     AIRDROP_RESPONSE = """We've sent you {amount} MOB (~{symbol}{value:.2f}). 
-
-Send us 0.01 MOB, and we'll send it back, plus more! 
+Send us 0.001 MOB, and we'll send it back, plus more! 
 You could end up with as much as £50 of MOB"""
     AIRDROP_SUMMARY = (
         "You've received your initial MOB, tried making a payment, "
@@ -98,7 +97,7 @@ You could end up with as much as £50 of MOB"""
     AIRDROP_INSTRUCTIONS = (
         "Here's how our MOB airdrop works:\n\n"
         "1. We send you some MOB to fund your wallet. It will be approx £3 worth\n"
-        "2. Give sending MOB a try by giving us back a tiny bit, say 0.01 MOB\n"
+        "2. Give sending MOB a try by giving us back a tiny bit, say 0.001 MOB\n"
         "3. We'll send you a random BONUS airdrop. You could receive as much as £50 in MOB"
         "\n\nWhether you get £5 or £50, it’s yours to keep and spend however you like"
     )
@@ -109,16 +108,26 @@ Sorry 😭"""
 
     AIRDROP_SOLD_OUT_REFUND = """Thank you for sending {amount} MOB! 
 
+<<<<<<< HEAD
 Unfortunately, we ran out of MOB to distribute 😭. 
 We're returning your MOB and the network fee."""
     BONUS_SOLD_OUT_REFUND = """Thank you for sending {amount} MOB!
 
 Unfortunately, we ran out of bonuses 😭. 
+=======
+Unfortunately, we ran out of MOB to distribute 😭.
+
+We're returning your MOB and the network fee."""
+    BONUS_SOLD_OUT_REFUND = """Thank you for sending {amount} MOB!
+
+Unfortunately, we ran out of bonuses 😭.
+
+>>>>>>> dev
 We're returning your MOB and the network fee."""
 
     AIRDROP_INITIALIZE = """Great! We've just sent you {amount} MOB (~{symbol}{value:.2f})
 
-Send us 0.01 MOB, and we'll send it back, plus more!
+Send us 0.001 MOB, and we'll send it back, plus more!
 
 You could end up with as much as £50 of MOB"""
 
@@ -132,8 +141,8 @@ To give others a chance, we're only allowing one MOB airdrop per person"""
     NOTIFICATIONS_ASK = "Would you like to receive alerts for future drops?"
 
     PAY_HELP = """To see your balance and send a payment:
-1. Select the attachment (+) icon and select Pay
-2. Enter the amount you want to send (e.g. 0.01 MOB)
+1. Select the attachment (+) icon and select Payment
+2. Enter the amount you want to send (e.g. 0.001 MOB)
 3. Tap Pay
 4. Tap Confirm Payment
 """

@@ -13,10 +13,18 @@ from mobot_client.logger import SignalMessenger
 from mobot_client.models import (
     SessionState,
     Store,
+<<<<<<< HEAD
     DropSession, Payment,
 )
 from mobot_client.chat_strings import ChatStrings
 from mobot_client.payments.client import MCClient
+=======
+    DropSession,
+)
+from mobot_client.chat_strings import ChatStrings
+from mobot_client.payments.client import MCClient
+from mobot_client.utils import TimerFactory
+>>>>>>> dev
 
 
 class NotEnoughFundsException(Exception):
@@ -41,6 +49,12 @@ class Payments:
         self.messenger = messenger
         self.logger = logging.getLogger("MOBot.Payments")
         self._transaction_lock = threading.Lock()
+<<<<<<< HEAD
+=======
+        self.timers = TimerFactory("Payments", self.logger)
+        with self.timers.get_timer("Startup"):
+            self.logger.info("Payments started")
+>>>>>>> dev
 
     def get_payments_address(self, source):
         if isinstance(source, dict):
@@ -56,6 +70,7 @@ class Payments:
             self.logger.warning(f"Found no MobileCoin payment address for {source}. Response: {customer_signal_profile}")
         return mobilecoin_address
 
+<<<<<<< HEAD
     def send_mob_to_customer(self, customer, amount_mob, cover_transaction_fee, memo="Refund") -> Payment:
         phone_number = str(customer.phone_number)
 
@@ -79,6 +94,36 @@ class Payments:
             self.send_mob_to_address(
                 phone_number, self.account_id, amount_mob, customer_payments_address, memo=memo
             )
+=======
+    def send_mob_to_customer(self, customer, source, amount_mob, cover_transaction_fee, memo="Refund"):
+        with self.timers.get_timer("send_mob_to_customer"):
+            if isinstance(source, dict):
+                source = source["number"]
+            else:
+                source = str(source)
+
+            if not cover_transaction_fee:
+                amount_mob = amount_mob - Decimal(mc.pmob2mob(self.minimum_fee_pmob))
+            else:
+                # covering transaction fee includes reimbursing the user for the transaction
+                # fee that they spent sending us the original transaction that we are refunding
+                amount_mob = amount_mob + Decimal(mc.pmob2mob(self.minimum_fee_pmob))
+
+            self.logger.info(f"Sending {amount_mob} MOB to {source}. Cover_transaction_fee: {cover_transaction_fee}")
+            self.logger.info(f"Getting payment address for customer with # {source}")
+            customer_payments_address = self.get_payments_address(source)
+
+            if customer_payments_address is None:
+                self.messenger.log_and_send_message(
+                    customer,
+                    source,
+                    ChatStrings.PAYMENTS_DEACTIVATED.format(number=self.store.phone_number),
+                )
+            elif amount_mob > 0:
+                self.send_mob_to_address(
+                    source, self.account_id, amount_mob, customer_payments_address, memo=memo
+                )
+>>>>>>> dev
 
     def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund"):
         # customer_payments_address is b64 encoded, but full service wants a b58 address
@@ -86,16 +131,31 @@ class Payments:
             customer_payments_address
         )
 
+<<<<<<< HEAD
         self._transaction_lock.acquire(blocking=True)
         tx_proposal = self.mcc.build_transaction(
             account_id, amount_in_mob, customer_payments_address
         )
         txo_id = self.submit_transaction(tx_proposal, account_id)
+=======
+        with self.timers.get_timer("acquire_lock"):
+            self._transaction_lock.acquire(blocking=True)
+            with self.timers.get_timer("build_and_send_transaction"):
+                tx_proposal = self.mcc.build_transaction(
+                    account_id, amount_in_mob, customer_payments_address
+                )
+                txo_id = self.submit_transaction(tx_proposal, account_id)
+>>>>>>> dev
         self._transaction_lock.release()
 
         for _ in range(10):
             try:
+<<<<<<< HEAD
                 self.mcc.get_txo(txo_id)
+=======
+                with self.timers.get_timer("get_txo"):
+                    self.mcc.get_txo(txo_id)
+>>>>>>> dev
             except Exception:
                 print("TxOut did not land yet, id: " + txo_id)
             else:
@@ -111,6 +171,7 @@ class Payments:
 
     def submit_transaction(self, tx_proposal: dict, account_id: str):
         # retry up to 10 times in case there's some failure with a 1 sec timeout in between each
+<<<<<<< HEAD
         transaction_log = self.mcc.submit_transaction(tx_proposal, account_id)
         list_of_txos = transaction_log["output_txos"]
 
@@ -118,6 +179,16 @@ class Payments:
             raise ValueError("Found more than one txout for this chat bot-initiated transaction.")
 
         return list_of_txos[0]["txo_id_hex"]
+=======
+        with self.timers.get_timer("submit_transaction"):
+            transaction_log = self.mcc.submit_transaction(tx_proposal, account_id)
+            list_of_txos = transaction_log["output_txos"]
+
+            if len(list_of_txos) > 1:
+                raise ValueError("Found more than one txout for this chat bot-initiated transaction.")
+
+            return list_of_txos[0]["txo_id_hex"]
+>>>>>>> dev
 
     def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund"):
         receiver_receipt = self.create_receiver_receipt(tx_proposal)
@@ -137,9 +208,16 @@ class Payments:
         return receiver_receipts[0]
 
     def get_unspent_pmob(self) -> int:
+<<<<<<< HEAD
         account_amount_response = self.mcc.get_balance_for_account(self.account_id)
         unspent_pmob = int(account_amount_response["unspent_pmob"])
         return unspent_pmob
+=======
+        with self.timers.get_timer("get_unspent_pmob"):
+            account_amount_response = self.mcc.get_balance_for_account(self.account_id)
+            unspent_pmob = int(account_amount_response["unspent_pmob"])
+            return unspent_pmob
+>>>>>>> dev
 
     def has_enough_funds_for_payment(self, payment_amount: int) -> bool:
         """Return a bool to check if we can pay out the desired amount"""
@@ -162,6 +240,10 @@ class Payments:
             self.logger.warning("Refunding customer their payment minus transaction fees")
             self.messenger.log_and_send_message(
                 customer,
+<<<<<<< HEAD
+=======
+                source,
+>>>>>>> dev
                 ChatStrings.NOT_ENOUGH_REFUND.format(amount_paid=refund_amount.normalize())
             )
             self.send_mob_to_customer(customer, source, amount_paid_mob, False)
@@ -169,6 +251,10 @@ class Payments:
             self.logger.warning("Not Refunding. Payment not enough to cover transaction fees for refund.")
             self.messenger.log_and_send_message(
                 customer,
+<<<<<<< HEAD
+=======
+                source,
+>>>>>>> dev
                 ChatStrings.NOT_ENOUGH
             )
 
@@ -178,6 +264,10 @@ class Payments:
         net_excess = mc.pmob2mob(mc.mob2pmob(excess) - self.minimum_fee_pmob)
         self.messenger.log_and_send_message(
             drop_session.customer,
+<<<<<<< HEAD
+=======
+            drop_session.customer.phone_number.as_e164,
+>>>>>>> dev
             ChatStrings.EXCESS_PAYMENT.format(refund=net_excess.normalize())
         )
         self.send_mob_to_customer(drop_session.customer, drop_session.customer.phone_number.as_e164, excess, False)
@@ -186,12 +276,20 @@ class Payments:
         customer = drop_session.customer
         self.messenger.log_and_send_message(
             customer,
+<<<<<<< HEAD
+=======
+            customer.phone_number.as_e164,
+>>>>>>> dev
             ChatStrings.WE_RECEIVED_MOB.format(mob=amount_paid_mob.normalize())
         )
 
     def handle_out_of_stock(self, amount_paid_mob: Decimal, drop_session: DropSession):
         self.messenger.log_and_send_message(
             drop_session.customer,
+<<<<<<< HEAD
+=======
+            drop_session.customer.phone_number.as_e164,
+>>>>>>> dev
             ChatStrings.OUT_OF_STOCK_REFUND
         )
         self.send_mob_to_customer(drop_session.customer,

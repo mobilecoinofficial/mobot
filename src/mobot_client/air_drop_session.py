@@ -120,7 +120,7 @@ class AirDropSession(BaseDropSession):
                 value_in_currency = amount_in_mob * Decimal(
                     drop_session.drop.conversion_rate_mob_to_currency
                 )
-                print(f"Sending customer {drop_session.customer} initial coin amount...")
+                self.logger.info(f"Sending customer {drop_session.customer} initial coin amount...")
                 self.payments.send_mob_to_customer(drop_session.customer, amount_in_mob, True)
                 self.messenger.log_and_send_message(
                     drop_session.customer,
@@ -130,6 +130,8 @@ class AirDropSession(BaseDropSession):
                         value=value_in_currency
                     )
                 )
+                self.logger.info(f"Sending customer {drop_session.customer} initial coin amount...")
+                self.payments.send_mob_to_customer(drop_session.customer, message.source, amount_in_mob, True)
                 self.messenger.log_and_send_message(
                     drop_session.customer,
                     ChatStrings.PAY_HELP
@@ -211,32 +213,39 @@ class AirDropSession(BaseDropSession):
             customer_payments_address = self.payments.get_payments_address(customer.phone_number.as_e164)
             if customer_payments_address is None:
                 self.messenger.log_and_send_message(
-                    customer,
-                    ChatStrings.PAYMENTS_ENABLED_HELP.format(item_desc=drop.pre_drop_description),
-                )
-            elif not drop.under_quota():
-                self.logger.warn(f"{drop} has run out of coins")
-                self.messenger.log_and_send_message(
-                    customer, ChatStrings.OVER_QUOTA
-                )
-            elif not self.initial_coin_funds_available(drop):
-                self.messenger.log_and_send_message(
-                    customer, ChatStrings.NO_COIN_LEFT
-                )
-                raise NotEnoughFundsException("Not enough MOB in wallet to cover initial payment")
+                ChatStrings.COUNTRY_RESTRICTED
+            )
             else:
-                new_drop_session, _ = DropSession.objects.get_or_create(
-                    customer=customer,
-                    drop=drop,
-                    state=SessionState.READY,
-                )
+                customer_payments_address = self.payments.get_payments_address(message.source)
+                if customer_payments_address is None:
+                    self.messenger.log_and_send_message(
+                        customer,
+                        message.source,
+                        ChatStrings.PAYMENTS_ENABLED_HELP.format(item_desc=drop.pre_drop_description),
+                    )
+                elif not drop.under_quota():
+                    self.messenger.log_and_send_message(
+                        customer,
+                        customer, ChatStrings.OVER_QUOTA
+                    )
+                elif not self.initial_coin_funds_available(drop):
+                    self.messenger.log_and_send_message(
+                        customer, ChatStrings.NO_COIN_LEFT
+                    )
+                    raise NotEnoughFundsException("Not enough MOB in wallet to cover initial payment")
+                else:
+                    new_drop_session, _ = DropSession.objects.get_or_create(
+                        customer=customer,
+                        drop=drop,
+                        state=SessionState.READY,
+                    )
 
-                self.messenger.log_and_send_message(
-                    customer,
-                    ChatStrings.AIRDROP_DESCRIPTION
-                )
-                self.messenger.log_and_send_message(
-                    customer,
-                    ChatStrings.AIRDROP_INSTRUCTIONS,
-                )
-                self.messenger.log_and_send_message(customer, ChatStrings.READY)
+                    self.messenger.log_and_send_message(
+                        customer,
+                        ChatStrings.AIRDROP_DESCRIPTION
+                    )
+                    self.messenger.log_and_send_message(
+                        customer,
+                        ChatStrings.AIRDROP_INSTRUCTIONS,
+                    )
+                    self.messenger.log_and_send_message(customer, ChatStrings.READY)

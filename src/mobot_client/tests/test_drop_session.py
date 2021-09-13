@@ -6,3 +6,4 @@ from mobot_client.air_drop_session import AirDropSession
 
 class AirDropSessionTests(TestCase):
     pass
+

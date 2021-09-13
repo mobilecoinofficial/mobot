@@ -1,4 +1,5 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
+<<<<<<< HEAD
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -11,6 +12,13 @@ from mobilecoin import Client as MCC
 import mobilecoin as mc
 
 from mobot_client.models import PaymentStatus, Payment, Customer
+=======
+
+from mobilecoin.utility import b58_wrapper_to_b64_public_address
+from mobilecoin import Client as MCC
+
+from django.conf import settings
+>>>>>>> dev
 
 
 class MCClient(MCC):
@@ -18,9 +26,13 @@ class MCClient(MCC):
         super().__init__(settings.FULLSERVICE_URL)
         self.public_address, self.account_id = self._get_default_account_info()
         self.minimum_fee_pmob = self._get_minimum_fee_pmob()
+<<<<<<< HEAD
         self.b64_public_address = mc.utility.b58_wrapper_to_b64_public_address(self.public_address)
         self.logger = logging.getLogger("MCClient")
         self._pool = ThreadPoolExecutor(max_workers=settings.PAYMENT_THREADS)
+=======
+        self.b64_public_address = b58_wrapper_to_b64_public_address(self.public_address)
+>>>>>>> dev
 
     def _get_minimum_fee_pmob(self):
         get_network_status_response = self.get_network_status()
@@ -32,6 +44,7 @@ class MCClient(MCC):
         account_obj = accounts[account_id]
         public_address = account_obj["main_address"]
         return public_address, account_id
+<<<<<<< HEAD
 
     async def _wait_for_transaction(self, receipt) -> PaymentStatus:
         receipt_status = None
@@ -81,3 +94,5 @@ class MCClient(MCC):
                 tx_future.add_done_callback(callback)
 
         return payment
+=======
+>>>>>>> dev

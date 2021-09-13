@@ -10,6 +10,10 @@ from decimal import Decimal
 from typing import Optional, Union, Callable
 
 import pytz
+from decimal import Decimal
+from typing import Optional, Union
+import logging
+
 from django.db import models
 from django.db.models import F, Q, Sum
 from django.utils import timezone
@@ -20,6 +24,10 @@ from phonenumber_field.modelfields import PhoneNumberField
 from signald.types import Message as SignalMessage, Payment as SignalPayment
 
 from mobot_client.models.states import SessionState
+from mobot_client.models.states import SessionState
+from django.contrib import admin
+from phonenumber_field.modelfields import PhoneNumberField
+
 from mobot_client.models.states import SessionState
 import mobilecoin as mc
 
@@ -182,9 +190,11 @@ class Drop(models.Model):
         else:
             return 0
 
+    @admin.display(description='Initial Payments')
     def num_initial_sent(self) -> int:
         return DropSession.objects.initial_coin_sent_sessions().filter(drop=self).count()
 
+    @admin.display(description='Bonus Payments')
     def num_bonus_sent(self) -> int:
         return BonusCoin.objects.with_available().filter(drop=self).aggregate(Sum('num_claimed_sessions'))[
             'num_claimed_sessions__sum']
@@ -232,9 +242,8 @@ class Drop(models.Model):
 class BonusCoinQuerySet(models.QuerySet):
     def with_available(self):
         return self.annotate(
-            num_claimed_sessions=models.Count('drop_sessions',
-                                              filter=Q(drop_sessions__state=SessionState.ALLOW_CONTACT_REQUESTED))) \
-            .filter(num_claimed_sessions__lt=F('number_available_at_start')) \
+            num_claimed_sessions=models.Count('drop_sessions', filter=Q(
+                drop_sessions__state__in=[SessionState.ALLOW_CONTACT_REQUESTED, SessionState.COMPLETED]))) \
             .annotate(remaining=F('number_available_at_start') - F('num_claimed_sessions'),
                       pmob_claimed=F('num_claimed_sessions') * F('amount_pmob'))
 
@@ -291,6 +300,7 @@ class Customer(models.Model):
     def active_drop_sessions(self):
         return DropSession.objects.active_drop_sessions().filter(customer=self)
 
+    @admin.display(description='Active')
     def has_active_drop_session(self) -> bool:
         return self.drop_sessions.count() > 0
 
@@ -303,6 +313,7 @@ class Customer(models.Model):
     def sessions_awaiting_payment(self):
         return DropSession.objects.awaiting_payment_sessions()
 
+    @admin.display(description='Awaiting Payment')
     def has_session_awaiting_payment(self):
         return self.sessions_awaiting_payment().count() > 0
 
@@ -311,18 +322,16 @@ class Customer(models.Model):
     def fulfilled_drop_sessions(self):
         return DropSession.objects.sold_sessions().filter(customer=self)
 
+
+    @admin.display(description='Fulfilled')
     def has_fulfilled_drop_session(self):
         return self.fulfilled_drop_sessions().count() > 0
-
-    has_fulfilled_drop_session.short_description = "Fulfilled"
 
     def completed_drop_sessions(self):
         return DropSession.objects.completed_sessions().filter(customer=self)
 
     def has_completed_session(self):
         return self.completed_drop_sessions().count() > 0
-
-    has_completed_session.short_description = "Completed"
 
     def errored_sessions(self):
         return DropSession.objects.errored_sessions().filter(customer=self)
@@ -344,7 +353,7 @@ class Customer(models.Model):
     def has_store_preferences(self, store: Store) -> bool:
         return self.store_preferences(store) is not None
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.phone_number.as_e164}"
 
 
@@ -425,7 +434,6 @@ class DropSession(models.Model):
     objects = DropSessionManager()
 
     class Meta:
-        unique_together = ('customer', 'drop')
         ordering = ('-state', '-updated')
 
     def is_active(self) -> bool:
@@ -438,6 +446,15 @@ class DropSession(models.Model):
 class MessageDirection(models.IntegerChoices):
     RECEIVED = 0, 'received'
     SENT = 1, 'sent'
+
+
+
+class Message(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="messages")
+    store = models.ForeignKey(Store, on_delete=models.CASCADE)
+    text = models.TextField()
+    date = models.DateTimeField(auto_now_add=True)
+    direction = models.PositiveIntegerField(choices=MessageDirection.choices)
 
 
 class OrderStatus(models.IntegerChoices):
@@ -586,6 +603,7 @@ class MobotResponse(models.Model):
     response_payment = models.OneToOneField(Payment, on_delete=models.CASCADE, null=True, blank=True,
                                             related_name='response')
     created_at = models.DateTimeField(auto_now_add=True)
+
 
 
 # ------------------------------------------------------------------------------------------

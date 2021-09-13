@@ -4,4 +4,7 @@
 
 set -e
 
-/usr/local/bin/python manage.py check_migration && /usr/local/bin/python manage.py run_mobot_client
+
+python manage.py check_migration
+
+python manage.py run_mobot_client

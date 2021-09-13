@@ -7,6 +7,7 @@ from mobot_client.chat_strings import ChatStrings
 from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku, SessionState, Message
 
 
+
 class BaseDropSession:
     def __init__(self, store, payments, messenger):
         self.store = store
@@ -62,7 +63,8 @@ class BaseDropSession:
         except (Exception,):
             return False
 
-    def handle_drop_session_allow_contact_requested(self, message: Message, drop_session: DropSession):
+
+    def handle_drop_session_allow_contact_requested(self, message, drop_session):
         if message.text.lower() in ("y", "yes"):
             CustomerStorePreferences.objects.create(
                 customer=drop_session.customer, store=self.store, allows_contact=True

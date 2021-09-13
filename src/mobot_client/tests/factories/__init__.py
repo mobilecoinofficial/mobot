@@ -154,4 +154,8 @@ class OrderFactory(factory.django.DjangoModelFactory):
 
 
 class GenericItemDropFactory(factory.django.DjangoModelFactory):
+<<<<<<< HEAD
     pass
+=======
+    pass
+>>>>>>> dev

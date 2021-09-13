@@ -25,7 +25,7 @@ on:
     tags:
     - 'v*'
     branches:
-    - develop
+    - dev
 
 jobs:
   docker:
@@ -84,7 +84,7 @@ jobs:
         mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
   deploy-staging:
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/dev'
     needs: docker
     runs-on: ubuntu-latest
     container:

@@ -28,30 +28,46 @@ class Timeouts:
     @staticmethod
     def customer_is_active(customer):
         session = DropSession.objects.filter(customer=customer).values('state').last()
+<<<<<<< HEAD
         if session is not None and session.state in SessionState.active_states():
             return True
         return False
+=======
+        return session is not None and session.state in SessionState.active_states()
+>>>>>>> dev
 
     @staticmethod
     def customer_is_idle(customer):
         session = DropSession.objects.filter(customer=customer).values('state').last()
+<<<<<<< HEAD
         if session is not None and (session.state == SessionState.IDLE or session.state == SessionState.IDLE_AND_REFUNDABLE):
             return True
         return False
+=======
+        return session is not None and (session.state == SessionState.IDLE or session.state == SessionState.IDLE_AND_REFUNDABLE)
+>>>>>>> dev
 
     @staticmethod
     def customer_needs_refund(customer):
         session = DropSession.objects.filter(customer=customer).values('state').last()
+<<<<<<< HEAD
         if session is not None and session.state in SessionState.refundable_states():
             return True
         return False
+=======
+        return session is not None and session.state in SessionState.refundable_states()
+>>>>>>> dev
 
     @staticmethod
     def set_customer_idle(customer):
         session = DropSession.objects.filter(customer=customer).last()
+<<<<<<< HEAD
         if session is not None and session.state in SessionState.active_states():
             session.state = SessionState.IDLE
             session.save()
+=======
+        return session is not None and session.state in SessionState.active_states()
+>>>>>>> dev
 
     @staticmethod
     def set_customer_idle(customer):
