@@ -6,7 +6,8 @@ import time
 
 import mobilecoin as mc
 
-from mobot_client.models import DropSession, Customer, Message, SessionState
+from mobot_client.models import DropSession, Customer, SessionState
+from mobot_client.models.messages import Message
 from mobot_client.chat_strings import ChatStrings
 
 utc = pytz.UTC

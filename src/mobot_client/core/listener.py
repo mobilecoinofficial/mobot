@@ -14,7 +14,8 @@ from django.conf import settings
 from django.db.models import QuerySet
 from django.db import transaction
 
-from mobot_client.models import Message, Store, Customer, MessageStatus
+from mobot_client.models import Store, Customer
+from mobot_client.models.messages import MessageStatus, Message
 from mobot_client.payments import MCClient
 
 

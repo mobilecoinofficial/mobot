@@ -5,16 +5,29 @@ from contextlib import contextmanager
 from typing import Optional
 from dataclasses import dataclass
 
-from mobot_client.models import Message, MessageDirection, MobotResponse
+from mobot_client.models.messages import Message, MobotResponse, MessageDirection
 
 
-class SignalMessenger:
-    CTX = threading.local()
+class Responder:
+    CONTEXT = threading.local().context
+
+    def __init__(self, message: Message):
+        self.message = message
+        
+
+    def __enter__(self):
+
+
+    def send(self, message: Message) -> MobotResponse:
+
+
+
+class SignalMessenger(Responder):
     def __init__(self, signal, store):
         self.signal = signal
         self.store = store
         self.logger = logging.getLogger("SignalMessenger")
-        self._context = SignalMessenger.CTX
+        self._context = super().CONTEXT
 
     @contextmanager
     def message_context(self, message: Message):

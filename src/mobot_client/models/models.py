@@ -2,14 +2,7 @@
 
 from __future__ import annotations
 import random
-import logging
 
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
-from decimal import Decimal
-from typing import Optional, Union, Callable
-
-import pytz
 from decimal import Decimal
 from typing import Optional, Union
 import logging
@@ -19,12 +12,7 @@ from django.db.models import F, Q, Sum
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.db import transaction
-from django.conf import settings
-from phonenumber_field.modelfields import PhoneNumberField
-from signald.types import Message as SignalMessage, Payment as SignalPayment
 
-from mobot_client.models.states import SessionState
-from mobot_client.models.states import SessionState
 from django.contrib import admin
 from phonenumber_field.modelfields import PhoneNumberField
 
@@ -443,20 +431,6 @@ class DropSession(models.Model):
         return f"{self.drop.name}"
 
 
-class MessageDirection(models.IntegerChoices):
-    RECEIVED = 0, 'received'
-    SENT = 1, 'sent'
-
-
-
-class Message(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="messages")
-    store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    text = models.TextField()
-    date = models.DateTimeField(auto_now_add=True)
-    direction = models.PositiveIntegerField(choices=MessageDirection.choices)
-
-
 class OrderStatus(models.IntegerChoices):
     STARTED = 0, 'started'
     CONFIRMED = 1, 'confirmed'
@@ -495,115 +469,6 @@ class Order(models.Model):
     def cancel(self):
         self.status = OrderStatus.CANCELLED
         self.save()
-
-
-class PaymentStatus(models.TextChoices):
-    FAILURE = "Failure"
-    PENDING = "TransactionPending"
-    SUCCESS = "TransactionSuccess"
-
-
-class PaymentManager(models.Manager):
-    def create_from_signal(self, message: SignalMessage, mcc: "mobot_client.payments.MCClient",
-                           callback: Optional[Callable]) -> Payment:
-        return mcc.process_receipt(message.source, message.payment.receipt, callback)
-
-
-class Payment(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='payments')
-    amount_pmob = models.PositiveIntegerField(null=False, blank=False)
-    receipt = models.TextField(default=None, blank=True, null=True, help_text="Full-service receipt")
-    created_at = models.DateTimeField(auto_now_add=True)
-    processed = models.DateTimeField(blank=True, null=True, help_text="The date a payment was processed, if it was.")
-    last_updated = models.DateTimeField(auto_now=True, help_text="Time of last update")
-    status = models.SmallIntegerField(choices=PaymentStatus.choices, default=PaymentStatus.PENDING,
-                                      help_text="Status of payment")
-    txo_id = models.CharField(max_length=255, null=True, blank=True)
-
-    ### Custom Manager ###
-    objects = PaymentManager()
-
-
-class MessageStatus(models.IntegerChoices):
-    ERROR = -1
-    NOT_PROCESSED = 0
-    PROCESSING = 1
-    PROCESSED = 2
-
-
-class MessageQuerySet(models.QuerySet):
-    def not_processing(self) -> models.QuerySet:
-        return self.filter(status=MessageStatus.NOT_PROCESSED, direction=MessageDirection.RECEIVED).order_by('date',
-                                                                                                             '-payment').all()
-
-    @transaction.atomic
-    def get_message(self):
-        if message := self.not_processing().select_for_update().first():
-            message.status = MessageStatus.PROCESSING
-            message.processing = timezone.now()
-            message.save()
-            return message
-
-
-class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
-    def create_from_signal(self, store: Store, mcc: "mobot_client.payments.MCClient", customer: Customer,
-                           message: SignalMessage, callback: Optional[Callable] = None) -> Message:
-        payment = None
-        if message.payment:
-            payment = Payment.objects.create_from_signal(message, mcc, callback)
-        dt = timezone.make_aware(datetime.fromtimestamp(message.timestamp))
-        message = self.get_queryset().create(
-            customer=customer,
-            text=message.text,
-            date=dt,
-            direction=MessageDirection.RECEIVED,
-            payment=payment,
-            store=store,
-        )
-        return message
-
-
-class Message(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="messages")
-    store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    text = models.TextField()
-    date = models.DateTimeField(auto_now_add=True)
-    status = models.SmallIntegerField(choices=MessageStatus.choices, default=MessageStatus.NOT_PROCESSED)
-    processing = models.DateTimeField(blank=True, null=True, help_text="The time we started processing a message")
-    processed = models.DateTimeField(blank=True, db_index=True, null=True,
-                                     help_text="The time at which a message was finished processing")
-    direction = models.PositiveIntegerField(choices=MessageDirection.choices, db_index=True)
-    payment = models.OneToOneField(Payment, on_delete=models.CASCADE, null=True, blank=True,
-                                   help_text="Attached payment, if it exists", related_name='message')
-
-    ### Custom manager to create from signal and process payment ###
-    objects = MessageManager()
-
-    class Meta:
-        ordering = ['date', '-payment', '-processing', 'processed']
-
-    def __str__(self):
-        text_oneline = self.text.replace("\n", " ||| ")
-        return f'Message: customer: {self.customer} - {self.direction} --- {text_oneline}'
-
-
-class ProcessingError(models.Model):
-    message = models.ForeignKey(Message, on_delete=models.CASCADE)
-    text = models.TextField()
-
-
-class MobotResponse(models.Model):
-    """The response to an incoming message or payment"""
-    incoming_message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='responses', null=True,
-                                         blank=True)
-    incoming_payment = models.ForeignKey(Payment, on_delete=models.CASCADE, related_name='responses', null=True,
-                                         blank=True)
-    response_message = models.OneToOneField(Message, on_delete=models.CASCADE, null=True, blank=True,
-                                            related_name='response')
-    response_payment = models.OneToOneField(Payment, on_delete=models.CASCADE, null=True, blank=True,
-                                            related_name='response')
-    created_at = models.DateTimeField(auto_now_add=True)
-
 
 
 # ------------------------------------------------------------------------------------------

@@ -10,12 +10,12 @@ from .models import (
     CustomerStorePreferences,
     CustomerDropRefunds,
     DropSession,
-    Message,
     BonusCoin,
     ChatbotSettings,
     Order,
     Sku,
 )
+from .models.messages import Message
 
 
 class StoreAdmin(admin.ModelAdmin):

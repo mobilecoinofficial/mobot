@@ -4,8 +4,8 @@ import logging
 from django.utils import timezone
 
 from mobot_client.chat_strings import ChatStrings
-from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku, SessionState, Message
-
+from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku, SessionState
+from mobot_client.models.messages import Message
 
 
 class BaseDropSession:
