@@ -95,7 +95,7 @@ class Timeouts:
             session.save()
 
     def do_refund(self, customer):
-        session = DropSession.objects.filter(customer_id=customer.phone_number).last()
+        session = DropSession.objects.filter(customer_id=customer.source).last()
         if session is None:
             return
         # Confirm drop session is active
@@ -104,7 +104,7 @@ class Timeouts:
         # Get amount customer paid
         price = session.drop.item.price_in_pmob
 
-        self.payments.send_mob_to_customer(customer, customer.phone_number, mc.pmob2mob(price), True)
+        self.payments.send_mob_to_customer(customer, customer.source, mc.pmob2mob(price), True)
         self.set_customer_refunded(customer)
 
     # FIXME: might need to not be a class method in order to get discovered
@@ -118,7 +118,7 @@ class Timeouts:
 
                 last_message = Message.objects.filter(
                     direction=0,
-                    customer=customer.phone_number
+                    customer=customer.source
                 ).values('customer', 'date').order_by('-date').first()
 
                 if last_message is None:
@@ -129,13 +129,13 @@ class Timeouts:
                 if time_delta > self.cancel_timeout and self.customer_is_idle(customer):
                     if self.customer_needs_refund(customer):
                         self.do_refund(customer)
-                        self.messenger.log_and_send_message(customer, customer.phone_number, ChatStrings.TIMEOUT_REFUND)
+                        self.messenger.log_and_send_message(customer, customer.source, ChatStrings.TIMEOUT_REFUND)
                     else:
                         self.set_customer_cancelled(customer)
-                        self.messenger.log_and_send_message(customer, customer.phone_number,
+                        self.messenger.log_and_send_message(customer, customer.source,
                                                             ChatStrings.TIMEOUT_CANCELLED)
 
                 if time_delta > self.idle_timeout and self.customer_is_active(customer):
                     self.set_customer_idle(customer)
-                    self.messenger.log_and_send_message(customer, customer.phone_number, ChatStrings.TIMEOUT)
+                    self.messenger.log_and_send_message(customer, customer.source, ChatStrings.TIMEOUT)
             time.sleep(self.schedule)

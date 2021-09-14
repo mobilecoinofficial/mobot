@@ -15,7 +15,7 @@ from django.db.models import QuerySet
 from django.db import transaction
 
 from mobot_client.models import Store, Customer
-from mobot_client.models.messages import MessageStatus, Message
+from mobot_client.models.messages import MessageStatus, Message, RawMessage
 from mobot_client.payments import MCClient
 
 
@@ -36,10 +36,12 @@ class MobotListener:
     @transaction.atomic
     def receive_message(self, signal_message: SignalMessage, *args) -> Message:
         self._logger.info(f"Listener received from signal: {signal_message}")
+        raw = RawMessage.objects.store_message(signal_message)
         if isinstance(signal_message.source, dict):
             number = signal_message.source['number']
         else:
             number = signal_message.source
+
         customer, _ = Customer.objects.get_or_create(phone_number=number)
         message = Message.objects.create_from_signal(store=self._store,
                                                      mcc=self._mcc,

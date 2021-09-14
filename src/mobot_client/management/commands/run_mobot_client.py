@@ -33,7 +33,7 @@ class Command(BaseCommand):
         store = cb_settings.store
         bot_avatar_filename = cb_settings.avatar_filename
         bot_name = cb_settings.name
-        signal = Signal(str(store.phone_number), socket_path=(settings.SIGNALD_ADDRESS, settings.SIGNALD_PORT))
+        signal = Signal(str(store.source), socket_path=(settings.SIGNALD_ADDRESS, settings.SIGNALD_PORT))
         mcc = MCClient()
         try:
             mobot = MOBot(bot_name=bot_name,

@@ -39,7 +39,7 @@ class Responder:
 
     def _send(self, response: Message, attachments=[]):
         """This simply prints the message. For signal, it uses signal, of course."""
-        self._logger.info(f"Dummy responder, responding to {self.message.customer.phone_number}:{self.message.text} - {response.text}")
+        self._logger.info(f"Dummy responder, responding to {self.message.customer.source}:{self.message.text} - {response.text}")
 
     def _log_and_send_reply(self, response: Message, attachments=[]) -> MobotResponse:
         MobotResponse.objects.create(
@@ -82,7 +82,7 @@ class SignalMessenger:
         else:
             incoming = None
 
-        phone_number = customer.phone_number.as_e164
+        phone_number = customer.source.as_e164
 
         response_message = Message(
             customer=customer,

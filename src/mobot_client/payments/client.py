@@ -5,17 +5,17 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Optional
 import asyncio
 
-from django.conf import settings
 from django.utils import timezone
-from mobilecoin import Client as MCC
 import mobilecoin as mc
 
 from mobot_client.models import Customer
-from mobot_client.models.messages import PaymentStatus, Payment
+from mobot_client.models.messages import PaymentStatus, Payment, PaymentReceipt, ReceiptType
 
 from mobilecoin import Client as MCC
 
 from django.conf import settings
+from signald.types import Payment as SignalPayment
+
 
 
 class MCClient(MCC):
@@ -61,14 +61,20 @@ class MCClient(MCC):
         payment.save()
         return payment
 
-    def process_receipt(self, source: str, receipt: str, callback: Optional[Callable]) -> Payment:
-        self.logger.info(f"received receipt {receipt}")
-        receipt = mc.utility.b64_receipt_to_full_service_receipt(receipt)
+    def process_signal_payment(self, source: str, payment: SignalPayment, callback: Optional[Callable]) -> Payment:
+        self.logger.info(f"received receipt {payment}")
+        signal_receipt = PaymentReceipt.objects.create(
+            receipt_type=ReceiptType.SIGNAL,
+            note=payment.note,
+            body=payment.receipt,
+        )
+        receipt = mc.utility.b64_receipt_to_full_service_receipt(payment.receipt)
         receipt_status = self.check_receiver_receipt_status(
             self.public_address, receipt
         )
         amount_paid_mob = mc.pmob2mob(receipt_status["txo"]["value_pmob"])
         customer, _ = Customer.objects.get_or_create(phone_number=source)
+
         payment = Payment.objects.create(
             customer=Customer,
             amount_pmob=mc.utility.mob2pmob(amount_paid_mob),

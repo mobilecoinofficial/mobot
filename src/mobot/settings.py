@@ -52,7 +52,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
-    'mobot_client.apps.MobotClientConfig'
+    'mobot_client.apps.MobotClientConfig',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [

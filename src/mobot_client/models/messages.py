@@ -1,6 +1,7 @@
 #  Copyright (c) 2021 MobileCoin. All rights reserved.
 from __future__ import annotations
-
+import attr
+import json
 from typing import Optional, Callable
 from datetime import datetime
 
@@ -8,6 +9,7 @@ from django.db import models
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import IntegerChoices
+from phonenumber_field.modelfields import PhoneNumberField
 from signald.types import Message as SignalMessage
 
 from mobot_client.models import Customer, Store
@@ -22,7 +24,7 @@ class PaymentStatus(models.TextChoices):
 class PaymentManager(models.Manager):
     def create_from_signal(self, message: SignalMessage, mcc: "mobot_client.payments.MCClient",
                            callback: Optional[Callable]) -> Payment:
-        return mcc.process_receipt(message.source, message.payment.receipt, callback)
+        return mcc.process_signal_payment(message.source, message.payment.receipt, callback)
 
 
 class MessageStatus(models.IntegerChoices):
@@ -52,7 +54,8 @@ class MessageQuerySet(models.QuerySet):
 
 
 class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
-    def create_from_signal(self, store: Store, mcc: "mobot_client.payments.MCClient", customer: Customer,
+
+    def create_from_signal(self, store: Store, mcc: "mobot_client.payments.client.MCClient", customer: Customer,
                            message: SignalMessage, callback: Optional[Callable] = None) -> Message:
         if message.payment:
             payment = Payment.objects.create_from_signal(message, mcc, callback)
@@ -67,6 +70,32 @@ class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
         return message
 
 
+class RawMessageManager(models.Manager):
+    def store_message(self, signal_message: SignalMessage) -> RawMessage:
+        if isinstance(signal_message.source, dict):
+            number = signal_message.source['number']
+        else:
+            number = signal_message.source
+
+        raw = self.get_queryset().create(
+            account=signal_message.username,
+            source=number,
+            timestamp=signal_message.timestamp,
+            raw=json.dumps(attr.asdict(signal_message)),
+        )
+        return raw
+
+
+class RawMessage(models.Model):
+    '''A copy of the raw signal message'''
+    account = PhoneNumberField(null=False, blank=False, help_text="Number of the receiver")
+    source = PhoneNumberField(null=True, blank=True, help_text="Number associated with message, if it exists")
+    timestamp = models.IntegerField(help_text="Raw unix timestamp from the message data")
+    raw = models.JSONField(help_text="The raw json sent")
+    ### Manager to add custom creation/parsing
+    objects = RawMessageManager()
+
+
 class Message(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="messages")
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
@@ -76,6 +105,7 @@ class Message(models.Model):
     processing = models.DateTimeField(blank=True, null=True, help_text="The time we started processing a message")
     updated = models.DateTimeField(auto_now=True)
     direction = models.PositiveIntegerField(choices=MessageDirection.choices, db_index=True)
+    raw = models.OneToOneField(RawMessage, on_delete=models.DO_NOTHING)
 
     ### Custom manager to create from signal and process payment ###
     objects = MessageManager()
@@ -108,10 +138,10 @@ class ReceiptType(models.IntegerChoices):
 
 
 class PaymentReceipt(models.Model):
-    payment = models.ForeignKey(Payment, on_delete=models.CASCADE, related_name='receipts')
+    payment = models.OneToOneField(Payment, on_delete=models.CASCADE, related_name='receipts')
     note = models.TextField(default=None, null=True, blank=True, help_text="The note that arrived with the payment")
     body = models.CharField(max_length=255)
-    typ = models.IntegerField(choices=ReceiptType.choices, default=ReceiptType.SIGNAL)
+    receipt_type = models.IntegerField(choices=ReceiptType.choices, default=ReceiptType.SIGNAL)
 
     def get_amount_pmob(self) -> int:
         pass

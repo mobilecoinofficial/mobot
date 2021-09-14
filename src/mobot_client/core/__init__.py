@@ -4,9 +4,6 @@ import logging
 import threading
 import time
 from typing import Callable
-
-import traceback
-
 from collections import defaultdict
 
 import pytz
@@ -152,7 +149,7 @@ class MOBot:
             )
 
     def handle_payment(self, payment: Payment):
-        source = str(payment.customer.phone_number)
+        source = str(payment.customer.source)
         self.logger.info(f"Received payment from {source}")
         receipt_status = None
         transaction_status = "TransactionPending"
@@ -198,7 +195,7 @@ class MOBot:
         customer, _ = Customer.objects.get_or_create(phone_number=message.source['number'])
         message_to_send = ChatStrings.PLUS_SIGN_HELP
         message_to_send += f"\n{ChatStrings.PAY_HELP}"
-        self.messenger.log_and_send_message(customer, customer.phone_number, message_to_send)
+        self.messenger.log_and_send_message(customer, customer.source, message_to_send)
 
     def chat_router_coins(self, message: Message):
         customer, _ = Customer.objects.get_or_create(phone_number=message.source['number'])
@@ -215,7 +212,7 @@ class MOBot:
                 message_to_send += (
                     f"\n{bonus_coin.number_claimed()} / {bonus_coin.number_available_at_start} - {mc.pmob2mob(bonus_coin.amount_pmob).normalize()} claimed"
                 )
-            self.messenger.log_and_send_message(customer, customer.phone_number, message_to_send)
+            self.messenger.log_and_send_message(customer, customer.source, message_to_send)
 
     def chat_router_items(self, message: Message):
         active_drop = Drop.objects.get_active_drop()
