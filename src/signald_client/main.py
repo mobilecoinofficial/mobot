@@ -72,6 +72,9 @@ class Signal(_Signal):
         while self._run:
             try:
                 message = next(messages_iterator)
+            except ConnectionResetError as e:
+                self.logger.exception("Got an error attempting to get a message from signal!")
+                raise
             except Exception as e:
                 self.logger.exception("Got an error attempting to get a message from signal!")
                 continue
