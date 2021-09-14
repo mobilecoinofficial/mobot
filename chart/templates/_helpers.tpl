@@ -105,3 +105,13 @@ Mobot Secret Name
   {{- end }}
 {{- end }}
 
+{{/*
+fullService ConfigMap Name
+*/}}
+{{- define "chart.fullServiceConfigMapName" -}}
+  {{- if .Values.fullService.configMap.external }}
+    {{- .Values.fullService.configMap.name }}
+  {{- else }}
+    {{- include "chart.fullname" . }}-{{ .Values.fullServiceConfig.configMap.name }}
+  {{- end }}
+{{- end }}
