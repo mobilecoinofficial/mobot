@@ -17,19 +17,12 @@ signald:
   affinity: {}
 
 fullService:
-  enabled: false
   replicaCount: 1
   image:
     repository: mobilecoin/full-service
     tag: ""
   podAnnotations:
     fluentbit.io/include: 'true'
-  args: []
-  # Example args for testnet
-  # - --peer=mc://node1.test.mobilecoin.com/
-  # - --peer=mc://node2.test.mobilecoin.com/
-  # - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node1.test.mobilecoin.com/
-  # - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node2.test.mobilecoin.com/
   resources: {}
   nodeSelector: {}
   tolerations: []
@@ -43,6 +36,15 @@ fullService:
       resources:
         requests:
           storage: 512Gi
+  configMap:
+    external: true
+    name: full-service
+    # Example args for testnet
+    # data:
+    #   peer_0: mc://node1.test.mobilecoin.com/
+    #   peer_1: mc://node2.test.mobilecoin.com/
+    #   tx_source_url_0: https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node1.test.mobilecoin.com/
+    #   tx_source_url_1: https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node2.test.mobilecoin.com/
 
 mobotClient:
   replicaCount: 1

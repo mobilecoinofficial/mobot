@@ -1,5 +1,3 @@
-# This should probably be a statefulSet so we can leverage PVC
-{{- if .Values.fullService.enabled }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -38,8 +36,32 @@ spec:
           readOnlyRootFilesystem: true
         image: "{{ .Values.fullService.image.repository }}:{{ .Values.fullService.image.tag }}"
         imagePullPolicy: Always
+        env:
+        - name: PEER_0
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chart.fullServiceConfigMapName" . }}
+              key: peer_0
+        - name: PEER_1
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chart.fullServiceConfigMapName" . }}
+              key: peer_1
+        - name: TX_SOURCE_URL_0
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chart.fullServiceConfigMapName" . }}
+              key: tx_source_url_0
+        - name: TX_SOURCE_URL_1
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chart.fullServiceConfigMapName" . }}
+              key: tx_source_url_1
         args:
-          {{- toYaml .Values.fullService.args | nindent 10 }}
+        - "--peer=$(PEER_0)"
+        - "--peer=$(PEER_1)"
+        - "--tx-source-url=$(TX_SOURCE_URL_0)"
+        - "--tx-source-url=$(TX_SOURCE_URL_1)"
         ports:
         - name: full-service
           containerPort: 9090
@@ -67,4 +89,4 @@ spec:
     spec:
       {{- toYaml .Values.fullService.persistence.spec | nindent 6 }}
   {{- end }}
-{{- end }}
+
