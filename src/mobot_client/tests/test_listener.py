@@ -17,9 +17,8 @@ from signald.types import Message as SignalMessage, Payment as SignalPayment
 
 from mobot_client.core import MOBot
 from mobot_client.tests.factories import StoreFactory, CustomerFactory
-from mobot_client.models import MessageDirection, Payment, Store, Customer
-from mobot_client.models.messages import Message, MobotResponse
-from mobot_client.models.payments import PaymentStatus
+from mobot_client.models import Store, Customer
+from mobot_client.models.messages import Message, MobotResponse, MessageDirection, Payment, PaymentStatus
 from mobot_client.core.listener import MobotListener
 from mobot_client.payments import MCClient
 from signald_client import Signal

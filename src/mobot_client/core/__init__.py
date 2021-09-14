@@ -26,8 +26,7 @@ from mobot_client.item_drop_session import ItemDropSession
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import Store, Customer, SessionState, DropType, Drop, BonusCoin, Sku, Order, OrderStatus, \
     CustomerStorePreferences, DropSession
-from mobot_client.models.messages import MessageStatus, Message, ProcessingError
-from mobot_client.models.payments import Payment
+from mobot_client.models.messages import MessageStatus, Message, ProcessingError, Payment
 from mobot_client.payments import MCClient, Payments
 from signald_client import Signal
 

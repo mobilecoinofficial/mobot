@@ -11,7 +11,6 @@ from django.db.models import IntegerChoices
 from signald.types import Message as SignalMessage
 
 from mobot_client.models import Customer, Store
-from mobot_client.payments import MCClient
 
 
 class PaymentStatus(models.TextChoices):
@@ -21,7 +20,7 @@ class PaymentStatus(models.TextChoices):
 
 
 class PaymentManager(models.Manager):
-    def create_from_signal(self, message: SignalMessage, mcc: MCClient,
+    def create_from_signal(self, message: SignalMessage, mcc: "mobot_client.payments.MCClient",
                            callback: Optional[Callable]) -> Payment:
         return mcc.process_receipt(message.source, message.payment.receipt, callback)
 
@@ -55,7 +54,6 @@ class MessageQuerySet(models.QuerySet):
 class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
     def create_from_signal(self, store: Store, mcc: "mobot_client.payments.MCClient", customer: Customer,
                            message: SignalMessage, callback: Optional[Callable] = None) -> Message:
-        payment = None
         if message.payment:
             payment = Payment.objects.create_from_signal(message, mcc, callback)
         dt = timezone.make_aware(datetime.fromtimestamp(message.timestamp))
@@ -64,7 +62,6 @@ class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
             text=message.text,
             date=dt,
             direction=MessageDirection.RECEIVED,
-            payment=payment,
             store=store,
         )
         return message
@@ -84,7 +81,7 @@ class Message(models.Model):
     objects = MessageManager()
 
     class Meta:
-        ordering = ['date', '-payment', '-processing', 'processed']
+        ordering = ['date', '-processing', 'updated']
 
     def __str__(self):
         text_oneline = self.text.replace("\n", " ||| ")
@@ -99,7 +96,7 @@ class Payment(models.Model):
     status = models.SmallIntegerField(choices=PaymentStatus.choices, default=PaymentStatus.PENDING,
                                       help_text="Status of payment")
     txo_id = models.CharField(max_length=255, null=True, blank=True)
-    message = models.OneToOneField(Message, on_delete=models.CASCADE)
+    message = models.OneToOneField(Message, on_delete=models.CASCADE, related_name="payments")
 
     ### Custom Manager ###
     objects = PaymentManager()
@@ -120,7 +117,6 @@ class PaymentReceipt(models.Model):
         pass
 
 
-
 class ProcessingError(models.Model):
     message = models.ForeignKey(Message, on_delete=models.CASCADE)
     text = models.TextField()
@@ -128,12 +124,8 @@ class ProcessingError(models.Model):
 
 class MobotResponse(models.Model):
     """The response to an incoming message or payment"""
-    incoming_message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='responses', null=True,
-                                         blank=True)
-    incoming_payment = models.ForeignKey(Payment, on_delete=models.CASCADE, related_name='responses', null=True,
-                                         blank=True)
-    response_message = models.OneToOneField(Message, on_delete=models.CASCADE, null=True, blank=True,
-                                            related_name='response')
-    response_payment = models.OneToOneField(Payment, on_delete=models.CASCADE, null=True, blank=True,
-                                            related_name='response')
+    incoming = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='responses', null=True,
+                                 blank=True)
+    response = models.OneToOneField(Message, on_delete=models.CASCADE, null=True, blank=True,
+                                    related_name='response')
     created_at = models.DateTimeField(auto_now_add=True)
