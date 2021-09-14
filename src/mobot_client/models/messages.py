@@ -56,18 +56,19 @@ class MessageQuerySet(models.QuerySet):
 class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
 
     def create_from_signal(self, store: Store, mcc: "mobot_client.payments.client.MCClient", customer: Customer,
-                           message: SignalMessage, callback: Optional[Callable] = None) -> Message:
+                           message: SignalMessage, raw_message: RawMessage, callback: Optional[Callable] = None) -> Message:
         if message.payment:
             payment = Payment.objects.create_from_signal(message, mcc, callback)
         dt = timezone.make_aware(datetime.fromtimestamp(message.timestamp))
-        message = self.get_queryset().create(
+        stored_message = self.get_queryset().create(
             customer=customer,
             text=message.text,
             date=dt,
             direction=MessageDirection.RECEIVED,
             store=store,
+            raw=raw_message,
         )
-        return message
+        return stored_message
 
 
 class RawMessageManager(models.Manager):
@@ -105,7 +106,7 @@ class Message(models.Model):
     processing = models.DateTimeField(blank=True, null=True, help_text="The time we started processing a message")
     updated = models.DateTimeField(auto_now=True)
     direction = models.PositiveIntegerField(choices=MessageDirection.choices, db_index=True)
-    raw = models.OneToOneField(RawMessage, on_delete=models.DO_NOTHING)
+    raw = models.OneToOneField(RawMessage, on_delete=models.DO_NOTHING, null=True, blank=True, help_text=)
 
     ### Custom manager to create from signal and process payment ###
     objects = MessageManager()

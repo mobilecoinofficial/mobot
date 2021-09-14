@@ -43,10 +43,12 @@ class MobotListener:
             number = signal_message.source
 
         customer, _ = Customer.objects.get_or_create(phone_number=number)
-        message = Message.objects.create_from_signal(store=self._store,
+        store, _ = Store.objects.get_or_create(phone_number=signal_message.username)
+        message = Message.objects.create_from_signal(store=store,
                                                      mcc=self._mcc,
                                                      customer=customer,
-                                                     message=signal_message)
+                                                     message=signal_message,
+                                                     raw_message=raw)
         self._logger.info(f"Listener logged to database {message}")
 
     def _messages(self) -> QuerySet[Message]:
