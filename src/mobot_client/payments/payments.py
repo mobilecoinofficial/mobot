@@ -54,6 +54,7 @@ class Payments:
 
         self.logger.info(f"Getting payment address for customer {source}")
         customer_signal_profile = self.signal.get_profile(source)
+
         self.logger.info(f"Got customer({source}) signal profile {customer_signal_profile}")
         mobilecoin_address = customer_signal_profile.get('mobilecoin_address')
         if not mobilecoin_address:

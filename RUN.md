@@ -91,7 +91,9 @@ For testing, we build and run locally, using the Signal staging network, and the
    for values.) 
 
    ```shell
+
    nc localhost 15432
+
    
    # Response:
    {"type":"version","data":{"name":"signald","version":"0.14.0+git2021-08-03r9da1afeb.8","branch":"","commit":""}}
@@ -245,8 +247,6 @@ These are the instructions for creating an AirDrop for Coins.
 | `SECRET_KEY` | django - secret key value |
 | `ALLOWED_HOSTS` | django - Allowed request `Host` header values |
 
-
-
 ### Running with docker-compose
 
 This compose file has been set up to run in production mode. 
@@ -332,6 +332,7 @@ No extra configuration values are needed
 | Variable | Location |
 | --- | --- |
 | `SECRET_KEY` | Auto generated and provisioned for the environment. |
+
 
 ## UnitTests
 

@@ -72,6 +72,7 @@ class Signal(_Signal):
         while self._run:
             try:
                 message = next(messages_iterator)
+
             except ConnectionResetError as e:
                 self.logger.exception("Got an error attempting to get a message from signal!")
                 raise
@@ -80,6 +81,7 @@ class Signal(_Signal):
                 continue
 
             self.logger.info(f"Receiving message {message}")
+
 
             if message.payment:
                 for func in self._payment_handlers:
