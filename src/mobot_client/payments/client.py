@@ -9,13 +9,12 @@ from django.utils import timezone
 import mobilecoin as mc
 
 from mobot_client.models import Customer
-from mobot_client.models.messages import PaymentStatus, Payment, PaymentReceipt, ReceiptType
+from mobot_client.models.messages import PaymentStatus, Payment, PaymentReceipt, ReceiptType, Message
 
 from mobilecoin import Client as MCC
 
 from django.conf import settings
-from signald.types import Payment as SignalPayment
-
+from signald.types import Payment as SignalPayment, Message as SignalMessage
 
 
 class MCClient(MCC):
@@ -40,6 +39,7 @@ class MCClient(MCC):
 
     async def _wait_for_transaction(self, receipt) -> PaymentStatus:
         receipt_status = None
+        transaction_status = PaymentStatus.PENDING
         while transaction_status == PaymentStatus.PENDING:
             receipt_status = self.check_receiver_receipt_status(
                 self.public_address, receipt
@@ -55,28 +55,24 @@ class MCClient(MCC):
         return transaction_status
 
     async def process_payment(self, payment: Payment) -> Payment:
+        self.logger.info(f"Processing payment {payment}")
         transaction_status = await self._wait_for_transaction()
         payment.status = transaction_status
         payment.processed = timezone.now()
         payment.save()
         return payment
 
-    def process_signal_payment(self, source: str, payment: SignalPayment, callback: Optional[Callable]) -> Payment:
-        self.logger.info(f"received receipt {payment}")
-        signal_receipt = PaymentReceipt.objects.create(
-            receipt_type=ReceiptType.SIGNAL,
-            note=payment.note,
-            body=payment.receipt,
-        )
+    def process_signal_payment(self, customer: Customer, signal_message: SignalMessage) -> Payment:
+        payment = signal_message.payment
+        self.logger.info(f"received receipt {payment.receipt} for customer {customer}")
         receipt = mc.utility.b64_receipt_to_full_service_receipt(payment.receipt)
+        self.logger.info(f"checking Receiver status")
         receipt_status = self.check_receiver_receipt_status(
             self.public_address, receipt
         )
         amount_paid_mob = mc.pmob2mob(receipt_status["txo"]["value_pmob"])
-        customer, _ = Customer.objects.get_or_create(phone_number=source)
-
         payment = Payment.objects.create(
-            customer=Customer,
+            customer=customer,
             amount_pmob=mc.utility.mob2pmob(amount_paid_mob),
             receipt=receipt,
         )
@@ -87,8 +83,6 @@ class MCClient(MCC):
             loop.run_until_complete(asyncio.ensure_future(self.process_payment(payment)))
 
         with self._pool as pool:
-            tx_future = pool.submit(update_status)
-            if callback:
-                tx_future.add_done_callback(callback)
+            pool.submit(update_status)
 
         return payment

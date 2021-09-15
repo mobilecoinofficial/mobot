@@ -15,6 +15,33 @@ from signald.types import Message as SignalMessage
 from mobot_client.models import Customer, Store
 
 
+class SignalReceipt(models.Model):
+    note = models.TextField(help_text="Note sent with payment", blank=True, null=True)
+    receipt = models.CharField(max_length=255, help_text="encoded receipt")
+
+
+class RawMessageManager(models.Manager):
+    def store_message(self, signal_message: SignalMessage) -> RawMessage:
+        if isinstance(signal_message.source, dict):
+            number = signal_message.source['number']
+        else:
+            number = signal_message.source
+
+        if signal_message.payment:
+            receipt = RawMessage.objects.create()
+        else:
+            receipt = None
+
+        raw = self.get_queryset().create(
+            account=signal_message.username,
+            source=number,
+            timestamp=signal_message.timestamp,
+            text=signal_message.text,
+            raw=json.dumps(attr.asdict(signal_message)),
+        )
+        return raw
+
+
 class PaymentStatus(models.TextChoices):
     FAILURE = "Failure"
     PENDING = "TransactionPending"
@@ -25,6 +52,31 @@ class PaymentManager(models.Manager):
     def create_from_signal(self, message: SignalMessage, mcc: "mobot_client.payments.MCClient",
                            callback: Optional[Callable]) -> Payment:
         return mcc.process_signal_payment(message.source, message.payment.receipt, callback)
+
+
+class Payment(models.Model):
+    amount_pmob = models.PositiveIntegerField(null=False, blank=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    processed = models.DateTimeField(blank=True, null=True, help_text="The date a payment was processed, if it was.")
+    updated = models.DateTimeField(auto_now=True, help_text="Time of last update")
+    status = models.SmallIntegerField(choices=PaymentStatus.choices, default=PaymentStatus.PENDING,
+                                      help_text="Status of payment")
+    txo_id = models.CharField(max_length=255, null=True, blank=True)
+
+    ### Custom Manager ###
+    objects = PaymentManager()
+
+
+class RawMessage(models.Model):
+    '''A copy of the raw signal message'''
+    account = PhoneNumberField(null=False, blank=False, help_text="Number of the receiver")
+    source = PhoneNumberField(null=True, blank=True, help_text="Number associated with message, if it exists")
+    timestamp = models.IntegerField(help_text="Raw unix timestamp from the message data")
+    text = models.TextField(help_text="Text body, if it exists", blank=True, null=True)
+    raw = models.JSONField(help_text="The raw json sent")
+
+    ### Manager to add custom creation/parsing
+    objects = RawMessageManager()
 
 
 class MessageStatus(models.IntegerChoices):
@@ -55,46 +107,20 @@ class MessageQuerySet(models.QuerySet):
 
 class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
 
-    def create_from_signal(self, store: Store, mcc: "mobot_client.payments.client.MCClient", customer: Customer,
-                           message: SignalMessage, raw_message: RawMessage, callback: Optional[Callable] = None) -> Message:
-        if message.payment:
-            payment = Payment.objects.create_from_signal(message, mcc, callback)
-        dt = timezone.make_aware(datetime.fromtimestamp(message.timestamp))
+    def create_from_signal(self, signal_message: SignalMessage) -> Message:
+        raw = RawMessage.objects.store_message(signal_message=signal_message)
+        dt = timezone.make_aware(datetime.fromtimestamp(raw.timestamp))
+        store = Store.objects.get(phone_number=raw.account)
+        customer, _ = Customer.objects.get_or_create(phone_number=raw.account)
         stored_message = self.get_queryset().create(
             customer=customer,
-            text=message.text,
+            text=signal_message.text,
             date=dt,
             direction=MessageDirection.RECEIVED,
             store=store,
-            raw=raw_message,
+            raw=raw,
         )
         return stored_message
-
-
-class RawMessageManager(models.Manager):
-    def store_message(self, signal_message: SignalMessage) -> RawMessage:
-        if isinstance(signal_message.source, dict):
-            number = signal_message.source['number']
-        else:
-            number = signal_message.source
-
-        raw = self.get_queryset().create(
-            account=signal_message.username,
-            source=number,
-            timestamp=signal_message.timestamp,
-            raw=json.dumps(attr.asdict(signal_message)),
-        )
-        return raw
-
-
-class RawMessage(models.Model):
-    '''A copy of the raw signal message'''
-    account = PhoneNumberField(null=False, blank=False, help_text="Number of the receiver")
-    source = PhoneNumberField(null=True, blank=True, help_text="Number associated with message, if it exists")
-    timestamp = models.IntegerField(help_text="Raw unix timestamp from the message data")
-    raw = models.JSONField(help_text="The raw json sent")
-    ### Manager to add custom creation/parsing
-    objects = RawMessageManager()
 
 
 class Message(models.Model):
@@ -106,8 +132,8 @@ class Message(models.Model):
     processing = models.DateTimeField(blank=True, null=True, help_text="The time we started processing a message")
     updated = models.DateTimeField(auto_now=True)
     direction = models.PositiveIntegerField(choices=MessageDirection.choices, db_index=True)
-    raw = models.OneToOneField(RawMessage, on_delete=models.DO_NOTHING, null=True, blank=True, help_text=)
-
+    raw = models.OneToOneField(RawMessage, on_delete=models.DO_NOTHING, null=True, blank=True, help_text="Reference to the raw message this was parsed from")
+    payment = models.ForeignKey(Payment, on_delete=models.CASCADE, null=True, blank=True)
     ### Custom manager to create from signal and process payment ###
     objects = MessageManager()
 
@@ -117,35 +143,6 @@ class Message(models.Model):
     def __str__(self):
         text_oneline = self.text.replace("\n", " ||| ")
         return f'Message: customer: {self.customer} - {self.direction} --- {text_oneline}'
-
-
-class Payment(models.Model):
-    amount_pmob = models.PositiveIntegerField(null=False, blank=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    processed = models.DateTimeField(blank=True, null=True, help_text="The date a payment was processed, if it was.")
-    updated = models.DateTimeField(auto_now=True, help_text="Time of last update")
-    status = models.SmallIntegerField(choices=PaymentStatus.choices, default=PaymentStatus.PENDING,
-                                      help_text="Status of payment")
-    txo_id = models.CharField(max_length=255, null=True, blank=True)
-    message = models.OneToOneField(Message, on_delete=models.CASCADE, related_name="payments")
-
-    ### Custom Manager ###
-    objects = PaymentManager()
-
-
-class ReceiptType(models.IntegerChoices):
-    FULL_SERVICE = 0
-    SIGNAL = 1
-
-
-class PaymentReceipt(models.Model):
-    payment = models.OneToOneField(Payment, on_delete=models.CASCADE, related_name='receipts')
-    note = models.TextField(default=None, null=True, blank=True, help_text="The note that arrived with the payment")
-    body = models.CharField(max_length=255)
-    receipt_type = models.IntegerField(choices=ReceiptType.choices, default=ReceiptType.SIGNAL)
-
-    def get_amount_pmob(self) -> int:
-        pass
 
 
 class ProcessingError(models.Model):

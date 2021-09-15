@@ -17,7 +17,7 @@ from django.utils import timezone
 from mobot_client.air_drop_session import AirDropSession
 from mobot_client.chat_strings import ChatStrings
 
-from mobot_client.core.listener import MobotListener
+from mobot_client.core.listener import MessageLogger
 from mobot_client.drop_session import BaseDropSession
 from mobot_client.item_drop_session import ItemDropSession
 from mobot_client.logger import SignalMessenger
@@ -52,7 +52,7 @@ class MOBot:
         self.mcc = mcc
         self.public_address = mcc.public_address
         self.minimum_fee_pmob = mcc.minimum_fee_pmob
-        self.listener = MobotListener(mcc=mcc, signal_client=signal, store=self.store)
+        self.listener = MessageLogger(mcc=mcc, signal_client=signal, store=self.store)
         self._listener_thread = None
         self._thread_count = 0
         self._number_processed = 0

@@ -19,7 +19,7 @@ from mobot_client.models.messages import MessageStatus, Message, RawMessage
 from mobot_client.payments import MCClient
 
 
-class MobotListener:
+class MessageLogger:
     def __init__(self, mcc: MCClient, signal_client: Signal, store: Store):
         self._mcc = mcc
         self._signal = signal_client
@@ -31,24 +31,16 @@ class MobotListener:
         self._executor = ThreadPoolExecutor(max_workers=5)
         self._futures: List[Future] = []
         self._timeout = settings.SIGNALD_PROCESS_TIMEOUT
-        self._signal.register_handler("", self.receive_message)
 
     @transaction.atomic
     def receive_message(self, signal_message: SignalMessage, *args) -> Message:
         self._logger.info(f"Listener received from signal: {signal_message}")
         raw = RawMessage.objects.store_message(signal_message)
-        if isinstance(signal_message.source, dict):
-            number = signal_message.source['number']
-        else:
-            number = signal_message.source
-
-        customer, _ = Customer.objects.get_or_create(phone_number=number)
-        store, _ = Store.objects.get_or_create(phone_number=signal_message.username)
-        message = Message.objects.create_from_signal(store=store,
-                                                     mcc=self._mcc,
-                                                     customer=customer,
+        customer, _ = Customer.objects.get_or_create(phone_number=raw.account)
+        message = Message.objects.create_from_signal(customer=customer,
                                                      message=signal_message,
                                                      raw_message=raw)
+        payment = self._mcc.process_signal_payment(message, signal_message.payment) if signal_message.payment else None
         self._logger.info(f"Listener logged to database {message}")
 
     def _messages(self) -> QuerySet[Message]:
