@@ -2,13 +2,16 @@
 # This code is copied from [pysignald](https://pypi.org/project/pysignald/) and modified to run locally with payments
 import logging
 import re
-
+from concurrent.futures import ThreadPoolExecutor
 from typing import Protocol, Iterator
 
 from signald import Signal as _Signal
 from signald.types import Message as SignalMessage
+
+from django.conf import settings
 from mobot_client.models.messages import RawMessage, Message
 from mobot_client.payments.client import MCClient
+
 
 # We'll need to know the compiled RE object later.
 
@@ -26,6 +29,8 @@ class DBSignal:
         self.logger = logging.getLogger("SignalListener")
         self._mcc = mcc
         self._signal = signal
+        self._pool = ThreadPoolExecutor(max_workers=settings.LISTENER_THREADS)
+        self._futures = []
 
     def _parse_message(self, message, auto_send_receipts=True) -> Message:
         if not message.text or message.payment:
@@ -36,6 +41,10 @@ class DBSignal:
                 stored_message = Message.objects.create_from_signal(message)
                 if message.payment:
                     payment = self._mcc.process_signal_payment(stored_message)
+                    stored_message.payment = payment
+                    stored_message.save()
+                else:
+                    payment = None
             except Exception as e:
                 self.logger.exception("Exception storing message")
             else:
@@ -48,7 +57,7 @@ class DBSignal:
                 except Exception as e:
                     print(e)
                     raise
-                return raw
+                return stored_message
 
     def run_chat(self, auto_send_receipts=True):
         """
@@ -56,5 +65,7 @@ class DBSignal:
         """
         self.logger.debug("Registering interrupt handler...")
         for message in self._signal.receive_messages():
-            self.logger(f"Signal received message {message}... Processing!")
-            self.
+            self.logger.info(f"Signal received message {message}... Processing!")
+            message = self._parse_message(message)
+            self.logger.info(f"Stored message from {message}")
+

@@ -132,7 +132,7 @@ class MOBot:
                 source = source["number"]
 
             self.logger.info(f"received receipt {receipt}")
-            receipt = mc.utility.b64_receipt_to_full_service_receipt(receipt.receipt)
+            receipt = mc.utility.b64_receipt_to_full_service_receipt(receipt.payment)
 
             while transaction_status == "TransactionPending":
                 receipt_status = self.mcc.check_receiver_receipt_status(

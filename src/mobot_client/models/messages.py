@@ -15,7 +15,24 @@ from signald.types import Message as SignalMessage
 from mobot_client.models import Customer, Store
 
 
-class SignalReceipt(models.Model):
+
+class PaymentStatus(models.TextChoices):
+    FAILURE = "Failure"
+    PENDING = "TransactionPending"
+    SUCCESS = "TransactionSuccess"
+
+
+class Payment(models.Model):
+    amount_pmob = models.PositiveIntegerField(null=False, blank=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    processed = models.DateTimeField(blank=True, null=True, help_text="The date a payment was processed, if it was.")
+    updated = models.DateTimeField(auto_now=True, help_text="Time of last update")
+    status = models.SmallIntegerField(choices=PaymentStatus.choices, default=PaymentStatus.PENDING,
+                                      help_text="Status of payment")
+    txo_id = models.CharField(max_length=255, null=True, blank=True)
+
+
+class SignalPayment(models.Model):
     note = models.TextField(help_text="Note sent with payment", blank=True, null=True)
     receipt = models.CharField(max_length=255, help_text="encoded receipt")
 
@@ -28,7 +45,8 @@ class RawMessageManager(models.Manager):
             number = signal_message.source
 
         if signal_message.payment:
-            receipt = RawMessage.objects.create()
+            receipt = SignalPayment.objects.create(note=signal_message.payment.note,
+                                                   receipt=signal_message.payment.payment)
         else:
             receipt = None
 
@@ -38,33 +56,9 @@ class RawMessageManager(models.Manager):
             timestamp=signal_message.timestamp,
             text=signal_message.text,
             raw=json.dumps(attr.asdict(signal_message)),
+            receipt=receipt,
         )
         return raw
-
-
-class PaymentStatus(models.TextChoices):
-    FAILURE = "Failure"
-    PENDING = "TransactionPending"
-    SUCCESS = "TransactionSuccess"
-
-
-class PaymentManager(models.Manager):
-    def create_from_signal(self, message: SignalMessage, mcc: "mobot_client.payments.MCClient",
-                           callback: Optional[Callable]) -> Payment:
-        return mcc.process_signal_payment(message.source, message.payment.receipt, callback)
-
-
-class Payment(models.Model):
-    amount_pmob = models.PositiveIntegerField(null=False, blank=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    processed = models.DateTimeField(blank=True, null=True, help_text="The date a payment was processed, if it was.")
-    updated = models.DateTimeField(auto_now=True, help_text="Time of last update")
-    status = models.SmallIntegerField(choices=PaymentStatus.choices, default=PaymentStatus.PENDING,
-                                      help_text="Status of payment")
-    txo_id = models.CharField(max_length=255, null=True, blank=True)
-
-    ### Custom Manager ###
-    objects = PaymentManager()
 
 
 class RawMessage(models.Model):
@@ -74,6 +68,7 @@ class RawMessage(models.Model):
     timestamp = models.IntegerField(help_text="Raw unix timestamp from the message data")
     text = models.TextField(help_text="Text body, if it exists", blank=True, null=True)
     raw = models.JSONField(help_text="The raw json sent")
+    payment = models.ForeignKey(SignalPayment, on_delete=models.CASCADE, blank=True, null=True, help_text="Receipt object")
 
     ### Manager to add custom creation/parsing
     objects = RawMessageManager()

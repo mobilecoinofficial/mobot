@@ -35,7 +35,7 @@ FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', False)
-LISTENER_THREADS = os.getenv("LISTENER_THREADS", 20)
+LISTENER_THREADS = os.getenv("LISTENER_THREADS", 5)
 PAYMENT_THREADS = os.getenv("PAYMENT_THREADS", 3)
 
 DATABASE = os.environ.get('DATABASE', 'sqlite')

@@ -9,7 +9,7 @@ from django.utils import timezone
 import mobilecoin as mc
 
 from mobot_client.models import Customer
-from mobot_client.models.messages import PaymentStatus, Payment, PaymentReceipt, ReceiptType, Message
+from mobot_client.models.messages import PaymentStatus, Payment, Message
 
 from mobilecoin import Client as MCC
 
@@ -62,17 +62,17 @@ class MCClient(MCC):
         payment.save()
         return payment
 
-    def process_signal_payment(self, customer: Customer, signal_message: SignalMessage) -> Payment:
-        payment = signal_message.payment
-        self.logger.info(f"received receipt {payment.receipt} for customer {customer}")
-        receipt = mc.utility.b64_receipt_to_full_service_receipt(payment.receipt)
+    def process_signal_payment(self, message: Message) -> Payment:
+        receipt = message.raw.payment.receipt
+        self.logger.info(f"received receipt {receipt} for customer {message.customer}")
+        receipt = mc.utility.b64_receipt_to_full_service_receipt(receipt)
         self.logger.info(f"checking Receiver status")
         receipt_status = self.check_receiver_receipt_status(
             self.public_address, receipt
         )
         amount_paid_mob = mc.pmob2mob(receipt_status["txo"]["value_pmob"])
         payment = Payment.objects.create(
-            customer=customer,
+            customer=message.customer,
             amount_pmob=mc.utility.mob2pmob(amount_paid_mob),
             receipt=receipt,
         )
