@@ -4,8 +4,14 @@
 The entrypoint for the running MOBot.
 """
 
-import time
+from django.core.management.base import BaseCommand
+from django.conf import settings
 
+
+from mobot_client.models import ChatbotSettings
+from mobot_client.core import MOBot
+
+import time
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
@@ -24,11 +30,10 @@ class Command(BaseCommand):
             print("Awaiting settings... sleeping 60 seconds! Create a store and attach to ChatbotSettings to continue.")
             time.sleep(60)
             cb_settings.refresh_from_db()
-
         store = cb_settings.store
         bot_avatar_filename = cb_settings.avatar_filename
         bot_name = cb_settings.name
-        signal = Signal(str(store.phone_number), socket_path=(settings.SIGNALD_ADDRESS, settings.SIGNALD_PORT))
+        signal = Signal(str(store.source), socket_path=(settings.SIGNALD_ADDRESS, settings.SIGNALD_PORT))
         mcc = MCClient()
         try:
             mobot = MOBot(bot_name=bot_name,

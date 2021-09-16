@@ -10,12 +10,12 @@ from .models import (
     CustomerStorePreferences,
     CustomerDropRefunds,
     DropSession,
-    Message,
     BonusCoin,
     ChatbotSettings,
     Order,
     Sku,
 )
+from .models.messages import Message
 
 
 class StoreAdmin(admin.ModelAdmin):
@@ -92,7 +92,6 @@ class DropAdmin(admin.ModelAdmin):
         BonusCoinInline
     ]
     list_display = ('name', 'store', 'is_active', 'num_initial_sent', 'num_bonus_sent', 'total_spent',)
-
     readonly_fields = ('initial_coin_limit', 'is_active', 'initial_coins_available', 'bonus_coins_available_display', 'total_spent')
 
     @admin.display(description='Bonus Coins')

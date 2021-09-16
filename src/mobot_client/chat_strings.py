@@ -68,7 +68,6 @@ Please contact customer service at {number}"""
 'pay' - How to pay"""
 
     AIRDROP_RESPONSE = """We've sent you {amount} MOB (~{symbol}{value:.2f}). 
-
 Send us 0.001 MOB, and we'll send it back, plus more! 
 You could end up with as much as £50 of MOB"""
     AIRDROP_SUMMARY = (
@@ -109,6 +108,13 @@ Sorry 😭"""
 
     AIRDROP_SOLD_OUT_REFUND = """Thank you for sending {amount} MOB! 
 
+<<<<<<< HEAD
+Unfortunately, we ran out of MOB to distribute 😭. 
+We're returning your MOB and the network fee."""
+    BONUS_SOLD_OUT_REFUND = """Thank you for sending {amount} MOB!
+
+Unfortunately, we ran out of bonuses 😭. 
+=======
 Unfortunately, we ran out of MOB to distribute 😭.
 
 We're returning your MOB and the network fee."""
@@ -116,6 +122,7 @@ We're returning your MOB and the network fee."""
 
 Unfortunately, we ran out of bonuses 😭.
 
+>>>>>>> dev
 We're returning your MOB and the network fee."""
 
     AIRDROP_INITIALIZE = """Great! We've just sent you {amount} MOB (~{symbol}{value:.2f})

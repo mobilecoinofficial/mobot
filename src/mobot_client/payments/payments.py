@@ -7,7 +7,7 @@ import logging
 
 
 import mobilecoin as mc
-from signald_client import Signal
+from signald import Signal
 
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import (
@@ -53,8 +53,7 @@ class Payments:
             source = str(source)
 
         self.logger.info(f"Getting payment address for customer {source}")
-        customer_signal_profile = self.signal.get_profile(source)
-
+        customer_signal_profile = self.signal.get_profile(source, True)
         self.logger.info(f"Got customer({source}) signal profile {customer_signal_profile}")
         mobilecoin_address = customer_signal_profile.get('mobilecoin_address')
         if not mobilecoin_address:

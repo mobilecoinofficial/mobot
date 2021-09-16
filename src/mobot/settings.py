@@ -25,14 +25,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', "123")
 GMAPS_CLIENT_KEY = os.environ.get('GMAPS_CLIENT_KEY')
 VAT_ID = os.environ.get('VAT_ID', "123")
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', False)
-SIGNALD_ADDRESS = os.environ.get('SIGNALD_ADDRESS', '127.0.0.1')
-SIGNALD_PORT = os.environ.get('SIGNALD_PORT', 15432)
+SIGNALD_ADDRESS = os.getenv("SIGNALD_ADDRESS", "127.0.0.1")
+SIGNALD_PORT = os.getenv("SIGNALD_PORT", "15432")
+SIGNALD_PROCESS_TIMEOUT = os.getenv("SIGNALD_PROCESS_TIMEOUT", 20)
 FULLSERVICE_ADDRESS = os.getenv("FULLSERVICE_ADDRESS", "127.0.0.1")
 FULLSERVICE_PORT = os.getenv("FULLSERVICE_PORT", "9090")
 FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
+
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = os.environ.get('DEBUG', False)
+LISTENER_THREADS = os.getenv("LISTENER_THREADS", 5)
+PAYMENT_THREADS = os.getenv("PAYMENT_THREADS", 3)
 
 DATABASE = os.environ.get('DATABASE', 'sqlite')
 
@@ -48,7 +52,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
-    'mobot_client.apps.MobotClientConfig'
+    'mobot_client.apps.MobotClientConfig',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -153,7 +158,7 @@ else:
             'NAME': os.path.join(DB_ROOT, 'db.sqlite3'),
             'OPTIONS': {
                 'timeout': 20,
-            }
+            },
         }
     }
     CACHES = {

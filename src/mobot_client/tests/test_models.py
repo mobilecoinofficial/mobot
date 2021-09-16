@@ -1,4 +1,5 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
+import unittest
 import logging
 from typing import List, Dict
 from collections import defaultdict
@@ -197,3 +198,4 @@ class ModelTests(TestCase):
         self.assertFalse(de_customer.matches_country_code_restriction(drop_single))
         self.assertTrue(de_customer.matches_country_code_restriction(drop_none))
         self.assertTrue(de_customer.matches_country_code_restriction(drop_list))
+

@@ -53,7 +53,7 @@ class ItemDropSession(BaseDropSession):
                     ChatStrings.WAITING_FOR_SIZE_PREFIX + ChatStrings.get_options(list(drop_session.drop.item.skus.all()),
                                                                                   capitalize=True)
             )
-            self.messenger.log_and_send_message(customer, customer.phone_number.as_e164, message_to_send)
+            self.messenger.log_and_send_message(customer, message_to_send)
             drop_session.state = SessionState.WAITING_FOR_SIZE
         drop_session.save()
 
@@ -361,7 +361,7 @@ class ItemDropSession(BaseDropSession):
                 price=price_in_mob.normalize(),
                 country=drop.country_long_name_restriction
             )
-            self.messenger.log_and_send_message(customer, customer.phone_number.as_e164, message_to_send)
+            self.messenger.log_and_send_message(customer, message_to_send)
 
     def show_catalog_and_display_payment_instructions(self, message, drop_session: DropSession):
         customer = drop_session.customer
@@ -370,7 +370,6 @@ class ItemDropSession(BaseDropSession):
         if customer_payments_address is None:
             self.messenger.log_and_send_message(
                 customer,
-                message.source,
                 ChatStrings.PAYMENTS_ENABLED_HELP.format(
                     item_desc=drop.item.short_description
                 ),
@@ -394,7 +393,7 @@ class ItemDropSession(BaseDropSession):
         )
         if not customer.matches_country_code_restriction(drop):
             self.messenger.log_and_send_message(
-                customer, message.source, ChatStrings.COUNTRY_RESTRICTED
+                customer, ChatStrings.COUNTRY_RESTRICTED
             )
             new_drop_session.state = SessionState.CUSTOMER_DOES_NOT_MEET_RESTRICTIONS
         else:

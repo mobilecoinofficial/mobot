@@ -1,129 +1,75 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 # This code is copied from [pysignald](https://pypi.org/project/pysignald/) and modified to run locally with payments
-import json.decoder
 import logging
 import re
-import signal
-import sys
+from concurrent.futures import ThreadPoolExecutor
+from typing import Protocol
 
 from signald import Signal as _Signal
+from signald.types import Message as SignalMessage
+
+from django.conf import settings
+from mobot_client.models.messages import Message
+from mobot_client.payments.client import MCClient
+
 
 # We'll need to know the compiled RE object later.
+
 RE_TYPE = type(re.compile(""))
 
 
-class Signal(_Signal):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.logger = logging.getLogger("SignalListener")
-        self._chat_handlers = []
-        self._payment_handlers = []
-        self._run = True
+class SignalReceiver(Protocol):
+    def __call__(self, signal_message: SignalMessage) -> bool: ...
 
-    def isolated_handler(self, func):
-        '''Wrap a function so that it's executed within a try-except block'''
-        def isolated(*args, **kwargs):
-            try:
-                func(*args, **kwargs)
-            except Exception as e:
-                self.logger.exception(f"Chat exception while processing: --- {func.__name__}({args}, {kwargs})\n")
-        return isolated
 
-    def register_handler(self, regex, func, order=100):
-        '''Register a handler that runs when a regex matches, with a priority defined by lower order = higher priority'''
-        self.logger.info(f"Registering chat handler for {regex if regex else 'default'}")
-        if not isinstance(regex, RE_TYPE):
-            regex = re.compile(regex, re.I)
+class SignalLogger:
+    """A signal logger that logs to our DB instead of running callbacks"""
 
-        self._chat_handlers.append((order, regex, self.isolated_handler(func)))
-        # Use only the first value to sort so that declaration order doesn't change.
-        self._chat_handlers.sort(key=lambda x: x[0])
-
-    def chat_handler(self, regex, order=100):
-        """
-        A decorator that registers a chat handler function with a regex.
-        """
-        def decorator(func):
-            self.register_handler(regex, func, order)
-            return func
-
-        return decorator
-
-    def payment_handler(self, func):
-        isolated = self.isolated_handler(func)
-        self._payment_handlers.append(isolated)
-        return isolated
-
-    def register_payment_handler(self, func):
-        self.payment_handler(func)
-
-    def _stop_handler(self, sig, frame):
-        self.logger.error(f"SIGNAL {sig} CALLED! Finishing up current message...")
+    def __init__(self, signal: _Signal, mcc: MCClient, *args, **kwargs):
+        self.logger = logging.getLogger("SignalLogger")
+        self._mcc = mcc
+        self._signal = signal
         self._run = False
-        sys.exit(0)
 
-    def run_chat(self, auto_send_receipts=False):
-        """
-        Start the chat event loop.
-        """
-        signal.signal(signal.SIGINT, self._stop_handler)
-        signal.signal(signal.SIGQUIT, self._stop_handler)
-        messages_iterator = self.receive_messages()
-        while self._run:
+    def _parse_message(self, message, auto_send_receipts=True) -> Message:
+        if not message.text and not message.payment:
+            self.logger.warning(f"Message contained no text or payment. Not processing. {message}")
+            return False
+        else:
             try:
-                message = next(messages_iterator)
-
-            except ConnectionResetError as e:
-                self.logger.exception("Got an error attempting to get a message from signal!")
-                raise
+                stored_message = Message.objects.create_from_signal(message)
+                if message.payment:
+                    payment = self._mcc.process_signal_payment(stored_message)
+                    stored_message.payment = payment
+                    stored_message.save()
             except Exception as e:
-                self.logger.exception("Got an error attempting to get a message from signal!")
-                continue
-
-            self.logger.info(f"Receiving message {message}")
-
-
-            if message.payment:
-                for func in self._payment_handlers:
-                    func(message.source, message.payment)
-                continue
-
-            if not message.text:
-                continue
-
-            for _, regex, func in self._chat_handlers:
-                match = re.search(regex, message.text)
-                if not match:
-                    continue
-
-                try:
-                    reply = func(message, match)
-                except Exception as e:  # noqa - We don't care why this failed.
-                    self.logger.exception(f"Failed to process message {message}")
-                    continue
-
-                if isinstance(reply, tuple):
-                    stop, reply = reply
-                else:
-                    stop = True
-
+                self.logger.exception("Exception storing message")
+            else:
                 # In case a message came from a group chat
-                group_id = message.group_v2 and message.group_v2.get("id")  # TODO - not tested
-
+                group_id = message.group_v2 and message.group_v2.get("id")
                 # mark read and get that sweet filled checkbox
                 try:
                     if auto_send_receipts and not group_id:
-                        self.send_read_receipt(recipient=message.source['number'], timestamps=[message.timestamp])
-
-                    if group_id:
-                        self.send_group_message(recipient_group_id=group_id, text=reply)
-                    else:
-                        self.send_message(recipient=message.source['number'], text=reply)
+                        self._signal.send_read_receipt(recipient=message.source['number'], timestamps=[message.timestamp])
                 except Exception as e:
-                    self.logger.exception(e)
+                    print(e)
                     raise
+                return stored_message
 
-                if stop:
-                    # We don't want to continue matching things.
-                    break
-        return
+    def run_chat(self, auto_send_receipts=True, stop_when_done=False):
+        """
+        Start the chat.
+        """
+        self._run = True
+        self.logger.debug("Registering interrupt handler...")
+        messages = self._signal.receive_messages()
+        while self._run:
+            try:
+                signal_message = next(messages)
+                self.logger.info(f"Signal received message {signal_message}... Processing!")
+                message = self._parse_message(signal_message, auto_send_receipts=auto_send_receipts)
+                self.logger.info(f"Stored message from {message}")
+            except StopIteration:
+                self.logger.error(f"Signal no longer sending messages!")
+                if stop_when_done:
+                    self._run = False

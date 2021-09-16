@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import random
+
 from decimal import Decimal
 from typing import Optional, Union
 import logging
@@ -11,6 +12,7 @@ from django.db.models import F, Q, Sum
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.db import transaction
+
 from django.contrib import admin
 from phonenumber_field.modelfields import PhoneNumberField
 
@@ -27,10 +29,10 @@ class OutOfStockException(SessionException):
 
 
 class Store(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, default="MOB")
     phone_number = PhoneNumberField(db_index=True)
-    description = models.TextField()
-    privacy_policy_url = models.URLField()
+    description = models.TextField(default="MOB")
+    privacy_policy_url = models.URLField(default="https://privacy.com")
 
     def __str__(self):
         return f"{self.name} [{self.phone_number.as_e164}]"
@@ -308,19 +310,16 @@ class Customer(models.Model):
     def fulfilled_drop_sessions(self):
         return DropSession.objects.sold_sessions().filter(customer=self)
 
+
     @admin.display(description='Fulfilled')
     def has_fulfilled_drop_session(self):
         return self.fulfilled_drop_sessions().count() > 0
-
-    has_fulfilled_drop_session.short_description = "Fulfilled"
 
     def completed_drop_sessions(self):
         return DropSession.objects.completed_sessions().filter(customer=self)
 
     def has_completed_session(self):
         return self.completed_drop_sessions().count() > 0
-
-    has_completed_session.short_description = "Completed"
 
     def errored_sessions(self):
         return DropSession.objects.errored_sessions().filter(customer=self)
@@ -342,7 +341,7 @@ class Customer(models.Model):
     def has_store_preferences(self, store: Store) -> bool:
         return self.store_preferences(store) is not None
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.phone_number.as_e164}"
 
 
@@ -430,19 +429,6 @@ class DropSession(models.Model):
 
     def __str__(self):
         return f"{self.drop.name}"
-
-
-class MessageDirection(models.IntegerChoices):
-    RECEIVED = 0, 'received'
-    SENT = 1, 'sent'
-
-
-class Message(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="messages")
-    store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    text = models.TextField()
-    date = models.DateTimeField(auto_now_add=True)
-    direction = models.PositiveIntegerField(choices=MessageDirection.choices)
 
 
 class OrderStatus(models.IntegerChoices):
