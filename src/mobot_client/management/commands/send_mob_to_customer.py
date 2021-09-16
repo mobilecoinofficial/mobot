@@ -32,6 +32,8 @@ class Command(BaseCommand):
         mcc = MCClient()
         self.payments = Payments(
             mcc,
+            mcc.minimum_fee_pmob,
+            mcc.account_id,
             store,
             self.messenger,
             signal,
