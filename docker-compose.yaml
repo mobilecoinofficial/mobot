@@ -10,24 +10,26 @@ services:
     - ./docker/env
     expose:
     - 5432
+    ports:
+    - 127.0.0.1:5432:5432
     networks:
       mobot:
         ipv4_address: 10.200.0.5
 
   signald:
-    image: mobilecoin/signald:0.12.0-mc.0.0.3-staging
+    image: mobilecoin/signald:v0.12.1
     volumes:
     - signald:/signald
     expose:
     - 15432
     ports:
-    - "15432:15432"
+    - 127.0.0.1:15432:15432
     networks:
       mobot:
         ipv4_address: 10.200.0.6
 
   full-service:
-    image: mobilecoin/full-service:v1.0.0-pre.5.testnet
+    image: mobilecoin/full-service:v1.0.1-testnet
     volumes:
     - full-service:/data
     tty: true
@@ -39,7 +41,7 @@ services:
     expose:
     - 9090
     ports:
-    - "9090:9090"
+    - 127.0.0.1:9090:9090
     networks:
       mobot:
         ipv4_address: 10.200.0.7
@@ -53,12 +55,13 @@ services:
     env_file:
     - ./docker/env
     volumes:
-    - ./mobot:/app
     - signald:/signald
     depends_on:
     - db
     expose:
     - 8000
+    ports:
+    - 127.0.0.1:8000:8000
     networks:
       mobot:
         ipv4_address: 10.200.0.8
@@ -72,7 +75,6 @@ services:
     env_file:
     - ./docker/env
     volumes:
-    - ./mobot:/app
     - signald:/signald
     depends_on:
     - db

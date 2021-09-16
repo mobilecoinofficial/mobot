@@ -10,6 +10,7 @@ RUN  addgroup --system --gid 1000 app \
   && chown app:app /signald \
   && chown app:app /signald/attachments
 
+
 RUN  apt-get update \
   && apt-get upgrade -y \
   && apt-get install -y ca-certificates \

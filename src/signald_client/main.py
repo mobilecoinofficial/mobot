@@ -72,11 +72,16 @@ class Signal(_Signal):
         while self._run:
             try:
                 message = next(messages_iterator)
-            except json.decoder.JSONDecodeError as e:
+
+            except ConnectionResetError as e:
+                self.logger.exception("Got an error attempting to get a message from signal!")
+                raise
+            except Exception as e:
                 self.logger.exception("Got an error attempting to get a message from signal!")
                 continue
-            print("Receiving message")
-            print(message)
+
+            self.logger.info(f"Receiving message {message}")
+
 
             if message.payment:
                 for func in self._payment_handlers:
@@ -115,7 +120,7 @@ class Signal(_Signal):
                     else:
                         self.send_message(recipient=message.source['number'], text=reply)
                 except Exception as e:
-                    print(e)
+                    self.logger.exception(e)
                     raise
 
                 if stop:
