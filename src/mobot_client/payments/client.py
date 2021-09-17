@@ -1,12 +1,13 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
+import time
 
-from mobilecoin.utility import b58_wrapper_to_b64_public_address
-from mobilecoin import Client as MCC
+from mc_util import b58_wrapper_to_b64_public_address
+from mobilecoin import Client
 
 from django.conf import settings
 
 
-class MCClient(MCC):
+class MCClient(Client):
     def __init__(self):
         super().__init__(settings.FULLSERVICE_URL)
         self.public_address, self.account_id = self._get_default_account_info()

@@ -12,6 +12,7 @@ from django.conf import settings
 
 from mobot_client.payments.client import MCClient
 from signald_client import Signal
+import mc_util
 
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import (
@@ -65,7 +66,7 @@ class MOBot:
         # self.timeouts = Timeouts(self.messenger, self.payments, schedule=30, idle_timeout=60, cancel_timeout=300)
 
         self.logger.info(f"bot_avatar_filename {bot_avatar_filename}")
-        b64_public_address = mc.utility.b58_wrapper_to_b64_public_address(
+        b64_public_address = mc_util.b58_wrapper_to_b64_public_address(
             self.mcc.public_address
         )
 
@@ -132,14 +133,15 @@ class MOBot:
                 source = source["number"]
 
             self.logger.info(f"received receipt {receipt}")
-            receipt = mc.utility.b64_receipt_to_full_service_receipt(receipt.receipt)
+            receipt = mc_util.b64_receipt_to_full_service_receipt(receipt.receipt)
 
             while transaction_status == "TransactionPending":
                 receipt_status = self.mcc.check_receiver_receipt_status(
                     self.mcc.public_address, receipt
                 )
+                txo_id = receipt_status["txo"]["txo_id"]
                 transaction_status = receipt_status["receipt_transaction_status"]
-                self.logger.info(f"Waiting for {receipt}, current status {receipt_status}")
+                self.logger.info(f"Waiting for {receipt} with txo {txo_id}, current status {receipt_status}")
 
             if transaction_status != "TransactionSuccess":
                 self.logger.error(f"failed {transaction_status}")
@@ -180,7 +182,7 @@ class MOBot:
             bonus_coins = BonusCoin.objects.filter(drop=active_drop)
             message_to_send = ChatStrings.COINS_SENT.format(
                 initial_num_sent=active_drop.num_initial_sent(),
-                total=mc.utility.pmob2mob(active_drop.initial_pmob_disbursed()),
+                total=mc_util.pmob2mob(active_drop.initial_pmob_disbursed()),
             )
             for bonus_coin in bonus_coins:
                 message_to_send += (
