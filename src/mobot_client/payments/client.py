@@ -34,7 +34,7 @@ class MCClient(MCC):
         public_address = account_obj["main_address"]
         return public_address, account_id
 
-    async def _wait_for_transaction(self, receipt) -> PaymentStatus:
+    def _wait_for_transaction(self, receipt) -> PaymentStatus:
         transaction_status = PaymentStatus.PENDING
         while transaction_status == PaymentStatus.PENDING:
             receipt_status = self.check_receiver_receipt_status(
@@ -50,9 +50,9 @@ class MCClient(MCC):
 
         return transaction_status
 
-    async def process_payment(self, payment: Payment) -> Payment:
+    def process_payment(self, payment: Payment) -> Payment:
         self.logger.info(f"Processing payment {payment}")
-        transaction_status = await self._wait_for_transaction()
+        transaction_status = self._wait_for_transaction()
         payment.status = transaction_status
         payment.processed = timezone.now()
         payment.save()
@@ -76,12 +76,5 @@ class MCClient(MCC):
             receipt=receipt,
         )
 
-        def update_status():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(asyncio.ensure_future(self.process_payment(payment)))
-
-        with self._pool as pool:
-            pool.submit(update_status)
-
-        return payment
+        processed_payment = self.process_payment(payment)
+        return processed_payment

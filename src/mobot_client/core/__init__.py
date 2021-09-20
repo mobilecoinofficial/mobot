@@ -31,22 +31,20 @@ class ConfigurationException(Exception):
     pass
 
 
-class MOBot:
+class MOBotSubscriber:
     """
     MOBot is the container which holds all of the business logic relevant to a Drop.
     """
 
-    def __init__(self, bot_name: str, bot_avatar_filename: str, store: Store, signal: Signal, mcc: MCClient):
+    def __init__(self, store: Store, messenger: SignalMessenger, mcc: MCClient, payments: Payments):
         self._run = True
         self._chat_handlers = []
         self._payment_handlers = []
-        self._user_locks = defaultdict(lambda: threading.Lock())
         self.store: Store = store
         if not self.store:
             raise ConfigurationException("No store found!")
         self.logger = logging.getLogger(f"MOBot({self.store})")
-        self.signal = signal
-        self.messenger = SignalMessenger(self.signal, self.store)
+        self.messenger = messenger
 
         self.mcc = mcc
         self.public_address = mcc.public_address
@@ -55,36 +53,23 @@ class MOBot:
         self._thread_count = 0
         self._number_processed = 0
         self._thread_lock = threading.Lock()
-        self.payments = Payments(
-            mobilecoin_client=self.mcc,
-            store=self.store,
-            messenger=self.messenger,
-            signal=signal
-        )
+        self.payments = payments
         self._futures = []
 
 
         # self.timeouts = Timeouts(self.messenger, self.payments, schedule=30, idle_timeout=60, cancel_timeout=300)
 
-        self.logger.info(f"bot_avatar_filename {bot_avatar_filename}")
-        b64_public_address = mc.utility.b58_wrapper_to_b64_public_address(
-            self.mcc.public_address
-        )
-
-        resp = self.signal.set_profile(
-            bot_name, b64_public_address, bot_avatar_filename, True
-        )
         self.logger.info(f"set profile response {resp}")
         if resp.get("error"):
             assert False, resp
 
         self._register_payment_handler(self.handle_payment)
-        self._chat_handler("\+", self.chat_router_plus)
-        self._chat_handler("coins", self.chat_router_coins)
-        self._chat_handler("items", self.chat_router_items)
-        self._chat_handler("unsubscribe", self.unsubscribe_handler)
-        self._chat_handler("subscribe", self.subscribe_handler)
-        self._chat_handler("", self.default_handler)
+        self._register_chat_handler("\+", self.chat_router_plus)
+        self._register_chat_handler("coins", self.chat_router_coins)
+        self._register_chat_handler("items", self.chat_router_items)
+        self._register_chat_handler("unsubscribe", self.unsubscribe_handler)
+        self._register_chat_handler("subscribe", self.subscribe_handler)
+        self._register_chat_handler("", self.default_handler)
 
     def _isolated_handler(self, func):
         def isolated(*args, **kwargs):
@@ -94,7 +79,7 @@ class MOBot:
                 self.logger.exception(f"Chat exception while processing: --- {func.__name__}({args}, {kwargs})\n")
         return isolated
 
-    def _chat_handler(self, regex, func, order=100):
+    def _register_chat_handler(self, regex, func, order=100):
         self.logger.info(f"Registering chat handler for {regex if regex else 'default'}")
         regex = re.compile(regex, re.I)
 

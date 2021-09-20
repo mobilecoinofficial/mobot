@@ -2,6 +2,7 @@
 # This code is copied from [pysignald](https://pypi.org/project/pysignald/) and modified to run locally with payments
 import logging
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Protocol
 
@@ -73,3 +74,6 @@ class SignalLogger:
                 self.logger.error(f"Signal no longer sending messages!")
                 if stop_when_done:
                     self._run = False
+                else:
+                    time.sleep(0.5)
+

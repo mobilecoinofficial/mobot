@@ -15,7 +15,7 @@ from django.test import LiveServerTestCase
 from phonenumbers import PhoneNumber, parse
 from signald.types import Message as SignalMessage, Payment as SignalPayment
 
-from mobot_client.core import MOBot
+from mobot_client.core import MOBotSubscriber
 from mobot_client.logger import SignalMessenger
 from mobot_client.tests.factories import StoreFactory, CustomerFactory
 from mobot_client.models import Store, Customer
@@ -112,7 +112,7 @@ class ListenerTest(LiveServerTestCase):
 
     def test_mobot_gets_message_from_queue(self):
         signal = self.signal(messages=[TestMessage(phone_number=self.customer.phone_number, text="HI MOBOT", payment=None)])
-        mobot = MOBot(bot_name="MOBot", bot_avatar_filename="icon.png", store=self.store, signal=signal, mcc=self.mcc)
+        mobot = MOBotSubscriber(bot_name="MOBot", bot_avatar_filename="icon.png", store=self.store, signal=signal, mcc=self.mcc)
         mobot.run_chat(break_on_stop=True, break_after=1)
         responses = MobotResponse.objects.filter(incoming_message__customer=self.customer).all()
         self.assertEqual(responses.count(), 1)

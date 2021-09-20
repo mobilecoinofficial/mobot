@@ -35,10 +35,16 @@ class Payment(models.Model):
 class SignalPayment(models.Model):
     note = models.TextField(help_text="Note sent with payment", blank=True, null=True)
     receipt = models.CharField(max_length=255, help_text="encoded receipt")
+    verified = models.DateTimeField(null=True, blank=True, help_text="The date at which a payment is verified")
+
+
+class PaymentVerification(models.Model):
+    signal_payment = models.ForeignKey(SignalPayment, on_delete=models.CASCADE, blank=False, null=False, help_text="The raw payment receipt")
+    error = models.TextField(blank=True, null=True, help_text="An error")
 
 
 class RawMessageManager(models.Manager):
-    def store_message(self, signal_message: SignalMessage) -> RawMessage:
+    def store_message(self, signal_message: SignalMessage) -> RawSignalMessage:
         if isinstance(signal_message.source, dict):
             number = signal_message.source['number']
         else:
@@ -61,7 +67,7 @@ class RawMessageManager(models.Manager):
         return raw
 
 
-class RawMessage(models.Model):
+class RawSignalMessage(models.Model):
     '''A copy of the raw signal message'''
     account = PhoneNumberField(null=False, blank=False, help_text="Number of the receiver")
     source = PhoneNumberField(null=True, blank=True, help_text="Number associated with message, if it exists")
@@ -72,6 +78,13 @@ class RawMessage(models.Model):
 
     ### Manager to add custom creation/parsing
     objects = RawMessageManager()
+
+
+class SignalProcessingError(models.Model):
+    exception = models.CharField(max_length=255, null=False, blank=False, help_text="Exception class")
+    message = models.TextField(null=True, blank=True, help_text="Exception message")
+    traceback = models.TextField(null=True, blank=True, help_text="Traceback for message")
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class MessageStatus(models.IntegerChoices):
@@ -103,8 +116,8 @@ class MessageQuerySet(models.QuerySet):
 class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
 
     def create_from_signal(self, signal_message: SignalMessage) -> Message:
-        raw = RawMessage.objects.store_message(signal_message=signal_message)
-        dt = timezone.make_aware(datetime.fromtimestamp(raw.timestamp))
+        raw = RawSignalMessage.objects.store_message(signal_message=signal_message)
+        dt = timezone.make_aware(datetime.fromtimestamp(float(signal_message.timestamp)))
         store, _ = Store.objects.get_or_create(phone_number=raw.account)
         customer, _ = Customer.objects.get_or_create(phone_number=raw.account)
         stored_message = self.get_queryset().create(
@@ -127,7 +140,7 @@ class Message(models.Model):
     processing = models.DateTimeField(blank=True, null=True, help_text="The time we started processing a message")
     updated = models.DateTimeField(auto_now=True)
     direction = models.PositiveIntegerField(choices=MessageDirection.choices, db_index=True)
-    raw = models.OneToOneField(RawMessage, on_delete=models.DO_NOTHING, null=True, blank=True, help_text="Reference to the raw message this was parsed from")
+    raw = models.OneToOneField(RawSignalMessage, on_delete=models.DO_NOTHING, null=True, blank=True, help_text="Reference to the raw message this was parsed from")
     payment = models.ForeignKey(Payment, on_delete=models.CASCADE, null=True, blank=True)
     ### Custom manager to create from signal and process payment ###
     objects = MessageManager()
@@ -138,11 +151,6 @@ class Message(models.Model):
     def __str__(self):
         text_oneline = self.text.replace("\n", " ||| ")
         return f'Message: customer: {self.customer} - {self.direction} --- {text_oneline}'
-
-
-class ProcessingError(models.Model):
-    message = models.ForeignKey(Message, on_delete=models.CASCADE)
-    text = models.TextField()
 
 
 class MobotResponse(models.Model):
