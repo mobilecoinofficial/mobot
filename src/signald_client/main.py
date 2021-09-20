@@ -19,6 +19,10 @@ from mobot_client.payments.client import MCClient
 RE_TYPE = type(re.compile(""))
 
 
+class SignalMessageException(Exception):
+    pass
+
+
 class SignalReceiver(Protocol):
     def __call__(self, signal_message: SignalMessage) -> bool: ...
 
@@ -35,7 +39,7 @@ class SignalLogger:
     def _parse_message(self, message, auto_send_receipts=True) -> Message:
         if not message.text and not message.payment:
             self.logger.warning(f"Message contained no text or payment. Not processing. {message}")
-            return False
+            raise SignalMessageException(f"Message contained no text or payment. Not processing. {message}")
         else:
             try:
                 stored_message = Message.objects.create_from_signal(message)
@@ -76,4 +80,6 @@ class SignalLogger:
                     self._run = False
                 else:
                     time.sleep(0.5)
+            except SignalMessageException as e:
+                self.logger.exception(f"Error parsing message from signal")
 

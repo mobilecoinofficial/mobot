@@ -25,22 +25,20 @@ class PaymentStatus(models.TextChoices):
 class SignalPayment(models.Model):
     note = models.TextField(help_text="Note sent with payment", blank=True, null=True)
     receipt = models.CharField(max_length=255, help_text="encoded receipt")
-    verified = models.DateTimeField(null=True, blank=True, help_text="The date at which a payment is verified")
 
 
 class Payment(models.Model):
-    amount_pmob = models.PositiveIntegerField(null=False, blank=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    processed = models.DateTimeField(blank=True, null=True, help_text="The date a payment was processed, if it was.")
+    amount_pmob = models.PositiveIntegerField(null=True, blank=True, help_text="Amount of payment, if known")
+    processed = models.DateTimeField(auto_now_add=True, help_text="The date a payment was processed, if it was.")
     updated = models.DateTimeField(auto_now=True, help_text="Time of last update")
     status = models.SmallIntegerField(choices=PaymentStatus.choices, default=PaymentStatus.PENDING,
                                       help_text="Status of payment")
-    txo_id = models.CharField(max_length=255, null=True, blank=True)
+    txo_id = models.CharField(max_length=255, null=False, blank=False)
     signal_payment = models.OneToOneField(SignalPayment, on_delete=models.CASCADE, null=True, blank=True)
 
 
 class PaymentVerification(models.Model):
-    payment = models.ForeignKey(Payment, on_delete=models.CASCADE, blank=False, null=False, help_text="The raw payment receipt")
+    payment = models.OneToOneField(SignalPayment, on_delete=models.CASCADE, blank=False, null=False, help_text="The raw payment receipt")
     error = models.TextField(blank=True, null=True, help_text="An error, if it exists")
     successful = models.BooleanField(blank=False, null=False, default=True)
 

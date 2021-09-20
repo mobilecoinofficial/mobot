@@ -53,7 +53,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_extensions',
     'mobot_client.apps.MobotClientConfig',
-    'django_celery_results',
 ]
 
 MIDDLEWARE = [

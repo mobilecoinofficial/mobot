@@ -3,11 +3,12 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
+from typing import Optional
 
 from django.utils import timezone
 import mobilecoin as mc
 
-from mobot_client.models.messages import PaymentStatus, Payment, Message
+from mobot_client.models.messages import PaymentStatus, Payment, Message, PaymentVerification
 
 from mobilecoin import Client as MCC
 
@@ -53,23 +54,26 @@ class MCClient(MCC):
             self.logger.exception("Exception raised when checking receipt")
             raise CheckReceiptException(str(e))
 
-    def _wait_for_transaction(self, receipt) -> PaymentStatus:
+    def _wait_for_transaction(self, payment: Payment) -> Payment:
+        receipt = payment.signal_payment.receipt
         transaction_status = PaymentStatus.PENDING
-        txo_id = None
         while transaction_status == PaymentStatus.PENDING:
             receipt_status = self.check_receiver_receipt_status(
                 self.public_address, receipt
             )
             transaction_status = PaymentStatus[receipt_status["receipt_transaction_status"]]
-            txo_id = receipt_status["txo"]["txo_id"]
             self.logger.info(f"Waiting for {receipt}, current status {receipt_status}")
+            payment.status = transaction_status
+            payment.save()
             time.sleep(2)
 
         if transaction_status != PaymentStatus.SUCCESS:
             self.logger.error(f"failed {transaction_status}")
             transaction_status = PaymentStatus.FAILURE
+            payment.status = transaction_status
+            payment.save()
 
-        return txo_id, transaction_status
+        return payment
 
     def process_payment(self, payment: Payment) -> Payment:
         self.logger.info(f"Processing payment {payment}")
@@ -77,10 +81,11 @@ class MCClient(MCC):
             txo_id, transaction_status = self._wait_for_transaction(payment)
             payment.status = transaction_status
             payment.processed = timezone.now()
-            payment.txo_id = txo_id
         except PaymentClientException as e:
             self.logger.exception("Got an error processing payment")
-            raise e
+            payment.status = PaymentStatus.FAILURE
+            payment.processed = timezone.now()
+        return payment
 
     def get_receipt_status(self, receipt: str) -> dict:
         try:
@@ -95,19 +100,28 @@ class MCClient(MCC):
             raise CheckReceiptException(str(e))
 
     def process_signal_payment(self, message: Message) -> Payment:
-        receipt = message.raw.payment.receipt
+        signal_payment = message.raw.payment
+        receipt = signal_payment.receipt
         self.logger.info(f"received receipt {receipt} for customer {message.customer}")
         try:
             receipt_status = self.get_receipt_status(receipt)
-        except Exception as e:
+        except PaymentClientException as e:
             self.logger.exception("Exception getting receipt status")
+            raise e
         else:
             amount_paid_mob = mc.pmob2mob(receipt_status["txo"]["value_pmob"])
-            payment = Payment.objects.create(amount_pmob=mc.utility.mob2pmob(amount_paid_mob))
+            txo_id = receipt_status["txo"]["txo_id"]
+
+            payment = Payment.objects.create(
+                amount_pmob=mc.utility.mob2pmob(amount_paid_mob),
+                txo_id=txo_id,
+                status=receipt_status,
+                signal_payment=signal_payment,
+            )
             message.payment = payment
-            message.save()
             try:
                 processed_payment = self.process_payment(payment)
+                return processed_payment
             except PaymentClientException as e:
-                
-        return processed_payment
+                self.logger.exception("Exception processing payment status")
+                raise e
