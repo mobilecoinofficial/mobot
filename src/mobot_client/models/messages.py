@@ -80,11 +80,14 @@ class RawSignalMessage(models.Model):
     objects = RawMessageManager()
 
 
-class SignalProcessingError(models.Model):
+class PaymentProcessingError(models.Model):
     exception = models.CharField(max_length=255, null=False, blank=False, help_text="Exception class")
-    message = models.TextField(null=True, blank=True, help_text="Exception message")
+    body = models.TextField(null=True, blank=True, help_text="Exception message")
     traceback = models.TextField(null=True, blank=True, help_text="Traceback for message")
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class MessageProcess
 
 
 class MessageStatus(models.IntegerChoices):
