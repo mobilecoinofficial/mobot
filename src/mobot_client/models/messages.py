@@ -22,6 +22,12 @@ class PaymentStatus(models.TextChoices):
     SUCCESS = "TransactionSuccess"
 
 
+class SignalPayment(models.Model):
+    note = models.TextField(help_text="Note sent with payment", blank=True, null=True)
+    receipt = models.CharField(max_length=255, help_text="encoded receipt")
+    verified = models.DateTimeField(null=True, blank=True, help_text="The date at which a payment is verified")
+
+
 class Payment(models.Model):
     amount_pmob = models.PositiveIntegerField(null=False, blank=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -30,17 +36,13 @@ class Payment(models.Model):
     status = models.SmallIntegerField(choices=PaymentStatus.choices, default=PaymentStatus.PENDING,
                                       help_text="Status of payment")
     txo_id = models.CharField(max_length=255, null=True, blank=True)
-
-
-class SignalPayment(models.Model):
-    note = models.TextField(help_text="Note sent with payment", blank=True, null=True)
-    receipt = models.CharField(max_length=255, help_text="encoded receipt")
-    verified = models.DateTimeField(null=True, blank=True, help_text="The date at which a payment is verified")
+    signal_payment = models.OneToOneField(SignalPayment, on_delete=models.CASCADE, null=True, blank=True)
 
 
 class PaymentVerification(models.Model):
-    signal_payment = models.ForeignKey(SignalPayment, on_delete=models.CASCADE, blank=False, null=False, help_text="The raw payment receipt")
-    error = models.TextField(blank=True, null=True, help_text="An error")
+    payment = models.ForeignKey(Payment, on_delete=models.CASCADE, blank=False, null=False, help_text="The raw payment receipt")
+    error = models.TextField(blank=True, null=True, help_text="An error, if it exists")
+    successful = models.BooleanField(blank=False, null=False, default=True)
 
 
 class RawMessageManager(models.Manager):
@@ -78,16 +80,6 @@ class RawSignalMessage(models.Model):
 
     ### Manager to add custom creation/parsing
     objects = RawMessageManager()
-
-
-class PaymentProcessingError(models.Model):
-    exception = models.CharField(max_length=255, null=False, blank=False, help_text="Exception class")
-    body = models.TextField(null=True, blank=True, help_text="Exception message")
-    traceback = models.TextField(null=True, blank=True, help_text="Traceback for message")
-    created_at = models.DateTimeField(auto_now_add=True)
-
-
-class MessageProcess
 
 
 class MessageStatus(models.IntegerChoices):
@@ -144,7 +136,7 @@ class Message(models.Model):
     updated = models.DateTimeField(auto_now=True)
     direction = models.PositiveIntegerField(choices=MessageDirection.choices, db_index=True)
     raw = models.OneToOneField(RawSignalMessage, on_delete=models.DO_NOTHING, null=True, blank=True, help_text="Reference to the raw message this was parsed from")
-    payment = models.ForeignKey(Payment, on_delete=models.CASCADE, null=True, blank=True)
+    payment = models.OneToOneField(Payment, on_delete=models.CASCADE, null=True, blank=True)
     ### Custom manager to create from signal and process payment ###
     objects = MessageManager()
 
