@@ -10,7 +10,7 @@ from argparse import ArgumentParser
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
-from signald_client import Signal
+from signal_logger import Signal
 from mobot_client.logger import SignalMessenger
 from mobot_client.chat_strings import ChatStrings
 from mobot_client.models import Customer, ChatbotSettings

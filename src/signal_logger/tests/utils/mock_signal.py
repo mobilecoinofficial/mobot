@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from signald_client import Signal
+from signal_logger import Signal
 
 
 @dataclass

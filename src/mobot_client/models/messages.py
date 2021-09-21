@@ -101,13 +101,12 @@ class MessageQuerySet(models.QuerySet):
                            direction=Direction.RECEIVED)\
                     .order_by('date', '-payment').all()
 
+    @transaction.atomic()
     def get_message(self):
         if message := self.not_processing().select_for_update().first():
             message.status = MessageStatus.PROCESSING
             message.processing = timezone.now()
-            message.save()
             return message
-
 
 class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
 
@@ -131,7 +130,7 @@ class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
 class Message(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="messages")
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    text = models.TextField(default="")
+    text = models.TextField(default="", null=True, blank=True)
     date = models.DateTimeField(auto_now_add=True)
     status = models.SmallIntegerField(choices=MessageStatus.choices, default=MessageStatus.NOT_PROCESSED)
     processing = models.DateTimeField(blank=True, null=True, help_text="The time we started processing a message")

@@ -6,6 +6,7 @@ import threading
 import time
 from typing import Callable
 
+import mc_util
 import mobilecoin as mc
 import pytz
 from django.utils import timezone
@@ -18,9 +19,9 @@ from mobot_client.item_drop_session import ItemDropSession
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import Store, SessionState, DropType, Drop, BonusCoin, Sku, Order, OrderStatus, \
     CustomerStorePreferences, Customer, DropSession
-from mobot_client.models.messages import Message, Payment, MessageStatus
+from mobot_client.models.messages import Message, Payment, MessageStatus, Direction
 from mobot_client.payments import MCClient, Payments
-from mobot_client.core.context import set_context, get_current_context, ChatContext
+from mobot_client.core.context import get_current_context, ChatContext
 
 
 class MOBotSubscriber:
@@ -127,10 +128,12 @@ class MOBotSubscriber:
                 customer, ChatStrings.UNSOLICITED_NOT_ENOUGH
             )
 
-    def handle_payment(self, message: Message):
+    def handle_payment(self, ctx: ChatContext):
+        message = ctx.message
         payment = message.payment
         source = str(message.customer.phone_number)
         self.logger.info(f"Received payment from {source}")
+        self.logger.info(f"Received payment {payment}")
         receipt_status = None
         transaction_status = "TransactionPending"
 
@@ -138,7 +141,7 @@ class MOBotSubscriber:
             source = source["number"]
 
         self.logger.info(f"received receipt {payment.signal_payment.receipt}")
-        receipt = payment.signal_payment.receipt
+        receipt = mc_util.b64_receipt_to_full_service_receipt(payment.signal_payment.receipt)
 
         while transaction_status == "TransactionPending":
             receipt_status = self.mcc.check_receiver_receipt_status(
@@ -299,14 +302,18 @@ class MOBotSubscriber:
 
     def _find_handler(self, message: Message) -> Callable:
         """Perform a regex match search to find an appropriate handler for an incoming message"""
-        if message.payment:
-            return self._payment_handlers[0]
+        self.logger.info(f"Finding handler for message {message}")
+        if message.text is None:
+            return self.handle_payment
         else:
             filtered = list(filter(lambda handler: re.search(handler[1], message.text), self._chat_handlers))[0]
             _, _, func = filtered
             return func
 
-    def _process(self, message: Message):
+    def process_message(self, sender, instance, created, **kwargs):
+        if not created or instance.direction != Direction.RECEIVED:
+            return
+        message = instance
         """Enter a chat context to manage which message/payment we're currently replying to"""
         with ChatContext(message) as ctx:
             handler = self._find_handler(message)
@@ -327,11 +334,12 @@ class MOBotSubscriber:
         # t.start()
         self.logger.info("Now running MOBot chat...")
         while self._run:
-            try:
-                message = Message.objects.get_message()
-                if message:
-                    self.logger.info(f"Got message! {message}")
-                    self._process(message)
-            except Exception as e:
-                self.logger.exception("Exception getting message!")
-                time.sleep(5.0)
+            continue
+            # try:
+            #     message = Message.objects.get_message()
+            #     if message:
+            #         self.logger.info(f"Got message! {message}")
+            #         self._process(message)
+            # except Exception as e:
+            #     self.logger.exception("Exception getting message!")
+            #     time.sleep(5.0)

@@ -3,23 +3,25 @@
 """
 The entrypoint for the running MOBot.
 """
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from concurrent.futures import ThreadPoolExecutor
+from django.db.models.signals import post_save, pre_delete
+import django.db.models.signals as db_signals
+from django.dispatch import receiver
+from signald import Signal
+
+
+from mobot_client.payments import MCClient, Payments
+from signal_logger import SignalLogger
 
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import ChatbotSettings, Store
+from mobot_client.models.messages import Message
 from mobot_client.core.subscriber import MOBotSubscriber
 
-import time
-from django.core.management.base import BaseCommand
-from django.conf import settings
-
-from mobot_client.models import ChatbotSettings
-from signald import Signal
-from mobot_client.payments import MCClient, Payments
-from signald_client import SignalLogger
 
 
 class Command(BaseCommand):
@@ -72,10 +74,12 @@ class Command(BaseCommand):
                                     messenger=messenger,
                                     mcc=mcc,
                                     payments=payments)
+            post_save.connect(mobot.process_message, sender=Message)
             with ThreadPoolExecutor() as pool:
                 print("Starting logger!")
                 pool.submit(logger.run_chat, True, False)
-                pool.submit(mobot.run_chat)
+
+
         except KeyboardInterrupt as e:
             print()
             pass

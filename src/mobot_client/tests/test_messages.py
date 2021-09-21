@@ -11,7 +11,7 @@ from mobot_client.models import Store, Customer
 from mobot_client.models.messages import Message
 from mobot_client.payments import MCClient
 from mobot_client.tests.mock import TestMessage, MockSignal, MockMCC, mock_signal_message_with_receipt
-from signald_client import SignalLogger
+from signal_logger import SignalLogger
 
 
 class MessageTest(LiveServerTestCase):

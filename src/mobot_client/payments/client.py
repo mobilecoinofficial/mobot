@@ -93,7 +93,7 @@ class MCClient(Client):
 
     def get_receipt_status(self, receipt: str) -> dict:
         try:
-            mc_util.b64_receipt_to_full_service_receipt(receipt)
+            receipt = mc_util.b64_receipt_to_full_service_receipt(receipt)
             self.logger.info(f"checking Receiver status")
             receipt_status = self.check_receiver_receipt_status(
                 self.public_address, receipt

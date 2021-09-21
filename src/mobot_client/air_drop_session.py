@@ -100,13 +100,11 @@ class AirDropSession(BaseDropSession):
         ):
             drop_session.state = SessionState.CANCELLED
             self.messenger.log_and_send_message(
-                drop_session.customer,
                 ChatStrings.SESSION_CANCELLED
             )
         elif message.text.lower() == "y" or message.text.lower() == "yes":
             if not self.under_drop_quota(drop_session.drop):
                 self.messenger.log_and_send_message(
-                    drop_session.customer,
                     ChatStrings.AIRDROP_OVER
                 )
                 drop_session.state = SessionState.CANCELLED
@@ -130,7 +128,6 @@ class AirDropSession(BaseDropSession):
                     )
                 )
                 self.messenger.log_and_send_message(
-                    drop_session.customer,
                     ChatStrings.PAY_HELP
                 )
                 drop_session.state = SessionState.WAITING_FOR_PAYMENT
