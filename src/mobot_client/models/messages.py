@@ -125,6 +125,7 @@ class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
             direction=MessageDirection.RECEIVED,
             store=store,
             raw=raw,
+            status=MessageStatus.NOT_PROCESSED,
         )
         return stored_message
 

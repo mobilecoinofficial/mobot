@@ -316,7 +316,7 @@ class MOBotSubscriber:
         return func
 
     def _process(self, message: Message):
-        with self.messenger.message_context(message) as ctx:
+        with self.messenger.get_responder(message) as ctx:
             chat_handler = self._find_handler(message)
             self.logger.info(f"Found handler {chat_handler}")
             try:
@@ -333,28 +333,13 @@ class MOBotSubscriber:
         # t.setDaemon(True)
         # t.start()
         self.logger.info("Now running MOBot chat...")
-        self.logger.info("Starting signal...")
-        with concurrent.futures.ThreadPoolExecutor() as pool:
-            self.logger.info("Launching listener thread...")
-            self._listener_thread = pool.submit(self.listener.listen, break_on_stop)
-            while self._run:
-                self.logger.info("Looking for message...")
-                if message := Message.objects.get_message():
-                    self._number_processed += 1
-                    self.logger.info(f"Mobot got a message from the queue! Processing... {message}")
-                    self._futures.append(pool.submit(self._process, message))
-                if break_after:
-                    if self._number_processed >= break_after:
-                        self.logger.info(f"Processed {self._number_processed} messages before quitting")
-                        break
-                if not self.signal.is_running():
-                    self.logger.info("Breaking because signal is done")
-                    break
-                else:
-                    self.logger.info("Sleeping while waiting for new messages...")
-                    time.sleep(1)
-            self.logger.warning("Shutting down!")
-            processing = concurrent.futures.as_completed(self._futures)
-            for future in processing:
-                future.result()
+        while self._run:
+            try:
+                message = Message.objects.get_message()
+                if message:
+                    self.logger.info(f"Got message! {message}")
+                    self._process(message)
+            except Exception as e:
+                self.logger.exception("Exception getting message!")
+                time.sleep(5.0)
 
