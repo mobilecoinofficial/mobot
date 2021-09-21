@@ -4,7 +4,7 @@ import uuid
 from unittest.mock import MagicMock
 from concurrent.futures import ThreadPoolExecutor
 
-import mobilecoin as mc
+import mc_util
 from mobot_client.payments import MCClient
 
 
@@ -15,7 +15,7 @@ class MockMCClient(MCClient):
     def __init__(self, *args, **kwargs):
         self.public_address, self.account_id = "foo_address", "foo_account_id"
         self.minimum_fee_pmob = self._get_minimum_fee_pmob()
-        self.b64_public_address = mc.utility.b58_wrapper_to_b64_public_address(self.public_address)
+        self.b64_public_address = mc_util.b58_wrapper_to_b64_public_address(self.public_address)
         self.logger = logging.getLogger("MCClient")
         self._pool = ThreadPoolExecutor(max_workers=3)
         self._receipt_responses = dict()

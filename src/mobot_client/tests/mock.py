@@ -10,7 +10,7 @@ from decimal import Decimal
 from django.utils import timezone
 from signald.types import Payment as SignalPayment, Message as SignalMessage
 
-from mobot_client.models.messages import Message
+from mobot_client.models.messages import Message, PaymentStatus
 from signald import Signal
 
 from mobot_client.payments import MCClient
@@ -18,20 +18,26 @@ from mobot_client.payments import MCClient
 
 class MockMCC(MCClient):
     def __init__(self):
+        super(MCClient, self).__init__()
         self.logger = logging.getLogger("MCClient")
         self.receipt_status_responses = {}
+        self.public_address = "FooAddress"
+        self.verbose = True
 
-    def _get_receipt(self, amount_pmob: int = int(Decimal("1e12"))) -> dict:
+    def _get_receipt(self, amount_pmob: int, status: PaymentStatus) -> dict:
         """Create a bogus receipt with an amount"""
-        full_service_receipt = {"txo":{
-            "value_pmob": amount_pmob
+        full_service_receipt = {
+            "receipt_transaction_status": status,
+            "txo": {
+                "txo_id": str(uuid.uuid4()),
+                "value_pmob": amount_pmob,
         }}
         return full_service_receipt
 
-    def add_mock_payment(self, amount_pmob: int) -> str:
+    def add_mock_payment(self, amount_pmob: int = int(Decimal("1e12")), status: PaymentStatus = PaymentStatus.TransactionPending) -> str:
         """Add a mock receipt response, returning a mock receipt ID"""
         mock_receipt = str(uuid.uuid4())
-        self.receipt_status_responses[mock_receipt] = self._get_receipt(amount_pmob)
+        self.receipt_status_responses[mock_receipt] = self._get_receipt(amount_pmob, status)
         return mock_receipt
 
     def get_receipt_status(self, receipt: str) -> dict:
@@ -47,9 +53,9 @@ class TestMessage:
     payment = attr.ib(type=Optional[int], default=None)
 
 
-def mock_signal_message_with_receipt(test_message: TestMessage, mcc: MockMCC):
+def mock_signal_message_with_receipt(test_message: TestMessage, mcc: MockMCC, status: PaymentStatus = PaymentStatus.TransactionSuccess):
     if test_message.payment:
-        receipt = mcc.add_mock_payment(test_message.payment)
+        receipt = mcc.add_mock_payment(test_message.payment, status)
         payment = SignalPayment(
             note="a payment",
             receipt=receipt

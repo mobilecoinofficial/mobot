@@ -17,9 +17,9 @@ from mobot_client.models import Customer, Store
 
 
 class PaymentStatus(models.TextChoices):
-    FAILURE = "Failure"
-    PENDING = "TransactionPending"
-    SUCCESS = "TransactionSuccess"
+    Failure = "Failure"
+    TransactionPending = "TransactionPending"
+    TransactionSuccess = "TransactionSuccess"
 
 
 class SignalPayment(models.Model):
@@ -31,10 +31,13 @@ class Payment(models.Model):
     amount_pmob = models.PositiveIntegerField(null=True, blank=True, help_text="Amount of payment, if known")
     processed = models.DateTimeField(auto_now_add=True, help_text="The date a payment was processed, if it was.")
     updated = models.DateTimeField(auto_now=True, help_text="Time of last update")
-    status = models.SmallIntegerField(choices=PaymentStatus.choices, default=PaymentStatus.PENDING,
-                                      help_text="Status of payment")
+    status = models.CharField(choices=PaymentStatus.choices, max_length=255, default=PaymentStatus.TransactionPending,
+                              help_text="Status of payment")
     txo_id = models.CharField(max_length=255, null=False, blank=False)
     signal_payment = models.OneToOneField(SignalPayment, on_delete=models.CASCADE, null=True, blank=True)
+
+    def __str__(self):
+        return f"Payment ({self.message.customer}) ({self.amount_pmob} PMOB)"
 
 
 class PaymentVerification(models.Model):
@@ -74,7 +77,7 @@ class RawSignalMessage(models.Model):
     timestamp = models.IntegerField(help_text="Raw unix timestamp from the message data")
     text = models.TextField(help_text="Text body, if it exists", blank=True, null=True)
     raw = models.JSONField(help_text="The raw json sent")
-    payment = models.ForeignKey(SignalPayment, on_delete=models.CASCADE, blank=True, null=True, help_text="Receipt object")
+    payment = models.OneToOneField(SignalPayment, on_delete=models.CASCADE, blank=True, null=True, help_text="Receipt object", related_name="signal_message")
 
     ### Manager to add custom creation/parsing
     objects = RawMessageManager()
@@ -94,8 +97,10 @@ class MessageDirection(models.IntegerChoices):
 
 class MessageQuerySet(models.QuerySet):
     def not_processing(self) -> models.QuerySet:
-        return self.filter(status=MessageStatus.NOT_PROCESSED, direction=MessageDirection.RECEIVED).order_by('date',
-                                                                                                             '-payment').all()
+        return self.filter(status=MessageStatus.NOT_PROCESSED,
+                           direction=MessageDirection.RECEIVED)\
+                    .order_by('date', '-payment')\
+                    .distinct('customer_id')
 
     @transaction.atomic
     def get_message(self):
@@ -133,7 +138,11 @@ class Message(models.Model):
     processing = models.DateTimeField(blank=True, null=True, help_text="The time we started processing a message")
     updated = models.DateTimeField(auto_now=True)
     direction = models.PositiveIntegerField(choices=MessageDirection.choices, db_index=True)
-    raw = models.OneToOneField(RawSignalMessage, on_delete=models.DO_NOTHING, null=True, blank=True, help_text="Reference to the raw message this was parsed from")
+    raw = models.OneToOneField(RawSignalMessage, on_delete=models.DO_NOTHING,
+                               null=True,
+                               blank=True,
+                               related_name="parsed_message",
+                               help_text="Reference to the raw message this was parsed from")
     payment = models.OneToOneField(Payment, on_delete=models.CASCADE, null=True, blank=True)
     ### Custom manager to create from signal and process payment ###
     objects = MessageManager()
@@ -148,8 +157,13 @@ class Message(models.Model):
 
 class MobotResponse(models.Model):
     """The response to an incoming message or payment"""
-    incoming = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='responses', null=True,
-                                 blank=True)
-    response = models.OneToOneField(Message, on_delete=models.CASCADE, null=True, blank=True,
-                                    related_name='response')
+    incoming = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='responses', null=True, blank=True)
+    response = models.OneToOneField(Message, on_delete=models.CASCADE, null=True, blank=True, related_name='response')
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class ProcessingError(models.Model):
+    """Any errors in processing message"""
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name="processing_errors", null=False, blank=False)
+    exception = models.CharField(max_length=255, help_text="Exception Name")
+    tb = models.TextField(help_text="Traceback or message", null=True, blank=True)

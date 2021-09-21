@@ -19,21 +19,30 @@ class MessageTest(LiveServerTestCase):
     def setUp(self) -> None:
         self.store: Store = StoreFactory.create()
         self.customer: Customer = CustomerFactory.create()
+        self.customer_2: Customer = CustomerFactory.create()
         self.logger = logging.getLogger('ListenerTest')
         self.mcc = MockMCC()
 
+    def _compare_message(self, test_message: TestMessage, message: Message):
+        print(f"Checking if message phone number {message.customer.phone_number} equals input {test_message.phone_number}")
+        self.assertEqual(test_message.phone_number, message.customer.phone_number)
+        print(f"Checking if message payment {message.payment.amount_pmob} equals input {test_message.payment}")
+        self.assertEqual(test_message.payment, message.payment.amount_pmob)
+        print(f"Checking if message text {message.text} equals input {test_message.text}")
+        self.assertEqual(test_message.text, message.text)
+
     def test_db_logging(self):
         """Ensure messages to signal are logged to DB"""
-        amount_mob = int(Decimal("1e12"))
-        test_messages = [mock_signal_message_with_receipt(TestMessage(
-            phone_number=self.customer.phone_number, text=message, payment=amount_mob), self.mcc) for message in ["Hello", "World"]]
+        amount_pmob = int(Decimal("1e12"))
+        test_message_1 = TestMessage(phone_number=self.customer.phone_number, text="Hello World", payment=amount_pmob)
+        test_message_2 = TestMessage(phone_number=self.customer_2.phone_number, text="Goodbye!", payment=2*amount_pmob)
+        test_messages = [mock_signal_message_with_receipt(message, self.mcc) for message in [test_message_1, test_message_2]]
         signal = MockSignal(test_messages=test_messages)
         logger = SignalLogger(signal=signal, mcc=self.mcc)
         logger.run_chat(stop_when_done=True)
         self.assertEqual(Message.objects.all().count(), 2)
         messages = list(Message.objects.all())
-        for message in messages:
-            self.assertEqual(message.customer, self.customer)
-        self.assertEqual(messages[0].text, "Hello")
-        self.assertEqual(messages[1].text, "World")
+        self._compare_message(test_message_1, messages[0])
+        self._compare_message(test_message_2, messages[1])
+
 

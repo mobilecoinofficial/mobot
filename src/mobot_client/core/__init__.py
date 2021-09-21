@@ -12,6 +12,7 @@ import re
 from decimal import Decimal
 
 import mobilecoin as mc
+import mc_util
 from django.utils import timezone
 
 from mobot_client.air_drop_session import AirDropSession
@@ -22,7 +23,7 @@ from mobot_client.item_drop_session import ItemDropSession
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import Store, Customer, SessionState, DropType, Drop, BonusCoin, Sku, Order, OrderStatus, \
     CustomerStorePreferences, DropSession
-from mobot_client.models.messages import MessageStatus, Message, ProcessingError, Payment
+from mobot_client.models.messages import MessageStatus, Message, Payment
 from mobot_client.payments import MCClient, Payments
 from signald import Signal
 
@@ -58,10 +59,6 @@ class MOBotSubscriber:
 
 
         # self.timeouts = Timeouts(self.messenger, self.payments, schedule=30, idle_timeout=60, cancel_timeout=300)
-
-        self.logger.info(f"set profile response {resp}")
-        if resp.get("error"):
-            assert False, resp
 
         self._register_payment_handler(self.handle_payment)
         self._register_chat_handler("\+", self.chat_router_plus)
@@ -189,7 +186,7 @@ class MOBotSubscriber:
             bonus_coins = BonusCoin.objects.filter(drop=active_drop)
             message_to_send = ChatStrings.COINS_SENT.format(
                 initial_num_sent=active_drop.num_initial_sent(),
-                total=mc.utility.pmob2mob(active_drop.initial_pmob_disbursed()),
+                total=mc_util.pmob2mob(active_drop.initial_pmob_disbursed()),
             )
             for bonus_coin in bonus_coins:
                 message_to_send += (
@@ -329,10 +326,6 @@ class MOBotSubscriber:
             except Exception as e:
                 self.logger.exception("Processing message failed!")
                 message.status = MessageStatus.ERROR
-                ProcessingError.objects.create(
-                    message=message,
-                    text=str(e),
-                )
 
     def run_chat(self, break_on_stop=False, break_after=0):
         # self.logger.info("Starting timeouts thread")
