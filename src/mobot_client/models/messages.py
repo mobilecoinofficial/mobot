@@ -115,9 +115,9 @@ class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
 
     def create_from_signal(self, signal_message: SignalMessage) -> Message:
         raw = RawSignalMessage.objects.store_message(signal_message=signal_message)
-        dt = timezone.make_aware(datetime.fromtimestamp(float(signal_message.timestamp)))
+        dt = timezone.make_aware(datetime.fromtimestamp(float(signal_message.timestamp/1000)))
         store, _ = Store.objects.get_or_create(phone_number=raw.account)
-        customer, _ = Customer.objects.get_or_create(phone_number=raw.account)
+        customer, _ = Customer.objects.get_or_create(phone_number=raw.source)
         stored_message = self.get_queryset().create(
             customer=customer,
             text=signal_message.text,

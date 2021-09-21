@@ -6,6 +6,7 @@ The entrypoint for the running MOBot.
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
+from concurrent.futures import ThreadPoolExecutor
 
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import ChatbotSettings, Store
@@ -16,7 +17,6 @@ from django.core.management.base import BaseCommand
 from django.conf import settings
 
 from mobot_client.models import ChatbotSettings
-from mobot_client.mobot import MOBot
 from signald import Signal
 from mobot_client.payments import MCClient, Payments
 from signald_client import SignalLogger
@@ -29,7 +29,7 @@ class Command(BaseCommand):
         store = cb_settings.store
         bot_avatar_filename = cb_settings.avatar_filename
         bot_name = cb_settings.name
-        signal = Signal(str(store.source), socket_path=(settings.SIGNALD_ADDRESS, settings.SIGNALD_PORT))
+        signal = Signal(str(store.phone_number), socket_path=(settings.SIGNALD_ADDRESS, int(settings.SIGNALD_PORT)))
         resp = signal.set_profile(
             display_name=bot_name,
             mobilecoin_address=b64_public_address,
@@ -48,7 +48,6 @@ class Command(BaseCommand):
             messenger=messenger,
         )
 
-
     def handle(self, *args, **kwargs):
         cb_settings = ChatbotSettings.load()
         while not cb_settings.store:
@@ -59,6 +58,7 @@ class Command(BaseCommand):
         mcc = MCClient()
         signal = self.get_signal(cb_settings, mcc.b64_public_address)
         messenger = SignalMessenger(signal, cb_settings.store)
+        print("Got messenger!")
         payments = self.get_payments(
             store=cb_settings.store,
             messenger=messenger,
@@ -68,7 +68,9 @@ class Command(BaseCommand):
 
         try:
             logger = SignalLogger(signal=signal, mcc=mcc)
-            logger.run_chat(True, False)
+            with ThreadPoolExecutor() as pool:
+                print("Starting logger!")
+                pool.submit(logger.run_chat, True, False)
             mobot = MOBotSubscriber(store=cb_settings.store,
                                     messenger=messenger,
                                     mcc=mcc,
