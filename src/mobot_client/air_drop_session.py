@@ -10,11 +10,12 @@ from mobot_client.drop_session import BaseDropSession
 from mobot_client.models import (
     Drop,
     DropSession,
-    BonusCoin, SessionState, OutOfStockException,
+    BonusCoin, SessionState, OutOfStockException, Customer,
 )
 
 import mobilecoin as mc
 from mobot_client.chat_strings import ChatStrings
+from mobot_client.models.messages import Message
 from mobot_client.payments import NotEnoughFundsException
 
 
@@ -182,7 +183,7 @@ class AirDropSession(BaseDropSession):
             )
         )
 
-    def handle_active_airdrop_drop_session(self, message, drop_session):
+    def handle_active_airdrop_drop_session(self, message: Message, drop_session: DropSession):
         if drop_session.state == SessionState.READY:
             self.handle_airdrop_session_ready_to_receive(message, drop_session)
         elif drop_session.state == SessionState.WAITING_FOR_PAYMENT:
@@ -192,60 +193,51 @@ class AirDropSession(BaseDropSession):
         elif drop_session.state == SessionState.ALLOW_CONTACT_REQUESTED:
             self.handle_drop_session_allow_contact_requested(message, drop_session)
 
-    def handle_no_active_airdrop_drop_session(self, customer, message, drop):
-        if customer.has_completed_drop(drop):
-            self.messenger.log_and_send_message(
-                customer,
-                ChatStrings.AIRDROP_SUMMARY
-            )
+    def handle_no_active_airdrop_drop_session(self, customer: Customer, message: Message, drop: Drop):
+        with self.messenger.get_responder(message) as ctx:
+            if customer.has_completed_drop(drop):
+                ctx.send_reply(ChatStrings.AIRDROP_SUMMARY)
 
-        elif customer.has_completed_drop_with_error(drop):
-            self.messenger.log_and_send_message(
-                customer,
-                ChatStrings.AIRDROP_INCOMPLETE_SUMMARY
-            )
-        elif not customer.matches_country_code_restriction(drop):
-            self.messenger.log_and_send_message(
-                customer,
-                ChatStrings.COUNTRY_RESTRICTED
-            )
-        else:
-            customer_payments_address = self.payments.get_payments_address(customer.source.as_e164)
-            if customer_payments_address is None:
-                self.messenger.log_and_send_message(
-                ChatStrings.COUNTRY_RESTRICTED
-            )
+            elif customer.has_completed_drop_with_error(drop):
+                ctx.send_reply(
+                    ChatStrings.AIRDROP_INCOMPLETE_SUMMARY
+                )
+            elif not customer.matches_country_code_restriction(drop):
+                ctx.send_reply(
+                    ChatStrings.COUNTRY_RESTRICTED
+                )
             else:
-                customer_payments_address = self.payments.get_payments_address(message.source)
+                customer_payments_address = self.payments.get_payments_address(customer.phone_number.as_e164)
                 if customer_payments_address is None:
-                    self.messenger.log_and_send_message(
-                        customer,
-                        message.source,
-                        ChatStrings.PAYMENTS_ENABLED_HELP.format(item_desc=drop.pre_drop_description),
-                    )
-                elif not drop.under_quota():
-                    self.messenger.log_and_send_message(
-                        customer,
-                        customer, ChatStrings.OVER_QUOTA
-                    )
-                elif not self.initial_coin_funds_available(drop):
-                    self.messenger.log_and_send_message(
-                        customer, ChatStrings.NO_COIN_LEFT
-                    )
-                    raise NotEnoughFundsException("Not enough MOB in wallet to cover initial payment")
+                    ctx.send_reply(
+                    ChatStrings.COUNTRY_RESTRICTED
+                )
                 else:
-                    new_drop_session, _ = DropSession.objects.get_or_create(
-                        customer=customer,
-                        drop=drop,
-                        state=SessionState.READY,
-                    )
+                    customer_payments_address = self.payments.get_payments_address(customer.phone_number.as_e164)
+                    if customer_payments_address is None:
+                        ctx.send_reply(
+                            ChatStrings.PAYMENTS_ENABLED_HELP.format(item_desc=drop.pre_drop_description),
+                        )
+                    elif not drop.under_quota():
+                        ctx.send_reply(
+                            ChatStrings.OVER_QUOTA
+                        )
+                    elif not self.initial_coin_funds_available(drop):
+                        ctx.send_reply(
+                            ChatStrings.NO_COIN_LEFT
+                        )
+                        raise NotEnoughFundsException("Not enough MOB in wallet to cover initial payment")
+                    else:
+                        new_drop_session, _ = DropSession.objects.get_or_create(
+                            customer=customer,
+                            drop=drop,
+                            state=SessionState.READY,
+                        )
 
-                    self.messenger.log_and_send_message(
-                        customer,
-                        ChatStrings.AIRDROP_DESCRIPTION
-                    )
-                    self.messenger.log_and_send_message(
-                        customer,
-                        ChatStrings.AIRDROP_INSTRUCTIONS,
-                    )
-                    self.messenger.log_and_send_message(customer, ChatStrings.READY)
+                        ctx.send_reply(
+                            ChatStrings.AIRDROP_DESCRIPTION
+                        )
+                        ctx.send_reply(
+                            ChatStrings.AIRDROP_INSTRUCTIONS,
+                        )
+                        ctx.send_reply(ChatStrings.READY)

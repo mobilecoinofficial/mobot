@@ -129,7 +129,7 @@ class MOBotSubscriber:
             )
 
     def handle_payment(self, payment: Payment):
-        source = str(payment.customer.source)
+        source = str(payment.message.customer.phone_number)
         self.logger.info(f"Received payment from {source}")
         receipt_status = None
         transaction_status = "TransactionPending"
@@ -137,8 +137,8 @@ class MOBotSubscriber:
         if isinstance(source, dict):
             source = source["number"]
 
-        self.logger.info(f"received receipt {payment.receipt}")
-        receipt = payment.receipt
+        self.logger.info(f"received receipt {payment.signal_payment.receipt}")
+        receipt = payment.signal_payment.receipt
 
         while transaction_status == "TransactionPending":
             receipt_status = self.mcc.check_receiver_receipt_status(
@@ -152,7 +152,7 @@ class MOBotSubscriber:
             return "The transaction failed!"
 
         amount_paid_mob = mc.pmob2mob(receipt_status["txo"]["value_pmob"])
-        customer = payment.customer
+        customer = payment.message.customer
         drop_session = customer.drop_sessions.filter(state=SessionState.WAITING_FOR_PAYMENT).first()
 
         if drop_session:
@@ -168,31 +168,31 @@ class MOBotSubscriber:
                     amount_paid_mob, drop_session
                 )
         else:
-            self.handle_unsolicited_payment(customer, amount_paid_mob)
+            self.handle_unsolicited_payment(payment.message)
 
     def chat_router_plus(self, message: Message):
-        self.logger.debug(message)
-        customer, _ = Customer.objects.get_or_create(phone_number=message.source['number'])
-        message_to_send = ChatStrings.PLUS_SIGN_HELP
-        message_to_send += f"\n{ChatStrings.PAY_HELP}"
-        self.messenger.log_and_send_message(customer, customer.source, message_to_send)
+        with self.messenger.get_responder(message) as ctx:
+            self.logger.debug(message)
+            message_to_send = ChatStrings.PLUS_SIGN_HELP
+            message_to_send += f"\n{ChatStrings.PAY_HELP}"
+            ctx.send_reply(message_to_send)
 
     def chat_router_coins(self, message: Message):
-        customer, _ = Customer.objects.get_or_create(phone_number=message.source['number'])
-        active_drop = Drop.objects.get_active_drop()
-        if not active_drop:
-            return "No active drop to check on coins"
-        else:
-            bonus_coins = BonusCoin.objects.filter(drop=active_drop)
-            message_to_send = ChatStrings.COINS_SENT.format(
-                initial_num_sent=active_drop.num_initial_sent(),
-                total=mc_util.pmob2mob(active_drop.initial_pmob_disbursed()),
-            )
-            for bonus_coin in bonus_coins:
-                message_to_send += (
-                    f"\n{bonus_coin.number_claimed()} / {bonus_coin.number_available_at_start} - {mc.pmob2mob(bonus_coin.amount_pmob).normalize()} claimed"
+        with self.messenger.get_responder(message) as ctx:
+            active_drop = Drop.objects.get_active_drop()
+            if not active_drop:
+                return "No active drop to check on coins"
+            else:
+                bonus_coins = BonusCoin.objects.filter(drop=active_drop)
+                message_to_send = ChatStrings.COINS_SENT.format(
+                    initial_num_sent=active_drop.num_initial_sent(),
+                    total=mc_util.pmob2mob(active_drop.initial_pmob_disbursed()),
                 )
-            self.messenger.log_and_send_message(customer, customer.source, message_to_send)
+                for bonus_coin in bonus_coins:
+                    message_to_send += (
+                        f"\n{bonus_coin.number_claimed()} / {bonus_coin.number_available_at_start} - {mc.pmob2mob(bonus_coin.amount_pmob).normalize()} claimed"
+                    )
+                ctx.send_reply(message_to_send)
 
     def chat_router_items(self, message: Message):
         active_drop = Drop.objects.get_active_drop()
@@ -209,46 +209,36 @@ class MOBotSubscriber:
         return message_to_send
 
     def unsubscribe_handler(self, message: Message):
-        customer = message.customer
-        store_preferences = customer.store_preferences(self.store)
-        if store_preferences:
-            if not store_preferences.allows_contact:
-                self.messenger.log_and_send_message(
-                    customer, ChatStrings.NOTIFICATIONS_OFF
+        with self.messenger.get_responder(message) as ctx:
+            customer = ctx.customer
+            store_preferences = customer.store_preferences(self.store)
+            if store_preferences:
+                if not store_preferences.allows_contact:
+                    ctx.send_reply(ChatStrings.NOTIFICATIONS_OFF)
+            else:
+                store_preferences = CustomerStorePreferences.objects.create(
+                    customer=customer, store=self.store
                 )
-        else:
-            store_preferences = CustomerStorePreferences.objects.create(
+
+            store_preferences = customer.store_preferences(store=self.store)
+            store_preferences.allows_contact = False
+            store_preferences.save()
+
+            ctx.send_reply(ChatStrings.DISABLE_NOTIFICATIONS)
+
+    def subscribe_handler(self, message):
+        with self.messenger.get_responder(message) as ctx:
+            customer = ctx.customer
+            store_preferences, _is_new = CustomerStorePreferences.objects.get_or_create(
                 customer=customer, store=self.store
             )
 
-        store_preferences = customer.store_preferences(store=self.store)
-        store_preferences.allows_contact = False
-        store_preferences.save()
-
-        self.messenger.log_and_send_message(
-            customer, message.source, ChatStrings.DISABLE_NOTIFICATIONS
-        )
-
-    def subscribe_handler(self, message, _match):
-        customer, _is_new = Customer.objects.get_or_create(
-            phone_number=message.source["number"]
-        )
-        store_preferences, _is_new = CustomerStorePreferences.objects.get_or_create(
-            customer=customer, store=self.store
-        )
-
-        if store_preferences.allows_contact:
-            self.messenger.log_and_send_message(
-                customer, message.source, ChatStrings.ALREADY_SUBSCRIBED
-            )
-            return
-
-        store_preferences.allows_contact = True
-        store_preferences.save()
-
-        self.messenger.log_and_send_message(
-            customer, message.source, ChatStrings.SUBSCRIBE_NOTIFICATIONS
-        )
+            if store_preferences.allows_contact:
+                ctx.send_reply(ChatStrings.ALREADY_SUBSCRIBED)
+            else:
+                store_preferences.allows_contact = True
+                store_preferences.save()
+                ctx.send_reply(ChatStrings.SUBSCRIBE_NOTIFICATIONS)
 
     def handle_new_drop_session(self, customer: Customer, message, active_drop: Drop):
         if active_drop.drop_type == DropType.AIRDROP:
@@ -269,46 +259,45 @@ class MOBotSubscriber:
             raise Exception("Unknown Drop Type")
 
     def default_handler(self, message: Message):
-        # Store the message
-        self.logger.info(f"\033[1;33m NOW ROUTING CHAT\033[0m {message}")
-        customer = message.customer
+        with self.messenger.get_responder(message) as ctx:
+            # Store the message
+            self.logger.info(f"\033[1;33m NOW ROUTING CHAT\033[0m {message}")
+            customer = ctx.customer
 
-        # see if there is an active airdrop session
-        active_drop_session: DropSession = customer.active_drop_sessions().first()
+            # see if there is an active airdrop session
+            active_drop_session: DropSession = customer.active_drop_sessions().first()
 
-        if not active_drop_session:
-            self.logger.info(f"Found no active session for customer {customer}")
-            self.logger.info(f"Searching for active drops...")
-            active_drop = Drop.objects.get_active_drop()
-            if active_drop:
-                self.logger.info(f"Active drop found: {active_drop}")
-                self.handle_new_drop_session(customer, message, active_drop)
-            else:
-                self.logger.warning(f"No active drops; Sending Store Closed message to customer {customer}")
-                if not self.maybe_advertise_drop(message):
-                    self.messenger.log_and_send_message(
-                        customer, ChatStrings.STORE_CLOSED_SHORT
-                    )
-        else:
-            self.logger.info(f"Found a drop session for customer {customer} of type {active_drop_session.drop.drop_type}")
-            if not active_drop_session.manual_override:
-                # manual_override means that a human is monitoring the chat via a linked
-                # device and wants to respond rather than having MOBot respond, so do
-                # nothing.
-                if active_drop_session.drop.drop_type == DropType.AIRDROP:
-                    self.logger.info(f"found active air drop session in state {active_drop_session.state}")
-                    air_drop = AirDropSession(self.store, self.payments, self.messenger)
-                    air_drop.handle_active_airdrop_drop_session(
-                        message, active_drop_session
-                    )
-                elif active_drop_session.drop.drop_type == DropType.ITEM:
-                    # there *is* an active item drop session.
-                    self.logger.info(f"found active item drop session in state {active_drop_session.state}")
-                    # dispatch to active_item_drop session handler
-                    item_drop = ItemDropSession(self.store, self.payments, self.messenger)
-                    item_drop.handle_active_item_drop_session(message, active_drop_session)
+            if not active_drop_session:
+                self.logger.info(f"Found no active session for customer {customer}")
+                self.logger.info(f"Searching for active drops...")
+                active_drop = Drop.objects.get_active_drop()
+                if active_drop:
+                    self.logger.info(f"Active drop found: {active_drop}")
+                    self.handle_new_drop_session(customer, message, active_drop)
                 else:
-                    raise Exception("Unknown drop type")
+                    self.logger.warning(f"No active drops; Sending Store Closed message to customer {customer}")
+                    if not self.maybe_advertise_drop(message):
+                        ctx.send_reply(ChatStrings.STORE_CLOSED_SHORT)
+            else:
+                self.logger.info(f"Found a drop session for customer {customer} of type {active_drop_session.drop.drop_type}")
+                if not active_drop_session.manual_override:
+                    # manual_override means that a human is monitoring the chat via a linked
+                    # device and wants to respond rather than having MOBot respond, so do
+                    # nothing.
+                    if active_drop_session.drop.drop_type == DropType.AIRDROP:
+                        self.logger.info(f"found active air drop session in state {active_drop_session.state}")
+                        air_drop = AirDropSession(self.store, self.payments, self.messenger)
+                        air_drop.handle_active_airdrop_drop_session(
+                            message, active_drop_session
+                        )
+                    elif active_drop_session.drop.drop_type == DropType.ITEM:
+                        # there *is* an active item drop session.
+                        self.logger.info(f"found active item drop session in state {active_drop_session.state}")
+                        # dispatch to active_item_drop session handler
+                        item_drop = ItemDropSession(self.store, self.payments, self.messenger)
+                        item_drop.handle_active_item_drop_session(message, active_drop_session)
+                    else:
+                        raise Exception("Unknown drop type")
 
     def _find_handler(self, message: Message) -> Callable:
         filtered = list(filter(lambda handler: re.search(handler[1], message.text), self._chat_handlers))[0]

@@ -4,12 +4,14 @@ import logging
 from django.utils import timezone
 
 from mobot_client.chat_strings import ChatStrings
-from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku, SessionState
+from mobot_client.logger import SignalMessenger
+from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku, SessionState, Store
 from mobot_client.models.messages import Message
+from mobot_client.payments import Payments
 
 
 class BaseDropSession:
-    def __init__(self, store, payments, messenger):
+    def __init__(self, store: Store, payments: Payments, messenger: SignalMessenger):
         self.store = store
         self.payments = payments
         self.messenger = messenger
@@ -65,47 +67,46 @@ class BaseDropSession:
 
 
     def handle_drop_session_allow_contact_requested(self, message, drop_session):
-        if message.text.lower() in ("y", "yes"):
-            CustomerStorePreferences.objects.create(
-                customer=drop_session.customer, store=self.store, allows_contact=True
-            )
-            drop_session.state = SessionState.COMPLETED
-            drop_session.save()
-            self.messenger.log_and_send_message(
-                drop_session.customer, ChatStrings.BYE, message
-            )
-            return
+        with self.messenger.get_responder(message) as ctx:
+            if message.text.lower() in ("y", "yes"):
+                CustomerStorePreferences.objects.create(
+                    customer=drop_session.customer, store=self.store, allows_contact=True
+                )
+                drop_session.state = SessionState.COMPLETED
+                drop_session.save()
+                ctx.send_reply(ChatStrings.BYE)
+                return
 
-        if message.text.lower() == "n" or message.text.lower() == "no":
-            customer_prefs = CustomerStorePreferences(
-                customer=drop_session.customer, store=self.store, allows_contact=False
-            )
-            customer_prefs.save()
-            drop_session.state = SessionState.COMPLETED
-            drop_session.save()
-            self.messenger.log_and_send_message(
-                drop_session.customer, ChatStrings.BYE
-            )
-            return
+            if message.text.lower() == "n" or message.text.lower() == "no":
+                customer_prefs = CustomerStorePreferences(
+                    customer=drop_session.customer, store=self.store, allows_contact=False
+                )
+                customer_prefs.save()
+                drop_session.state = SessionState.COMPLETED
+                drop_session.save()
+                self.messenger.log_and_send_message(
+                    drop_session.customer, ChatStrings.BYE
+                )
+                return
 
-        if message.text.lower() == "p" or message.text.lower() == "privacy":
-            self.messenger.log_and_send_message(
-                drop_session.customer,
-                ChatStrings.PRIVACY_POLICY_REPROMPT.format(url=self.store.privacy_policy_url),
-            )
-            return
+            if message.text.lower() == "p" or message.text.lower() == "privacy":
+                self.messenger.log_and_send_message(
+                    drop_session.customer,
+                    ChatStrings.PRIVACY_POLICY_REPROMPT.format(url=self.store.privacy_policy_url),
+                )
+                return
 
-        if message.text.lower() == "help":
+            if message.text.lower() == "help":
+                self.messenger.log_and_send_message(
+                    drop_session.customer,
+                    ChatStrings.HELP
+                )
+                return
+
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 ChatStrings.HELP
             )
-            return
-
-        self.messenger.log_and_send_message(
-            drop_session.customer,
-            ChatStrings.HELP
-        )
 
     def handle_cancel(self, message, drop_session: DropSession):
         drop_session.state = SessionState.CANCELLED

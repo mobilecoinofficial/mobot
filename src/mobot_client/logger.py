@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from typing import Optional
 from dataclasses import dataclass
 
-from mobot_client.models import Store
+from mobot_client.models import Store, Customer
 from signald import Signal
 from mobot_client.models.messages import Message, MobotResponse, MessageDirection, MessageStatus, ProcessingError
 
@@ -22,9 +22,14 @@ class Responder:
     def message(self):
         return self._context.message
 
+    @property
+    def customer(self):
+        return self._context.customer
+
     def __enter__(self):
         self._logger.info(f"Entering message response context to respond to {self.message}")
         self._context.incoming_message = self.message
+        self._context.customer = self.message.customer
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -68,14 +73,19 @@ class SignalMessenger:
 
         class SignalResponder(Responder):
             def __init__(inner, *args, **kwargs):
-                super().__init__(*args, **kwargs)
+                super(Responder).__init__(*args, **kwargs)
+                self.customer = self._context.customer
+                self.message = self._context.message
 
-            def send_message(inner, response: Message, attachments=[]):
-                self.log_and_send_message(str(response.customer.phone_number), response.text, attachments=attachments)
+            def send_reply(inner, response: Message, attachments=[]):
+                inner._log_and_send_reply(str(response.customer.phone_number), response.text, attachments=attachments)
+
+            def send_message(inner, text, attachments=[]):
+                self.log_and_send_message_from_context(text, attachments)
 
         return SignalResponder(message=message)
 
-    def log_and_send_message(self, customer, text, attachments=[]) -> Optional[MobotResponse]:
+    def _log_and_send_message(self, customer, text, attachments=[]) -> Optional[MobotResponse]:
         if hasattr(self._context, 'message'):
             incoming = self._context.message
             self.logger.info(f"Sending response to message {incoming}: {text}")
@@ -105,7 +115,19 @@ class SignalMessenger:
         except Exception as e:
             print(e)
             raise e
-            return e
+
+    def log_and_send_message(self, customer: Customer, text: str, attachments=[]):
+        self._log_and_send_message(customer, text, attachments)
+
+    def log_and_send_message_from_context(self, text: str, attachments=[]):
+        customer = None
+        if hasattr(self._context, 'customer'):
+            customer = self._context.customer
+            self._log_and_send_message(customer, text, attachments)
+        else:
+            raise Exception("Can't send message without context")
+
+
 
     @staticmethod
     def log_received(message, customer, store) -> Message:
