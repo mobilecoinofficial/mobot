@@ -98,6 +98,7 @@ class MCClient(Client):
             receipt_status = self.check_receiver_receipt_status(
                 self.public_address, receipt
             )
+            self.logger.info(f"Got receipt status {receipt_status}")
             return receipt_status
         except Exception as e:
             self.logger.exception("Exception getting receipt status")
@@ -114,7 +115,7 @@ class MCClient(Client):
             raise e
         else:
             amount_paid_mob = mc_util.pmob2mob(receipt_status["txo"]["value_pmob"])
-            txo_id = receipt_status["txo"]["txo_id"]
+            txo_id = receipt_status["txo"]["txo_id_hex"]
 
             payment = Payment.objects.create(
                 amount_pmob=mc_util.mob2pmob(amount_paid_mob),

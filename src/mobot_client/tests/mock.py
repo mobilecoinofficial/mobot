@@ -29,7 +29,7 @@ class MockMCC(MCClient):
         full_service_receipt = {
             "receipt_transaction_status": status,
             "txo": {
-                "txo_id": str(uuid.uuid4()),
+                "txo_id_hex": str(uuid.uuid4()),
                 "value_pmob": amount_pmob,
         }}
         return full_service_receipt
