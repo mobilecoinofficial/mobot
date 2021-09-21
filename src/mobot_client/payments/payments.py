@@ -6,9 +6,8 @@ import threading
 import logging
 
 
-import mobilecoin as mc
+import mc_util as mc
 
-import mc_util
 from signald import Signal
 
 from mobot_client.logger import SignalMessenger
@@ -24,7 +23,7 @@ from mobot_client.models.messages import (
 from mobot_client.chat_strings import ChatStrings
 from mobot_client.payments.client import MCClient
 from mobot_client.utils import TimerFactory
-from mobot_client.core.context import get_context, CurrentContext
+from mobot_client.core.context import get_current_context
 
 
 class NotEnoughFundsException(Exception):
@@ -93,7 +92,7 @@ class Payments:
                 )
 
     def send_reply_payment(self, amount_mob, cover_transaction_fee, memo="Refund"):
-        ctx = get_context()
+        ctx = get_current_context()
         payment = self._send_mob_to_customer(ctx.message.customer, amount_mob, cover_transaction_fee, memo)
         response = MobotResponse.objects.create(
             incoming=ctx.message,
@@ -110,16 +109,17 @@ class Payments:
 
     def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund") -> Payment:
         # customer_payments_address is b64 encoded, but full service wants a b58 address
-        customer_payments_address = mc_util.b64_public_address_to_b58_wrapper(
+        customer_payments_address = mc.b64_public_address_to_b58_wrapper(
             customer_payments_address
         )
 
         with self.timers.get_timer("build_and_send_transaction"):
+            self.logger.debug(f"Sending {amount_in_mob} MOB to {customer_payments_address}")
             txo_id, tx_proposal = self.mcc.build_and_submit_transaction_with_proposal(
                 account_id, amount_in_mob, customer_payments_address
             )
             payment = Payment.objects.create(
-                amount_pmob=mc_util.mob2pmob(amount_in_mob),
+                amount_pmob=mc.mob2pmob(amount_in_mob),
                 txo_id=txo_id,
             )
 
@@ -149,7 +149,7 @@ class Payments:
     def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund") -> str:
         receiver_receipt_fs = self.create_receiver_receipt(tx_proposal)
         confirmation = receiver_receipt_fs["confirmation"]
-        receiver_receipt = mc_util.full_service_receipt_to_b64_receipt(
+        receiver_receipt = mc.full_service_receipt_to_b64_receipt(
             receiver_receipt_fs
         )
         resp = self.signal.send_payment_receipt(source, receiver_receipt, memo)

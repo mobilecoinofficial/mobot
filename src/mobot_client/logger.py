@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from mobot_client.models import Store, Customer
 from signald import Signal
 from mobot_client.models.messages import Message, MobotResponse, Direction, MessageStatus, ProcessingError
-from mobot_client.core.context import get_context, set_context, unset_context, CurrentContext
+from mobot_client.core.context import get_current_context, set_context, unset_context, ChatContext
 
 
 class Responder:
@@ -36,7 +36,9 @@ class Responder:
                     exception=str(exc_type),
                     tb=str(exc_tb)
                 )
-                self.message.save()
+            else:
+                self.message.status = MessageStatus.PROCESSED
+            self.message.save()
         except Exception:
             self._logger.exception("Error leaving message context")
         finally:
@@ -49,7 +51,7 @@ class SignalMessenger:
         self.store = store
         self.logger = logging.getLogger("SignalMessenger")
 
-    def get_responder(self, message: Message):
+    def get_responder(self, message: Message, payments):
 
         class SignalResponder(Responder):
             def __init__(inner, *args, **kwargs):
@@ -87,7 +89,7 @@ class SignalMessenger:
             raise e
 
     def log_and_send_message(self, text: str, attachments=[]):
-        ctx = get_context()
+        ctx = get_current_context()
         incoming = ctx.message
         customer = ctx.message.customer
         self._log_and_send_message(customer, text, incoming, attachments)

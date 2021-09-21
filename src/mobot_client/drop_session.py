@@ -74,7 +74,7 @@ class BaseDropSession:
                 )
                 drop_session.state = SessionState.COMPLETED
                 drop_session.save()
-                ctx.send_reply(ChatStrings.BYE)
+                self.messenger.log_and_send_message(ChatStrings.BYE)
                 return
 
             if message.text.lower() == "n" or message.text.lower() == "no":

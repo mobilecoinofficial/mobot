@@ -15,7 +15,6 @@ from signald.types import Message as SignalMessage
 from mobot_client.models import Customer, Store
 
 
-
 class PaymentStatus(models.TextChoices):
     Failure = "Failure"
     TransactionPending = "TransactionPending"
@@ -25,6 +24,10 @@ class PaymentStatus(models.TextChoices):
 class SignalPayment(models.Model):
     note = models.TextField(help_text="Note sent with payment", blank=True, null=True)
     receipt = models.CharField(max_length=255, help_text="encoded receipt")
+
+    def __str__(self):
+        return f"{self.signal_message} -- PAYMENT"
+
 
 class Direction(models.IntegerChoices):
     RECEIVED = 0, 'received_from_customer'
@@ -43,11 +46,6 @@ class Payment(models.Model):
     def __str__(self):
         return f"Payment ({self.message.customer}) ({self.amount_pmob} PMOB)"
 
-
-class PaymentVerification(models.Model):
-    payment = models.OneToOneField(SignalPayment, on_delete=models.CASCADE, blank=False, null=False, help_text="The raw payment receipt")
-    error = models.TextField(blank=True, null=True, help_text="An error, if it exists")
-    successful = models.BooleanField(blank=False, null=False, default=True)
 
 
 class RawMessageManager(models.Manager):
@@ -86,6 +84,9 @@ class RawSignalMessage(models.Model):
     ### Manager to add custom creation/parsing
     objects = RawMessageManager()
 
+    def __str__(self):
+        return f"{'PAYMENT' if self.payment else ''} {self.source} -> {self.account}: '{self.text}'"
+
 
 class MessageStatus(models.IntegerChoices):
     ERROR = -1
@@ -94,16 +95,12 @@ class MessageStatus(models.IntegerChoices):
     PROCESSED = 2
 
 
-
-
-
 class MessageQuerySet(models.QuerySet):
     def not_processing(self) -> models.QuerySet:
         return self.filter(status=MessageStatus.NOT_PROCESSED,
                            direction=Direction.RECEIVED)\
                     .order_by('date', '-payment').all()
 
-    @transaction.atomic
     def get_message(self):
         if message := self.not_processing().select_for_update().first():
             message.status = MessageStatus.PROCESSING
@@ -153,8 +150,7 @@ class Message(models.Model):
         ordering = ['date', '-processing', 'updated']
 
     def __str__(self):
-        text_oneline = self.text.replace("\n", " ||| ")
-        return f'Message: customer: {self.customer} - {self.direction} --- {text_oneline}'
+        return f'Message: customer: {self.customer} - {self.direction} --- {self.text}'
 
 
 class MobotResponse(models.Model):

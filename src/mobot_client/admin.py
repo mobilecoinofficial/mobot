@@ -15,8 +15,12 @@ from .models import (
     Order,
     Sku,
 )
-from .models.messages import Message
-
+from .models.messages import (
+    Message,
+    MobotResponse,
+    Payment,
+    SignalMessage, RawSignalMessage,
+)
 
 class StoreAdmin(admin.ModelAdmin):
     pass
@@ -103,6 +107,18 @@ class DropAdmin(admin.ModelAdmin):
         return pmob2mob(obj.total_pmob_spent())
 
 
+class PaymentAdmin(admin.ModelAdmin):
+    pass
+
+
+class MobotResponseAdmin(admin.ModelAdmin):
+    pass
+
+
+class RawSignalMessageAdmin(admin.ModelAdmin):
+    pass
+
+
 
 admin.site.register(Store, StoreAdmin)
 admin.site.register(Customer, CustomerAdmin)
@@ -116,3 +132,6 @@ admin.site.register(Message, MessageAdmin)
 admin.site.register(BonusCoin, BonusCoinAdmin)
 admin.site.register(Sku, SkuAdmin)
 admin.site.register(Order, OrderAdmin)
+admin.site.register(RawSignalMessage, RawSignalMessageAdmin)
+admin.site.register(MobotResponse, MobotResponseAdmin)
+admin.site.register(Payment, PaymentAdmin)

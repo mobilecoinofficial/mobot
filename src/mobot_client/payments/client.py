@@ -6,8 +6,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 from django.utils import timezone
 import mobilecoin as mc
+import mc_util
 
-from mobot_client.models.messages import PaymentStatus, Payment, Message, PaymentVerification, ProcessingError
+from mobot_client.models.messages import PaymentStatus, Payment, Message, ProcessingError
 
 from mobilecoin import Client
 from django.conf import settings
@@ -31,7 +32,7 @@ class MCClient(Client):
         super().__init__(settings.FULLSERVICE_URL)
         self.public_address, self.account_id = self._get_default_account_info()
         self.minimum_fee_pmob = self._get_minimum_fee_pmob()
-        self.b64_public_address = mc.b58_wrapper_to_b64_public_address(self.public_address)
+        self.b64_public_address = mc_util.b58_wrapper_to_b64_public_address(self.public_address)
         self.logger = logging.getLogger("MCClient")
         self._pool = ThreadPoolExecutor(max_workers=settings.PAYMENT_THREADS)
 
@@ -92,7 +93,7 @@ class MCClient(Client):
 
     def get_receipt_status(self, receipt: str) -> dict:
         try:
-            mc.b64_receipt_to_full_service_receipt(receipt)
+            mc_util.b64_receipt_to_full_service_receipt(receipt)
             self.logger.info(f"checking Receiver status")
             receipt_status = self.check_receiver_receipt_status(
                 self.public_address, receipt
@@ -112,11 +113,11 @@ class MCClient(Client):
             self.logger.exception("Exception getting receipt status")
             raise e
         else:
-            amount_paid_mob = mc.pmob2mob(receipt_status["txo"]["value_pmob"])
+            amount_paid_mob = mc_util.pmob2mob(receipt_status["txo"]["value_pmob"])
             txo_id = receipt_status["txo"]["txo_id"]
 
             payment = Payment.objects.create(
-                amount_pmob=mc.mob2pmob(amount_paid_mob),
+                amount_pmob=mc_util.mob2pmob(amount_paid_mob),
                 txo_id=txo_id,
                 signal_payment=signal_payment,
             )
