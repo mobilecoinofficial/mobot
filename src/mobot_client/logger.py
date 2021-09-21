@@ -7,60 +7,40 @@ from dataclasses import dataclass
 
 from mobot_client.models import Store, Customer
 from signald import Signal
-from mobot_client.models.messages import Message, MobotResponse, MessageDirection, MessageStatus, ProcessingError
+from mobot_client.models.messages import Message, MobotResponse, Direction, MessageStatus, ProcessingError
+from mobot_client.core.context import get_context, set_context, unset_context, CurrentContext
 
 
 class Responder:
-
     def __init__(self, message: Message):
         self._logger = logging.getLogger("MessageContext")
-        self._context = threading.local()
-        self._context.message = message
+        self.message = message
 
     def __enter__(self):
         self._logger.info(f"Entering message response context to respond to {self.message}")
-        self._context.message = self.message
-        self._context.customer = self.message.customer
+        self.message = self.message
+        set_context(self.message)
         return self
 
     @property
-    def message(self):
-        return self._context.message
-
-    @property
     def customer(self):
-        return self._context.customer
+        return self.message.customer
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._logger.info("Leaving message response context")
-        if exc_type:
-            self._context.message.status = MessageStatus.ERROR
-            ProcessingError.objects.create(
-                message=self.message,
-                exception=str(exc_type),
-                tb=str(exc_tb)
-            )
-        del self._context.message
-
-    def _send(self, response: Message, attachments=[]):
-        """This simply prints the message. For signal, it uses signal, of course."""
-        self._logger.info(f"Dummy responder, responding to {self.message.customer.source}:{self.message.text} - {response.text}")
-
-    def _log_and_send_reply(self, response: Message, attachments=[]) -> MobotResponse:
-        MobotResponse.objects.create(
-            incoming=self.message,
-            response=response,
-        )
-        self._send(response, attachments)
-
-    def send_message_to_customer(self, body: str, attachments=[]):
-        message = Message.objects.create(
-            customer=self.message.customer,
-            store=self.message.store,
-            status=MessageStatus.NOT_PROCESSED,
-            direction=MessageDirection.SENT,
-        )
-        self._log_and_send_reply(message)
+        try:
+            if exc_type:
+                self.message.status = MessageStatus.ERROR
+                ProcessingError.objects.create(
+                    message=self.message,
+                    exception=str(exc_type),
+                    tb=str(exc_tb)
+                )
+                self.message.save()
+        except Exception:
+            self._logger.exception("Error leaving message context")
+        finally:
+            unset_context()
 
 
 class SignalMessenger:
@@ -76,60 +56,48 @@ class SignalMessenger:
                 super().__init__(*args, **kwargs)
 
             def send_reply(inner, response: str, attachments=[]):
-                inner._log_and_send_reply(str(self.customer.phone_number), response.text, attachments=attachments)
-
-            def send_message(inner, text, attachments=[]):
-                self.log_and_send_message_from_context(text, attachments)
+                self.log_and_send_message(response, attachments=attachments)
 
         return SignalResponder(message=message)
 
-    def _log_and_send_message(self, customer, text, attachments=[]) -> Optional[MobotResponse]:
-        if hasattr(self._context, 'message'):
-            incoming = self._context.message
-            self.logger.info(f"Sending response to message {incoming}: {text}")
-        else:
-            incoming = None
-
-        phone_number = customer.source.as_e164
+    def _log_and_send_message(self, customer: Customer, text: str, incoming: Optional[Message] = None, attachments=[]) -> Optional[MobotResponse]:
 
         response_message = Message(
             customer=customer,
             store=self.store,
             text=text,
-            direction=MessageDirection.SENT,
+            direction=Direction.SENT,
         )
         response_message.save()
 
         try:
-            self.signal.send_message(phone_number, text, attachments=attachments)
+
+            self.signal.send_message(recipient=customer.phone_number.as_e164,
+                                     text=text,
+                                     block=True,
+                                     attachments=attachments)
             if incoming:
                 response = MobotResponse.objects.create(
-                    incoming_message=incoming,
-                    incoming_payment=incoming.payment,
-                    response_message=response_message,
-                    response_payment=None
+                    incoming=incoming,
+                    outgoing_response=response_message,
                 )
                 return response
         except Exception as e:
             print(e)
             raise e
 
-    def log_and_send_message(self, customer: Customer, text: str, attachments=[]):
-        self._log_and_send_message(customer, text, attachments)
+    def log_and_send_message(self, text: str, attachments=[]):
+        ctx = get_context()
+        incoming = ctx.message
+        customer = ctx.message.customer
+        self._log_and_send_message(customer, text, incoming, attachments)
 
-    def log_and_send_message_from_context(self, text: str, attachments=[]):
-        customer = None
-        if hasattr(self._context, 'customer'):
-            customer = self._context.customer
-            self._log_and_send_message(customer, text, attachments)
-        else:
-            raise Exception("Can't send message without context")
 
 
 
     @staticmethod
     def log_received(message, customer, store) -> Message:
         incoming = Message(customer=customer, store=store, text=message.text,
-                           direction=MessageDirection.RECEIVED)
+                           direction=Direction.RECEIVED)
         incoming.save()
         return incoming

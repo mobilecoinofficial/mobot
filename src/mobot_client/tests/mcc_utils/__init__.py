@@ -4,7 +4,7 @@ import uuid
 from unittest.mock import MagicMock
 from concurrent.futures import ThreadPoolExecutor
 
-import mc_util
+import mobilecoin
 from mobot_client.payments import MCClient
 
 

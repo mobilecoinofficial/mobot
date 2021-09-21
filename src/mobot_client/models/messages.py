@@ -26,6 +26,10 @@ class SignalPayment(models.Model):
     note = models.TextField(help_text="Note sent with payment", blank=True, null=True)
     receipt = models.CharField(max_length=255, help_text="encoded receipt")
 
+class Direction(models.IntegerChoices):
+    RECEIVED = 0, 'received_from_customer'
+    SENT = 1, 'sent_to_customer'
+
 
 class Payment(models.Model):
     amount_pmob = models.PositiveIntegerField(null=True, blank=True, help_text="Amount of payment, if known")
@@ -90,15 +94,13 @@ class MessageStatus(models.IntegerChoices):
     PROCESSED = 2
 
 
-class MessageDirection(models.IntegerChoices):
-    RECEIVED = 0, 'received_from_customer'
-    SENT = 1, 'sent_to_customer'
+
 
 
 class MessageQuerySet(models.QuerySet):
     def not_processing(self) -> models.QuerySet:
         return self.filter(status=MessageStatus.NOT_PROCESSED,
-                           direction=MessageDirection.RECEIVED)\
+                           direction=Direction.RECEIVED)\
                     .order_by('date', '-payment').all()
 
     @transaction.atomic
@@ -121,7 +123,7 @@ class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
             customer=customer,
             text=signal_message.text,
             date=dt,
-            direction=MessageDirection.RECEIVED,
+            direction=Direction.RECEIVED,
             store=store,
             raw=raw,
             status=MessageStatus.NOT_PROCESSED,
@@ -132,12 +134,12 @@ class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
 class Message(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="messages")
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    text = models.TextField()
+    text = models.TextField(default="")
     date = models.DateTimeField(auto_now_add=True)
     status = models.SmallIntegerField(choices=MessageStatus.choices, default=MessageStatus.NOT_PROCESSED)
     processing = models.DateTimeField(blank=True, null=True, help_text="The time we started processing a message")
     updated = models.DateTimeField(auto_now=True)
-    direction = models.PositiveIntegerField(choices=MessageDirection.choices, db_index=True)
+    direction = models.PositiveIntegerField(choices=Direction.choices, db_index=True)
     raw = models.OneToOneField(RawSignalMessage, on_delete=models.DO_NOTHING,
                                null=True,
                                blank=True,
@@ -157,8 +159,8 @@ class Message(models.Model):
 
 class MobotResponse(models.Model):
     """The response to an incoming message or payment"""
-    incoming = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='responses', null=True, blank=True)
-    response = models.OneToOneField(Message, on_delete=models.CASCADE, null=True, blank=True, related_name='response')
+    incoming = models.ForeignKey(Message, on_delete=models.CASCADE, null=True, blank=True, related_name='responses')
+    outgoing_response = models.OneToOneField(Message, on_delete=models.CASCADE, null=True, blank=True, related_name="response_message")
     created_at = models.DateTimeField(auto_now_add=True)
 
 

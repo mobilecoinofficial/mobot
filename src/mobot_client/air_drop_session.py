@@ -38,7 +38,7 @@ class AirDropSession(BaseDropSession):
                     customer,
                     ChatStrings.AIRDROP_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
                 )
-                self.payments.send_mob_to_customer(customer, amount_paid_mob, True)
+                self.payments.send_reply_payment(customer, amount_paid_mob, True)
                 refunded = True
                 raise NotEnoughFundsException("Not enough MOB in wallet to cover bonus coin")
             ###  This will stop us from sending an initial payment if bonus coins aren't available
@@ -49,7 +49,7 @@ class AirDropSession(BaseDropSession):
                     customer,
                     ChatStrings.BONUS_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
                 )
-                self.payments.send_mob_to_customer(customer, amount_paid_mob, True)
+                self.payments.send_reply_payment(customer, amount_paid_mob, True)
         else:
             initial_coin_amount_mob = mc.pmob2mob(
                 drop_session.drop.initial_coin_amount_pmob
@@ -60,7 +60,7 @@ class AirDropSession(BaseDropSession):
                     + amount_paid_mob
                     + mc.pmob2mob(self.payments.get_minimum_fee_pmob())
             )
-            self.payments.send_mob_to_customer(customer, amount_to_send_mob, True)
+            self.payments.send_reply_payment(customer, amount_to_send_mob, True)
 
             total_prize = Decimal(initial_coin_amount_mob + amount_in_mob)
 
@@ -122,7 +122,7 @@ class AirDropSession(BaseDropSession):
                     drop_session.drop.conversion_rate_mob_to_currency
                 )
                 self.logger.info(f"Sending customer {drop_session.customer} initial coin amount...")
-                self.payments.send_mob_to_customer(drop_session.customer, amount_in_mob, True)
+                self.payments.send_reply_payment(amount_in_mob, True)
                 self.messenger.log_and_send_message(
                     drop_session.customer,
                     ChatStrings.AIRDROP_INITIALIZE.format(
@@ -131,8 +131,6 @@ class AirDropSession(BaseDropSession):
                         value=value_in_currency
                     )
                 )
-                self.logger.info(f"Sending customer {drop_session.customer} initial coin amount...")
-                self.payments.send_mob_to_customer(drop_session.customer, message.source, amount_in_mob, True)
                 self.messenger.log_and_send_message(
                     drop_session.customer,
                     ChatStrings.PAY_HELP
@@ -140,7 +138,6 @@ class AirDropSession(BaseDropSession):
                 drop_session.state = SessionState.WAITING_FOR_PAYMENT
         else:
             self.messenger.log_and_send_message(
-                drop_session.customer,
                 ChatStrings.YES_NO_HELP
             )
         drop_session.save()
@@ -149,22 +146,18 @@ class AirDropSession(BaseDropSession):
         print("----------------WAITING FOR BONUS TRANSACTION------------------")
         if message.text.lower() == "help":
             self.messenger.log_and_send_message(
-                drop_session.customer,
                 ChatStrings.AIRDROP_COMMANDS
             )
         elif message.text.lower() == "pay":
             self.messenger.log_and_send_message(
-                drop_session.customer,
                 ChatStrings.PAY_HELP
             )
         elif message.text.lower() == 'describe':
             self.messenger.log_and_send_message(
-                drop_session.customer,
                 ChatStrings.AIRDROP_INSTRUCTIONS
             )
         else:
             self.messenger.log_and_send_message(
-                drop_session.customer,
                 ChatStrings.AIRDROP_COMMANDS
             )
 
@@ -175,7 +168,6 @@ class AirDropSession(BaseDropSession):
         )
 
         self.messenger.log_and_send_message(
-            drop_session.customer,
             ChatStrings.AIRDROP_RESPONSE.format(
                 amount=amount_in_mob.normalize(),
                 symbol=drop_session.drop.currency_symbol,

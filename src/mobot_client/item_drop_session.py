@@ -168,10 +168,10 @@ class ItemDropSession(BaseDropSession):
             customer_drop_refunds.number_of_times_refunded = customer_drop_refunds.number_of_times_refunded + 1
             customer_drop_refunds.save()
 
-        self.payments.send_mob_to_customer(drop_session.customer,
-                                           message.source,
-                                           drop_session.drop.item.price_in_mob,
-                                           should_refund_transaction_fee)
+        self.payments.send_reply_payment(drop_session.customer,
+                                         message.source,
+                                         drop_session.drop.item.price_in_mob,
+                                         should_refund_transaction_fee)
         
         if order is not None:
             order.status = OrderStatus.CANCELLED

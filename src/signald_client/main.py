@@ -36,7 +36,7 @@ class SignalLogger:
         self._signal = signal
         self._run = False
 
-    def _parse_message(self, message, auto_send_receipts=True) -> Message:
+    def _parse_message(self, message: SignalMessage, auto_send_receipts=True) -> Message:
         if not message.text and not message.payment:
             self.logger.warning(f"Message contained no text or payment. Not processing. {message}")
             raise SignalMessageException(f"Message contained no text or payment. Not processing. {message}")

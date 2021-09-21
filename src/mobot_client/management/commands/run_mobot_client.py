@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import ChatbotSettings, Store
-from mobot_client.core import MOBotSubscriber
+from mobot_client.core.subscriber import MOBotSubscriber
 
 import time
 from django.core.management.base import BaseCommand

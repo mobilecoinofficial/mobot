@@ -17,9 +17,14 @@ from mobot_client.models import (
     Store,
     DropSession,
 )
+from mobot_client.models.messages import (
+    Payment,
+    MobotResponse, Direction, SignalPayment, PaymentStatus, Message, MessageStatus,
+)
 from mobot_client.chat_strings import ChatStrings
 from mobot_client.payments.client import MCClient
 from mobot_client.utils import TimerFactory
+from mobot_client.core.context import get_context, CurrentContext
 
 
 class NotEnoughFundsException(Exception):
@@ -61,12 +66,10 @@ class Payments:
             self.logger.warning(f"Found no MobileCoin payment address for {source}. Response: {customer_signal_profile}")
         return mobilecoin_address
 
-    def send_mob_to_customer(self, customer, source, amount_mob, cover_transaction_fee, memo="Refund"):
+    def _send_mob_to_customer(self, customer, amount_mob, cover_transaction_fee, memo="Refund"):
+        self.logger.info(f"Sending mob to customer: {customer}, amount: {amount_mob}")
         with self.timers.get_timer("send_mob_to_customer"):
-            if isinstance(source, dict):
-                source = source["number"]
-            else:
-                source = str(source)
+            source = customer.phone_number.as_e164
 
             if not cover_transaction_fee:
                 amount_mob = amount_mob - Decimal(mc.pmob2mob(self.minimum_fee_pmob))
@@ -82,15 +85,30 @@ class Payments:
             if customer_payments_address is None:
                 self.messenger.log_and_send_message(
                     customer,
-                    source,
                     ChatStrings.PAYMENTS_DEACTIVATED.format(number=self.store.phone_number),
                 )
             elif amount_mob > 0:
-                self.send_mob_to_address(
+                return self.send_mob_to_address(
                     source, self.account_id, amount_mob, customer_payments_address, memo=memo
                 )
 
-    def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund"):
+    def send_reply_payment(self, amount_mob, cover_transaction_fee, memo="Refund"):
+        ctx = get_context()
+        payment = self._send_mob_to_customer(ctx.message.customer, amount_mob, cover_transaction_fee, memo)
+        response = MobotResponse.objects.create(
+            incoming=ctx.message,
+            outgoing_response=Message.objects.create(
+                direction=Direction.SENT,
+                status=MessageStatus.PROCESSED,
+                store=self.store,
+                customer=ctx.customer,
+                payment=payment,
+            ),
+        )
+        self.logger.info("Sent payment to customer")
+
+
+    def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund") -> Payment:
         # customer_payments_address is b64 encoded, but full service wants a b58 address
         customer_payments_address = mc_util.b64_public_address_to_b58_wrapper(
             customer_payments_address
@@ -100,6 +118,10 @@ class Payments:
             txo_id, tx_proposal = self.mcc.build_and_submit_transaction_with_proposal(
                 account_id, amount_in_mob, customer_payments_address
             )
+            payment = Payment.objects.create(
+                amount_pmob=mc_util.mob2pmob(amount_in_mob),
+                txo_id=txo_id,
+            )
 
         for _ in range(10):
             try:
@@ -108,23 +130,31 @@ class Payments:
             except Exception:
                 print("TxOut did not land yet, id: " + txo_id)
             else:
-                self.send_payment_receipt(source, tx_proposal, memo)
-                return
+                receipt = self.send_payment_receipt(source, tx_proposal, memo)
+                signal_payment = SignalPayment.objects.create(
+                    note=memo,
+                    receipt=receipt
+                )
+                payment.signal_payment = signal_payment
+                payment.status = PaymentStatus.TransactionSuccess
+                payment.save()
+                return payment
             time.sleep(1.0)
         else:
-            self.signal.send_message(
-                source,
+            self.messenger.log_and_send_message(
                 ChatStrings.COULD_NOT_GENERATE_RECEIPT,
             )
             raise PaymentException("Could not send payment")
 
-    def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund"):
-        receiver_receipt = self.create_receiver_receipt(tx_proposal)
+    def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund") -> str:
+        receiver_receipt_fs = self.create_receiver_receipt(tx_proposal)
+        confirmation = receiver_receipt_fs["confirmation"]
         receiver_receipt = mc_util.full_service_receipt_to_b64_receipt(
-            receiver_receipt
+            receiver_receipt_fs
         )
         resp = self.signal.send_payment_receipt(source, receiver_receipt, memo)
         self.logger.info(f"Send receipt {receiver_receipt} to {source}: {resp}")
+        return receiver_receipt
 
     def create_receiver_receipt(self, tx_proposal: dict):
         receiver_receipts = self.mcc.create_receiver_receipts(tx_proposal)
@@ -161,16 +191,12 @@ class Payments:
         if refund_amount > 0:
             self.logger.warning("Refunding customer their payment minus transaction fees")
             self.messenger.log_and_send_message(
-                customer,
-                source,
                 ChatStrings.NOT_ENOUGH_REFUND.format(amount_paid=refund_amount.normalize())
             )
-            self.send_mob_to_customer(customer, source, amount_paid_mob, False)
+            self.send_reply_payment(customer, source, amount_paid_mob, False)
         else:
             self.logger.warning("Not Refunding. Payment not enough to cover transaction fees for refund.")
             self.messenger.log_and_send_message(
-                customer,
-                source,
                 ChatStrings.NOT_ENOUGH
             )
 
@@ -183,7 +209,7 @@ class Payments:
             drop_session.customer.phone_number.as_e164,
             ChatStrings.EXCESS_PAYMENT.format(refund=net_excess.normalize())
         )
-        self.send_mob_to_customer(drop_session.customer, drop_session.customer.phone_number.as_e164, excess, False)
+        self.send_reply_payment(drop_session.customer, drop_session.customer.phone_number.as_e164, excess, False)
 
     def handle_payment_successful(self, amount_paid_mob: Decimal, drop_session: DropSession):
         customer = drop_session.customer
@@ -195,14 +221,12 @@ class Payments:
 
     def handle_out_of_stock(self, amount_paid_mob: Decimal, drop_session: DropSession):
         self.messenger.log_and_send_message(
-            drop_session.customer,
-            drop_session.customer.phone_number.as_e164,
             ChatStrings.OUT_OF_STOCK_REFUND
         )
-        self.send_mob_to_customer(drop_session.customer,
-                                  drop_session.customer.phone_number.as_e164,
-                                  drop_session.drop.item.price_in_mob,
-                                  True)
+        self.send_reply_payment(drop_session.customer,
+                                drop_session.customer.phone_number.as_e164,
+                                drop_session.drop.item.price_in_mob,
+                                True)
 
         drop_session.state = SessionState.REFUNDED
         drop_session.save()

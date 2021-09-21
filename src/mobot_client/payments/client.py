@@ -5,7 +5,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 from django.utils import timezone
-import mc_util as mc
+import mobilecoin as mc
 
 from mobot_client.models.messages import PaymentStatus, Payment, Message, PaymentVerification, ProcessingError
 
