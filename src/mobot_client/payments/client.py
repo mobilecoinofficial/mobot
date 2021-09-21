@@ -1,17 +1,15 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 import logging
 import time
+
 from concurrent.futures import ThreadPoolExecutor
-import asyncio
-from typing import Optional
 
 from django.utils import timezone
-import mobilecoin as mc
+import mc_util as mc
 
 from mobot_client.models.messages import PaymentStatus, Payment, Message, PaymentVerification
 
-from mobilecoin import Client as MCC
-
+from mobilecoin import Client
 from django.conf import settings
 
 
@@ -27,12 +25,13 @@ class CheckReceiptException(PaymentClientException):
     pass
 
 
-class MCClient(MCC):
+
+class MCClient(Client):
     def __init__(self):
         super().__init__(settings.FULLSERVICE_URL)
         self.public_address, self.account_id = self._get_default_account_info()
         self.minimum_fee_pmob = self._get_minimum_fee_pmob()
-        self.b64_public_address = mc.utility.b58_wrapper_to_b64_public_address(self.public_address)
+        self.b64_public_address = mc.b58_wrapper_to_b64_public_address(self.public_address)
         self.logger = logging.getLogger("MCClient")
         self._pool = ThreadPoolExecutor(max_workers=settings.PAYMENT_THREADS)
 
@@ -81,7 +80,7 @@ class MCClient(MCC):
             txo_id, transaction_status = self._wait_for_transaction(payment)
             payment.status = transaction_status
             payment.processed = timezone.now()
-        except PaymentClientException as e:
+        except PaymentClientException:
             self.logger.exception("Got an error processing payment")
             payment.status = PaymentStatus.FAILURE
             payment.processed = timezone.now()
@@ -89,7 +88,7 @@ class MCClient(MCC):
 
     def get_receipt_status(self, receipt: str) -> dict:
         try:
-            mc.utility.b64_receipt_to_full_service_receipt(receipt)
+            mc.b64_receipt_to_full_service_receipt(receipt)
             self.logger.info(f"checking Receiver status")
             receipt_status = self.check_receiver_receipt_status(
                 self.public_address, receipt
@@ -113,7 +112,7 @@ class MCClient(MCC):
             txo_id = receipt_status["txo"]["txo_id"]
 
             payment = Payment.objects.create(
-                amount_pmob=mc.utility.mob2pmob(amount_paid_mob),
+                amount_pmob=mc.mob2pmob(amount_paid_mob),
                 txo_id=txo_id,
                 status=receipt_status,
                 signal_payment=signal_payment,

@@ -7,6 +7,8 @@ import logging
 
 
 import mobilecoin as mc
+
+import mc_util
 from signald import Signal
 
 from mobot_client.logger import SignalMessenger
@@ -41,7 +43,6 @@ class Payments:
         self.signal = signal
         self.messenger = messenger
         self.logger = logging.getLogger("MOBot.Payments")
-        self._transaction_lock = threading.Lock()
         self.timers = TimerFactory("Payments", self.logger)
         with self.timers.get_timer("Startup"):
             self.logger.info("Payments started")
@@ -91,18 +92,14 @@ class Payments:
 
     def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund"):
         # customer_payments_address is b64 encoded, but full service wants a b58 address
-        customer_payments_address = mc.utility.b64_public_address_to_b58_wrapper(
+        customer_payments_address = mc_util.b64_public_address_to_b58_wrapper(
             customer_payments_address
         )
 
-        with self.timers.get_timer("acquire_lock"):
-            self._transaction_lock.acquire(blocking=True)
-            with self.timers.get_timer("build_and_send_transaction"):
-                tx_proposal = self.mcc.build_transaction(
-                    account_id, amount_in_mob, customer_payments_address
-                )
-                txo_id = self.submit_transaction(tx_proposal, account_id)
-        self._transaction_lock.release()
+        with self.timers.get_timer("build_and_send_transaction"):
+            txo_id, tx_proposal = self.mcc.build_and_submit_transaction_with_proposal(
+                account_id, amount_in_mob, customer_payments_address
+            )
 
         for _ in range(10):
             try:
@@ -121,20 +118,9 @@ class Payments:
             )
             raise PaymentException("Could not send payment")
 
-    def submit_transaction(self, tx_proposal: dict, account_id: str):
-        # retry up to 10 times in case there's some failure with a 1 sec timeout in between each
-        with self.timers.get_timer("submit_transaction"):
-            transaction_log = self.mcc.submit_transaction(tx_proposal, account_id)
-            list_of_txos = transaction_log["output_txos"]
-
-            if len(list_of_txos) > 1:
-                raise ValueError("Found more than one txout for this chat bot-initiated transaction.")
-
-            return list_of_txos[0]["txo_id_hex"]
-
     def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund"):
         receiver_receipt = self.create_receiver_receipt(tx_proposal)
-        receiver_receipt = mc.utility.full_service_receipt_to_b64_receipt(
+        receiver_receipt = mc_util.full_service_receipt_to_b64_receipt(
             receiver_receipt
         )
         resp = self.signal.send_payment_receipt(source, receiver_receipt, memo)
