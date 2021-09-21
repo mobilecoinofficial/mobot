@@ -68,14 +68,14 @@ class Command(BaseCommand):
 
         try:
             logger = SignalLogger(signal=signal, mcc=mcc)
-            with ThreadPoolExecutor() as pool:
-                print("Starting logger!")
-                pool.submit(logger.run_chat, True, False)
             mobot = MOBotSubscriber(store=cb_settings.store,
                                     messenger=messenger,
                                     mcc=mcc,
                                     payments=payments)
-            mobot.run_chat()
+            with ThreadPoolExecutor() as pool:
+                print("Starting logger!")
+                pool.submit(logger.run_chat, True, False)
+                pool.submit(mobot.run_chat)
         except KeyboardInterrupt as e:
             print()
             pass

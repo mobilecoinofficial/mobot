@@ -99,8 +99,7 @@ class MessageQuerySet(models.QuerySet):
     def not_processing(self) -> models.QuerySet:
         return self.filter(status=MessageStatus.NOT_PROCESSED,
                            direction=MessageDirection.RECEIVED)\
-                    .order_by('date', '-payment')\
-                    .distinct('customer_id')
+                    .order_by('date', '-payment').all()
 
     @transaction.atomic
     def get_message(self):

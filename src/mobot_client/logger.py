@@ -11,12 +11,17 @@ from mobot_client.models.messages import Message, MobotResponse, MessageDirectio
 
 
 class Responder:
-    CONTEXT = threading.local()
 
     def __init__(self, message: Message):
         self._logger = logging.getLogger("MessageContext")
-        self._context = Responder.CONTEXT
+        self._context = threading.local()
         self._context.message = message
+
+    def __enter__(self):
+        self._logger.info(f"Entering message response context to respond to {self.message}")
+        self._context.message = self.message
+        self._context.customer = self.message.customer
+        return self
 
     @property
     def message(self):
@@ -26,19 +31,14 @@ class Responder:
     def customer(self):
         return self._context.customer
 
-    def __enter__(self):
-        self._logger.info(f"Entering message response context to respond to {self.message}")
-        self._context.incoming_message = self.message
-        self._context.customer = self.message.customer
-        return self
-
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._logger.info("Leaving message response context")
         if exc_type:
             self._context.message.status = MessageStatus.ERROR
             ProcessingError.objects.create(
                 message=self.message,
-                text=str(f"{exc_type}: {exc_tb}")
+                exception=str(exc_type),
+                tb=str(exc_tb)
             )
         del self._context.message
 
@@ -73,12 +73,10 @@ class SignalMessenger:
 
         class SignalResponder(Responder):
             def __init__(inner, *args, **kwargs):
-                super(Responder).__init__(*args, **kwargs)
-                self.customer = self._context.customer
-                self.message = self._context.message
+                super().__init__(*args, **kwargs)
 
-            def send_reply(inner, response: Message, attachments=[]):
-                inner._log_and_send_reply(str(response.customer.phone_number), response.text, attachments=attachments)
+            def send_reply(inner, response: str, attachments=[]):
+                inner._log_and_send_reply(str(self.customer.phone_number), response.text, attachments=attachments)
 
             def send_message(inner, text, attachments=[]):
                 self.log_and_send_message_from_context(text, attachments)

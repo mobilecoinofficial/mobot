@@ -305,16 +305,15 @@ class MOBotSubscriber:
         return func
 
     def _process(self, message: Message):
-        with self.messenger.get_responder(message) as ctx:
-            chat_handler = self._find_handler(message)
-            self.logger.info(f"Found handler {chat_handler}")
-            try:
-                result = chat_handler(message)
-                message.processed = timezone.now()
-                message.save()
-            except Exception as e:
-                self.logger.exception("Processing message failed!")
-                message.status = MessageStatus.ERROR
+        chat_handler = self._find_handler(message)
+        self.logger.info(f"Found handler {chat_handler}")
+        try:
+            result = chat_handler(message)
+            message.processed = timezone.now()
+            message.save()
+        except Exception as e:
+            self.logger.exception("Processing message failed!")
+            message.status = MessageStatus.ERROR
 
     def run_chat(self, break_on_stop=False, break_after=0):
         # self.logger.info("Starting timeouts thread")
