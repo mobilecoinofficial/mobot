@@ -67,58 +67,53 @@ class BaseDropSession:
 
 
     def handle_drop_session_allow_contact_requested(self, message, drop_session):
-        with self.messenger.get_responder(message) as ctx:
-            if message.text.lower() in ("y", "yes"):
-                CustomerStorePreferences.objects.create(
-                    customer=drop_session.customer, store=self.store, allows_contact=True
-                )
-                drop_session.state = SessionState.COMPLETED
-                drop_session.save()
-                self.messenger.log_and_send_message(ChatStrings.BYE)
-                return
+        if message.text.lower() in ("y", "yes"):
+            CustomerStorePreferences.objects.create(
+                customer=drop_session.customer, store=self.store, allows_contact=True
+            )
+            drop_session.state = SessionState.COMPLETED
+            drop_session.save()
+            self.messenger.log_and_send_message(ChatStrings.BYE)
+            return
 
-            if message.text.lower() == "n" or message.text.lower() == "no":
-                customer_prefs = CustomerStorePreferences(
-                    customer=drop_session.customer, store=self.store, allows_contact=False
-                )
-                customer_prefs.save()
-                drop_session.state = SessionState.COMPLETED
-                drop_session.save()
-                self.messenger.log_and_send_message(
-                    drop_session.customer, ChatStrings.BYE
-                )
-                return
+        if message.text.lower() == "n" or message.text.lower() == "no":
+            customer_prefs = CustomerStorePreferences(
+                customer=drop_session.customer, store=self.store, allows_contact=False
+            )
+            customer_prefs.save()
+            drop_session.state = SessionState.COMPLETED
+            drop_session.save()
+            self.messenger.log_and_send_message(
+                ChatStrings.BYE
+            )
+            return
 
-            if message.text.lower() == "p" or message.text.lower() == "privacy":
-                self.messenger.log_and_send_message(
-                    drop_session.customer,
-                    ChatStrings.PRIVACY_POLICY_REPROMPT.format(url=self.store.privacy_policy_url),
-                )
-                return
+        if message.text.lower() == "p" or message.text.lower() == "privacy":
+            self.messenger.log_and_send_message(
+                ChatStrings.PRIVACY_POLICY_REPROMPT.format(url=self.store.privacy_policy_url),
+            )
+            return
 
-            if message.text.lower() == "help":
-                self.messenger.log_and_send_message(
-                    drop_session.customer,
-                    ChatStrings.HELP
-                )
-                return
-
+        if message.text.lower() == "help":
             self.messenger.log_and_send_message(
                 drop_session.customer,
                 ChatStrings.HELP
             )
+            return
+
+        self.messenger.log_and_send_message(
+            ChatStrings.HELP
+        )
 
     def handle_cancel(self, message, drop_session: DropSession):
         drop_session.state = SessionState.CANCELLED
         drop_session.save()
         self.messenger.log_and_send_message(
-            drop_session.customer,
             ChatStrings.SESSION_CANCELLED
         )
 
     def handle_privacy_policy_request(self, message, drop_session: DropSession):
         privacy_policy_url = drop_session.drop.store.privacy_policy_url
         self.messenger.log_and_send_message(
-            drop_session.customer,
             ChatStrings.PRIVACY_POLICY.format(url=privacy_policy_url),
         )

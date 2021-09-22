@@ -112,6 +112,7 @@ class MCClient(Client):
             self.logger.exception("Exception getting receipt status")
             raise e
         else:
+            self.logger.info(f"Receipt status {receipt_status}")
             amount_paid_mob = mc_util.pmob2mob(receipt_status["txo"]["value_pmob"])
             txo_id = receipt_status["txo"]["txo_id_hex"]
 

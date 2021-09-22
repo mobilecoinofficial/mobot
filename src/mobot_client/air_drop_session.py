@@ -38,7 +38,7 @@ class AirDropSession(BaseDropSession):
                     customer,
                     ChatStrings.AIRDROP_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
                 )
-                self.payments.send_reply_payment(customer, amount_paid_mob, True)
+                self.payments.send_reply_payment(amount_paid_mob, True)
                 refunded = True
                 raise NotEnoughFundsException("Not enough MOB in wallet to cover bonus coin")
             ###  This will stop us from sending an initial payment if bonus coins aren't available
@@ -49,7 +49,7 @@ class AirDropSession(BaseDropSession):
                     customer,
                     ChatStrings.BONUS_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
                 )
-                self.payments.send_reply_payment(customer, amount_paid_mob, True)
+                self.payments.send_reply_payment(amount_paid_mob, True)
         else:
             initial_coin_amount_mob = mc.pmob2mob(
                 drop_session.drop.initial_coin_amount_pmob
@@ -60,7 +60,7 @@ class AirDropSession(BaseDropSession):
                     + amount_paid_mob
                     + mc.pmob2mob(self.payments.get_minimum_fee_pmob())
             )
-            self.payments.send_reply_payment(customer, amount_to_send_mob, True)
+            self.payments.send_reply_payment(amount_to_send_mob, True)
 
             total_prize = Decimal(initial_coin_amount_mob + amount_in_mob)
 

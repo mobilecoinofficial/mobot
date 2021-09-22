@@ -216,7 +216,7 @@ class Payments:
             self.messenger.log_and_send_message(
                 ChatStrings.NOT_ENOUGH_REFUND.format(amount_paid=refund_amount.normalize())
             )
-            self.send_reply_payment(customer, source, amount_paid_mob, False)
+            self.send_reply_payment(amount_paid_mob, False)
         else:
             self.logger.warning("Not Refunding. Payment not enough to cover transaction fees for refund.")
             self.messenger.log_and_send_message(
@@ -228,17 +228,13 @@ class Payments:
         excess = amount_paid_mob - item_cost_mob
         net_excess = mc.pmob2mob(mc.mob2pmob(excess) - self.minimum_fee_pmob)
         self.messenger.log_and_send_message(
-            drop_session.customer,
-            drop_session.customer.phone_number.as_e164,
             ChatStrings.EXCESS_PAYMENT.format(refund=net_excess.normalize())
         )
-        self.send_reply_payment(drop_session.customer, drop_session.customer.phone_number.as_e164, excess, False)
+        self.send_reply_payment(excess, False)
 
     def handle_payment_successful(self, amount_paid_mob: Decimal, drop_session: DropSession):
         customer = drop_session.customer
         self.messenger.log_and_send_message(
-            customer,
-            customer.phone_number.as_e164,
             ChatStrings.WE_RECEIVED_MOB.format(mob=amount_paid_mob.normalize())
         )
 
