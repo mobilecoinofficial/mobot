@@ -42,6 +42,7 @@ class Payment(models.Model):
                               help_text="Status of payment")
     txo_id = models.CharField(max_length=255, null=True, blank=True)
     signal_payment = models.OneToOneField(SignalPayment, on_delete=models.CASCADE, null=True, blank=True)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, null=False, blank=False, related_name='payments')
 
     def __str__(self):
         return f"Payment () ({self.amount_pmob} PMOB)"

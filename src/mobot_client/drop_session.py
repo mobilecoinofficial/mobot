@@ -96,7 +96,6 @@ class BaseDropSession:
 
         if message.text.lower() == "help":
             self.messenger.log_and_send_message(
-                drop_session.customer,
                 ChatStrings.HELP
             )
             return

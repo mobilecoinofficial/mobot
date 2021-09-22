@@ -99,7 +99,8 @@ class Payments:
             self.logger.exception(f"Failed sending reply payment to customer {ctx.customer}: {amount_mob} MOB")
             payment = Payment(
                 amount_pmob=mc.mob2pmob(amount_mob),
-                status=PaymentStatus.Failure
+                status=PaymentStatus.Failure,
+                customer=ctx.customer,
             )
         payment.save()
         response = MobotResponse.objects.create(
@@ -132,6 +133,7 @@ class Payments:
 
     def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund") -> Payment:
         # customer_payments_address is b64 encoded, but full service wants a b58 address
+        ctx = get_current_context()
         customer_payments_address = mc.b64_public_address_to_b58_wrapper(
             customer_payments_address
         )
@@ -145,6 +147,7 @@ class Payments:
             payment = Payment(
                 amount_pmob=mc.mob2pmob(amount_in_mob),
                 txo_id=txo_id,
+                customer=ctx.customer,
             )
 
         for _ in range(10):

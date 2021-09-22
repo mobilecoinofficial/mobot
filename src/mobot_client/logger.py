@@ -69,6 +69,7 @@ class SignalMessenger:
             store=self.store,
             text=text,
             direction=Direction.SENT,
+            status=MessageStatus.PROCESSED,
         )
         response_message.save()
 

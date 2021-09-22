@@ -108,8 +108,9 @@ class DropAdmin(admin.ModelAdmin):
 
 
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('status', 'updated', 'amount_pmob')
+    list_display = ('__str__', 'status', 'updated', 'amount_pmob')
     readonly_fields = ('status', 'updated', 'amount_pmob')
+    exclude = ('signal_payment')
 
 
 class MobotResponseAdmin(admin.ModelAdmin):
