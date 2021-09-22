@@ -106,6 +106,18 @@ class Payments:
         )
         self.logger.info("Sent payment to customer")
 
+    def build_and_submit_transaction_with_proposal(self, account_id: str, amount_in_mob: Decimal,
+                                                   customer_payments_address: str) -> (str, dict):
+        with self.timers.get_timer("submit_transaction"):
+            transaction_log, tx_proposal = self.mcc.build_and_submit_transaction_with_proposal(account_id,
+                                                                                               amount=amount_in_mob,
+                                                                                               to_address=customer_payments_address)
+            list_of_txos = transaction_log["output_txos"]
+
+            if len(list_of_txos) > 1:
+                raise ValueError("Found more than one txout for this chat bot-initiated transaction.")
+
+            return list_of_txos[0]["txo_id_hex"], tx_proposal
 
     def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund") -> Payment:
         # customer_payments_address is b64 encoded, but full service wants a b58 address
@@ -115,7 +127,7 @@ class Payments:
 
         with self.timers.get_timer("build_and_send_transaction"):
             self.logger.info(f"Sending {amount_in_mob} MOB to {customer_payments_address}")
-            txo, tx_proposal = self.mcc.build_and_submit_transaction_with_proposal(
+            txo_id, tx_proposal = self.mcc.build_and_submit_transaction_with_proposal(
                 account_id, amount_in_mob, customer_payments_address
             )
             self.logger.info(f"TXO_ID: {txo_id}")
