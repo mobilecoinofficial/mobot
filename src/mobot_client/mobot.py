@@ -139,9 +139,8 @@ class MOBot:
                 receipt_status = self.mcc.check_receiver_receipt_status(
                     self.mcc.public_address, receipt
                 )
-                txo_id = receipt_status["txo"]["txo_id"]
                 transaction_status = receipt_status["receipt_transaction_status"]
-                self.logger.info(f"Waiting for {receipt} with txo {txo_id}, current status {receipt_status}")
+                self.logger.info(f"Waiting for {receipt}, current status {receipt_status}")
 
             if transaction_status != "TransactionSuccess":
                 self.logger.error(f"failed {transaction_status}")
