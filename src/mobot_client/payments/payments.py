@@ -114,10 +114,11 @@ class Payments:
         )
 
         with self.timers.get_timer("build_and_send_transaction"):
-            self.logger.debug(f"Sending {amount_in_mob} MOB to {customer_payments_address}")
-            txo_id, tx_proposal = self.mcc.build_and_submit_transaction_with_proposal(
+            self.logger.info(f"Sending {amount_in_mob} MOB to {customer_payments_address}")
+            txo, tx_proposal = self.mcc.build_and_submit_transaction_with_proposal(
                 account_id, amount_in_mob, customer_payments_address
             )
+            self.logger.info(f"TXO_ID: {txo_id}")
             payment = Payment.objects.create(
                 amount_pmob=mc.mob2pmob(amount_in_mob),
                 txo_id=txo_id,

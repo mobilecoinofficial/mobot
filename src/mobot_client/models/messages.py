@@ -115,7 +115,7 @@ class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
         dt = timezone.make_aware(datetime.fromtimestamp(float(signal_message.timestamp/1000)))
         store, _ = Store.objects.get_or_create(phone_number=raw.account)
         customer, _ = Customer.objects.get_or_create(phone_number=raw.source)
-        stored_message = self.get_queryset().create(
+        stored_message = Message(
             customer=customer,
             text=signal_message.text,
             date=dt,
@@ -141,7 +141,7 @@ class Message(models.Model):
                                blank=True,
                                related_name="parsed_message",
                                help_text="Reference to the raw message this was parsed from")
-    payment = models.OneToOneField(Payment, on_delete=models.CASCADE, null=True, blank=True)
+    payment = models.OneToOneField(Payment, on_delete=models.CASCADE, null=True, blank=True, related_name="message")
     ### Custom manager to create from signal and process payment ###
     objects = MessageManager()
 

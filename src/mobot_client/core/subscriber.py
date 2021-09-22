@@ -120,17 +120,18 @@ class MOBotSubscriber:
         self.logger.warning("Could not find drop session for customer; Payment unsolicited!")
         if mc.pmob2mob(self.minimum_fee_pmob) < amount_paid_mob:
             self.messenger.log_and_send_message(
-                customer, ChatStrings.UNSOLICITED_PAYMENT
+                ChatStrings.UNSOLICITED_PAYMENT
             )
             self.payments.send_reply_payment(customer, amount_paid_mob, False)
         else:
             self.messenger.log_and_send_message(
-                customer, ChatStrings.UNSOLICITED_NOT_ENOUGH
+                ChatStrings.UNSOLICITED_NOT_ENOUGH
             )
 
     def handle_payment(self, ctx: ChatContext):
         message = ctx.message
         payment = message.payment
+        message.refresh_from_db()
         source = str(message.customer.phone_number)
         self.logger.info(f"Received payment from {source}")
         self.logger.info(f"Received payment {payment}")

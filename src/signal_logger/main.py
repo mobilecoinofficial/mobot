@@ -46,7 +46,7 @@ class SignalLogger:
                 if message.payment:
                     payment = self._mcc.process_signal_payment(stored_message)
                     stored_message.payment = payment
-                    stored_message.save()
+                stored_message.save()
             except Exception as e:
                 self.logger.exception("Exception storing message")
             else:
