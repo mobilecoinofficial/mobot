@@ -2,7 +2,6 @@
 
 import time
 from decimal import Decimal
-import threading
 import logging
 
 
