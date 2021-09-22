@@ -3,7 +3,6 @@ import logging
 import time
 
 from concurrent.futures import ThreadPoolExecutor
-
 from django.utils import timezone
 import mobilecoin as mc
 import mc_util
@@ -24,7 +23,6 @@ class TransactionCheckException(PaymentClientException):
 
 class CheckReceiptException(PaymentClientException):
     pass
-
 
 
 class MCClient(Client):

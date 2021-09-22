@@ -2,12 +2,10 @@
 
 import time
 from decimal import Decimal
-import threading
 import logging
 
 
 import mc_util as mc
-
 from signald import Signal
 
 from mobot_client.logger import SignalMessenger

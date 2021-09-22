@@ -1,7 +1,7 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 from django.contrib import admin
 
-from mobilecoin import pmob2mob
+from mc_util import pmob2mob
 from .models import (
     Store,
     Customer,
