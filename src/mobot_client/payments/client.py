@@ -3,6 +3,8 @@ import logging
 import time
 
 from concurrent.futures import ThreadPoolExecutor
+from typing import Tuple
+
 from django.utils import timezone
 import mobilecoin as mc
 import mc_util
@@ -38,7 +40,7 @@ class MCClient(Client):
         get_network_status_response = self.get_network_status()
         return int(get_network_status_response["fee_pmob"])
 
-    def _get_default_account_info(self) -> (str, str):
+    def _get_default_account_info(self) -> Tuple[str, str]:
         accounts = self.get_all_accounts()
         account_id = next(iter(accounts))
         account_obj = accounts[account_id]

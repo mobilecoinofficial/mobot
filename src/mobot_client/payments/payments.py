@@ -245,10 +245,7 @@ class Payments:
         self.messenger.log_and_send_message(
             ChatStrings.OUT_OF_STOCK_REFUND
         )
-        self.send_reply_payment(drop_session.customer,
-                                drop_session.customer.phone_number.as_e164,
-                                drop_session.drop.item.price_in_mob,
-                                True)
+        self.send_reply_payment(drop_session.drop.item.price_in_mob, True)
 
         drop_session.state = SessionState.REFUNDED
         drop_session.save()
