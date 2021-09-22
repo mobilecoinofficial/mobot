@@ -40,11 +40,11 @@ class Payment(models.Model):
     updated = models.DateTimeField(auto_now=True, help_text="Time of last update")
     status = models.CharField(choices=PaymentStatus.choices, max_length=255, default=PaymentStatus.TransactionPending,
                               help_text="Status of payment")
-    txo_id = models.CharField(max_length=255, null=False, blank=False)
+    txo_id = models.CharField(max_length=255, null=True, blank=True)
     signal_payment = models.OneToOneField(SignalPayment, on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
-        return f"Payment ({self.message.customer}) ({self.amount_pmob} PMOB)"
+        return f"Payment () ({self.amount_pmob} PMOB)"
 
 
 

@@ -3,7 +3,7 @@
 import time
 from decimal import Decimal
 import logging
-
+from typing import Optional
 
 import mc_util as mc
 from signald import Signal
@@ -63,7 +63,7 @@ class Payments:
             self.logger.warning(f"Found no MobileCoin payment address for {source}. Response: {customer_signal_profile}")
         return mobilecoin_address
 
-    def _send_mob_to_customer(self, customer, amount_mob, cover_transaction_fee, memo="Refund"):
+    def _send_mob_to_customer(self, customer, amount_mob, cover_transaction_fee, memo="Refund") -> Optional[Payment]:
         self.logger.info(f"Sending mob to customer: {customer}, amount: {amount_mob}")
         with self.timers.get_timer("send_mob_to_customer"):
             source = customer.phone_number.as_e164
@@ -81,7 +81,6 @@ class Payments:
 
             if customer_payments_address is None:
                 self.messenger.log_and_send_message(
-                    customer,
                     ChatStrings.PAYMENTS_DEACTIVATED.format(number=self.store.phone_number),
                 )
             elif amount_mob > 0:
@@ -91,21 +90,32 @@ class Payments:
 
     def send_reply_payment(self, amount_mob, cover_transaction_fee, memo="Refund"):
         ctx = get_current_context()
-        payment = self._send_mob_to_customer(ctx.message.customer, amount_mob, cover_transaction_fee, memo)
+        self.logger.info(f"Sending reply payment to {ctx.customer}: {amount_mob} MOB...")
+
+        try:
+            payment = self._send_mob_to_customer(ctx.message.customer, amount_mob, cover_transaction_fee, memo)
+            self.logger.info("Payment logged!")
+        except Exception:
+            self.logger.exception(f"Failed sending reply payment to customer {ctx.customer}: {amount_mob} MOB")
+            payment = Payment(
+                amount_pmob=mc.mob2pmob(amount_mob),
+                status=PaymentStatus.Failure
+            )
+        payment.save()
         response = MobotResponse.objects.create(
             incoming=ctx.message,
             outgoing_response=Message.objects.create(
                 direction=Direction.SENT,
-                status=MessageStatus.PROCESSED,
+                status=MessageStatus.PROCESSED if payment.status == PaymentStatus.TransactionSuccess else MessageStatus.ERROR,
                 store=self.store,
                 customer=ctx.customer,
                 payment=payment,
             ),
         )
-        self.logger.info("Sent payment to customer")
 
     def build_and_submit_transaction_with_proposal(self, account_id: str, amount_in_mob: Decimal,
                                                    customer_payments_address: str) -> (str, dict):
+        self.logger.info("Building and submitting with proposal")
         with self.timers.get_timer("submit_transaction"):
             transaction_log, tx_proposal = self.mcc.build_and_submit_transaction_with_proposal(account_id,
                                                                                                amount=amount_in_mob,
@@ -115,7 +125,10 @@ class Payments:
             if len(list_of_txos) > 1:
                 raise ValueError("Found more than one txout for this chat bot-initiated transaction.")
 
-            return list_of_txos[0]["txo_id_hex"], tx_proposal
+            txo_id = list_of_txos[0]["txo_id_hex"]
+            if not isinstance(txo_id, str):
+                raise Exception(f"TXO ID not a string: {txo_id}")
+            return txo_id, tx_proposal
 
     def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund") -> Payment:
         # customer_payments_address is b64 encoded, but full service wants a b58 address
@@ -125,11 +138,11 @@ class Payments:
 
         with self.timers.get_timer("build_and_send_transaction"):
             self.logger.info(f"Sending {amount_in_mob} MOB to {customer_payments_address}")
-            txo_id, tx_proposal = self.mcc.build_and_submit_transaction_with_proposal(
+            txo_id, tx_proposal = self.build_and_submit_transaction_with_proposal(
                 account_id, amount_in_mob, customer_payments_address
             )
             self.logger.info(f"TXO_ID: {txo_id}")
-            payment = Payment.objects.create(
+            payment = Payment(
                 amount_pmob=mc.mob2pmob(amount_in_mob),
                 txo_id=txo_id,
             )
@@ -148,14 +161,13 @@ class Payments:
                 )
                 payment.signal_payment = signal_payment
                 payment.status = PaymentStatus.TransactionSuccess
-                payment.save()
                 return payment
             time.sleep(1.0)
         else:
             self.messenger.log_and_send_message(
                 ChatStrings.COULD_NOT_GENERATE_RECEIPT,
             )
-            raise PaymentException("Could not send payment")
+        return payment
 
     def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund") -> str:
         receiver_receipt_fs = self.create_receiver_receipt(tx_proposal)
