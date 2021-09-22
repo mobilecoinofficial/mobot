@@ -24,3 +24,7 @@ ipython
 factory_boy==3.2.0
 faker==8.11.0
 
+# For linting
+mypy==0.910
+types-python-dateutil
+types-pytz

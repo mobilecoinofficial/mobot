@@ -1,13 +1,9 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 import logging
 import uuid
-from unittest.mock import MagicMock
-from concurrent.futures import ThreadPoolExecutor
 
-import mobilecoin
+import mc_util
 from mobot_client.payments import MCClient
-
-
 
 
 class MockMCClient(MCClient):
@@ -17,7 +13,6 @@ class MockMCClient(MCClient):
         self.minimum_fee_pmob = self._get_minimum_fee_pmob()
         self.b64_public_address = mc_util.b58_wrapper_to_b64_public_address(self.public_address)
         self.logger = logging.getLogger("MCClient")
-        self._pool = ThreadPoolExecutor(max_workers=3)
         self._receipt_responses = dict()
         self._txo_responses = dict()
 
@@ -29,7 +24,7 @@ class MockMCClient(MCClient):
 
     def make_receipt(self, amount_pmob: int) -> str:
         '''Creates a receipt to store for later access'''
-        receipt = uuid.uuid4()
+        receipt = str(uuid.uuid4())
         txo = uuid.uuid4()
         self._receipt_responses[receipt] = txo
         self._txo_responses[txo] = {
