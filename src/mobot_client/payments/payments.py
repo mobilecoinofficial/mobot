@@ -6,9 +6,8 @@ import threading
 import logging
 
 
-import mobilecoin as mc
-import mc_util
-from signald_client import Signal
+import mc_util as mc
+from signald import Signal
 
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import (
@@ -90,14 +89,27 @@ class Payments:
                     source, self.account_id, amount_mob, customer_payments_address, memo=memo
                 )
 
+    def build_and_submit_transaction_with_proposal(self, account_id: str, amount_in_mob: Decimal, customer_payments_address: str) -> (str, dict):
+        # retry up to 10 times in case there's some failure with a 1 sec timeout in between each
+        with self.timers.get_timer("submit_transaction"):
+            transaction_log, tx_proposal = self.mcc.build_and_submit_transaction_with_proposal(account_id,
+                                                                                               amount=amount_in_mob,
+                                                                                               to_address=customer_payments_address)
+            list_of_txos = transaction_log["output_txos"]
+
+            if len(list_of_txos) > 1:
+                raise ValueError("Found more than one txout for this chat bot-initiated transaction.")
+
+            return list_of_txos[0]["txo_id_hex"], tx_proposal
+
     def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund"):
         # customer_payments_address is b64 encoded, but full service wants a b58 address
-        customer_payments_address = mc_util.b64_public_address_to_b58_wrapper(
+        customer_payments_address = mc.b64_public_address_to_b58_wrapper(
             customer_payments_address
         )
 
         with self.timers.get_timer("build_and_send_transaction"):
-            txo_id, tx_proposal = self.mcc.build_and_submit_transaction_with_proposal(
+            txo_id, tx_proposal = self.build_and_submit_transaction_with_proposal(
                 account_id, amount_in_mob, customer_payments_address
             )
 
@@ -120,7 +132,7 @@ class Payments:
 
     def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund"):
         receiver_receipt = self.create_receiver_receipt(tx_proposal)
-        receiver_receipt = mc_util.full_service_receipt_to_b64_receipt(
+        receiver_receipt = mc.full_service_receipt_to_b64_receipt(
             receiver_receipt
         )
         resp = self.signal.send_payment_receipt(source, receiver_receipt, memo)
