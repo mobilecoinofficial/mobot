@@ -80,15 +80,6 @@ class MOBotSubscriber:
         self._payment_handlers.append(isolated)
         return isolated
 
-    def _set_context(self, message: Message):
-        self._context.message = message
-
-    def _unset_context(self):
-        try:
-            del self._context.message
-        except Exception as e:
-            self.logger.error("No context to unset")
-
     def maybe_advertise_drop(self, message: Message):
         customer = message.customer
         self.logger.info("Checking for advertising drop")
@@ -96,7 +87,7 @@ class MOBotSubscriber:
         if drop_to_advertise is not None:
             if not customer.matches_country_code_restriction(drop_to_advertise):
                 self.messenger.log_and_send_message(
-                    customer, ChatStrings.COUNTRY_RESTRICTED
+                    ChatStrings.COUNTRY_RESTRICTED
                 )
             else:
                 bst_time = drop_to_advertise.start_time.astimezone(
@@ -108,7 +99,7 @@ class MOBotSubscriber:
                     desc=drop_to_advertise.pre_drop_description
                 )
                 self.messenger.log_and_send_message(
-                    customer, response_message
+                    response_message
                 )
                 return True
         else:
@@ -122,7 +113,7 @@ class MOBotSubscriber:
             self.messenger.log_and_send_message(
                 ChatStrings.UNSOLICITED_PAYMENT
             )
-            self.payments.send_reply_payment(customer, amount_paid_mob, False)
+            self.payments.send_reply_payment(amount_paid_mob, False)
         else:
             self.messenger.log_and_send_message(
                 ChatStrings.UNSOLICITED_NOT_ENOUGH
