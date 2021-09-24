@@ -47,6 +47,13 @@ class Payment(models.Model):
     def __str__(self):
         return f"Payment () ({self.amount_pmob} PMOB)"
 
+    @property
+    def maybe_signal_payment(self):
+        if self.signal_payment:
+            return self.signal_payment
+        else:
+            return None
+
 
 
 class RawMessageManager(models.Manager):
@@ -77,7 +84,7 @@ class RawSignalMessage(models.Model):
     '''A copy of the raw signal message'''
     account = PhoneNumberField(null=False, blank=False, help_text="Number of the receiver")
     source = PhoneNumberField(null=True, blank=True, help_text="Number associated with message, if it exists")
-    timestamp = models.IntegerField(help_text="Raw unix timestamp from the message data")
+    timestamp = models.FloatField(help_text="Raw unix timestamp from the message data")
     text = models.TextField(help_text="Text body, if it exists", blank=True, null=True)
     raw = models.JSONField(help_text="The raw json sent")
     payment = models.OneToOneField(SignalPayment, on_delete=models.CASCADE, blank=True, null=True, help_text="Receipt object", related_name="signal_message")

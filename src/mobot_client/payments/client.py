@@ -119,6 +119,7 @@ class MCClient(Client):
             txo_id = receipt_status["txo"]["txo_id_hex"]
 
             payment = Payment.objects.create(
+                customer=message.customer,
                 amount_pmob=mc_util.mob2pmob(amount_paid_mob),
                 txo_id=txo_id,
                 signal_payment=signal_payment,

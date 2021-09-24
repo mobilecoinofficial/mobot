@@ -243,7 +243,7 @@ class BonusCoinManager(models.Manager.from_queryset(BonusCoinQuerySet)):
 
     @transaction.atomic
     def claim_random_coin(self, drop_session):
-        coins_available = self.available_coins().select_for_update().filter(remaining__gt=0)
+        coins_available = self.available_coins().filter(remaining__gt=0)
         coins_dist = [coin.remaining for coin in coins_available]
         if coins_available.count() > 0:
             coin = random.choices(list(coins_available), weights=coins_dist)[0]

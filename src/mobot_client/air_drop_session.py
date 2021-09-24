@@ -65,26 +65,24 @@ class AirDropSession(BaseDropSession):
             total_prize = Decimal(initial_coin_amount_mob + amount_in_mob)
 
             self.messenger.log_and_send_message(
-                customer,
                 ChatStrings.REFUND_SENT.format(amount=amount_to_send_mob.normalize(), total_prize=total_prize.normalize())
             )
             self.messenger.log_and_send_message(
-                customer, ChatStrings.PRIZE.format(prize=total_prize.normalize())
+                ChatStrings.PRIZE.format(prize=total_prize.normalize())
             )
             self.messenger.log_and_send_message(
-                customer,
                 ChatStrings.AIRDROP_COMPLETED
             )
 
             if customer.has_store_preferences(store=self.store):
                 self.messenger.log_and_send_message(
-                    customer, ChatStrings.BYE
+                    ChatStrings.BYE
                 )
                 drop_session.state = SessionState.COMPLETED
                 drop_session.save()
             else:
                 self.messenger.log_and_send_message(
-                    customer, ChatStrings.NOTIFICATIONS_ASK
+                    ChatStrings.NOTIFICATIONS_ASK
                 )
                 drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED
                 drop_session.save()

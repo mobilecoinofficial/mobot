@@ -116,10 +116,10 @@ WSGI_APPLICATION = 'mobot.wsgi.application'
 
 if DATABASE == "postgresql":
     try:
-        DATABASE_NAME = os.environ["DATABASE_NAME"]
-        DATABASE_USER = os.environ["DATABASE_USER"]
-        DATABASE_PASSWORD = os.environ["DATABASE_PASSWORD"]
-        DATABASE_HOST = os.environ["DATABASE_HOST"]
+        DATABASE_NAME = os.environ.get("DATABASE_NAME", "mobot")
+        DATABASE_USER = os.environ.get("DATABASE_USER", "mobot")
+        DATABASE_PASSWORD = os.environ.get("DATABASE_PASSWORD", "mobot")
+        DATABASE_HOST = os.environ.get("DATABASE_HOST", "localhost")
     except KeyError:
         print("expecting environment variables for database fields")
 
@@ -135,6 +135,19 @@ if DATABASE == "postgresql":
             'PASSWORD': DATABASE_PASSWORD,
             'HOST': DATABASE_HOST,
             'PORT': DATABASE_PORT,
+            'DISABLE_SERVER_SIDE_CURSORS': True,
+            'OPTIONS': {
+                'sslmode': DATABASE_SSL_MODE,
+                'sslrootcert': DATABASE_SSL_ROOT_CERT,
+            },
+        },
+        'test': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'USER': DATABASE_USER,
+            'PASSWORD': DATABASE_PASSWORD,
+            'HOST': DATABASE_HOST,
+            'PORT': DATABASE_PORT,
+            'DISABLE_SERVER_SIDE_CURSORS': True,
             'OPTIONS': {
                 'sslmode': DATABASE_SSL_MODE,
                 'sslrootcert': DATABASE_SSL_ROOT_CERT,
