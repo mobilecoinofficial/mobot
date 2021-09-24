@@ -74,10 +74,12 @@ class Command(BaseCommand):
                                     messenger=messenger,
                                     mcc=mcc,
                                     payments=payments)
-            post_save.connect(mobot.process_message, sender=Message)
             with ThreadPoolExecutor() as pool:
                 print("Starting logger!")
                 pool.submit(logger.run_chat, True, False)
+                fut = pool.submit(mobot.run_chat)
+
+            print(fut.result())
 
 
         except KeyboardInterrupt as e:

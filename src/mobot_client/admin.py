@@ -1,4 +1,5 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
+import mc_util
 from django.contrib import admin
 
 from mc_util import pmob2mob
@@ -19,7 +20,7 @@ from .models.messages import (
     Message,
     MobotResponse,
     Payment,
-    SignalMessage, RawSignalMessage,
+    SignalMessage, RawSignalMessage, SignalPayment, PaymentStatus,
 )
 
 class StoreAdmin(admin.ModelAdmin):
@@ -58,7 +59,15 @@ class DropSessionAdmin(admin.ModelAdmin):
 
 
 class MessageAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('customer', 'payment_friendly')
+    readonly_fields = ('payment_friendly',)
+
+    @admin.display(description='payment')
+    def payment_friendly(self, obj: Message):
+        if obj.payment:
+            return mc_util.pmob2mob(obj.payment.amount_pmob)
+        else:
+            return 0
 
 
 class BonusCoinAdmin(admin.ModelAdmin):
@@ -108,17 +117,33 @@ class DropAdmin(admin.ModelAdmin):
 
 
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('__str__', 'status', 'updated', 'amount_pmob')
-    readonly_fields = ('status', 'updated', 'amount_pmob', 'maybe_signal_payment')
-    exclude = ('signal_payment',)
+    list_display = ('customer', 'status', 'direction_friendly', 'status', 'updated', 'amount_pmob')
+    readonly_fields = ('customer', 'status', 'direction_friendly', 'updated', 'amount_pmob', 'maybe_signal_payment')
+
+    @admin.display(description="direction")
+    def direction_friendly(self, obj: Payment):
+        return obj.message.get_direction_display()
 
 
 class MobotResponseAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('customer', 'incoming_text', 'incoming_payment', 'outgoing_payment')
+    readonly_fields = ('customer', 'incoming_text', 'incoming_payment', 'outgoing_payment')
 
 
 class RawSignalMessageAdmin(admin.ModelAdmin):
     pass
+
+
+class SignalPaymentAdmin(admin.ModelAdmin):
+    list_display = ('customer',  'direction', 'amount_mob', 'status',)
+    readonly_fields = ('customer', 'direction', 'amount_mob', 'status',)
+
+    @admin.display(description="status")
+    def status(self, obj: SignalPayment):
+        if obj.payment:
+            return obj.payment.get_status_display()
+        else:
+            return "Failure"
 
 
 
@@ -135,5 +160,6 @@ admin.site.register(BonusCoin, BonusCoinAdmin)
 admin.site.register(Sku, SkuAdmin)
 admin.site.register(Order, OrderAdmin)
 admin.site.register(RawSignalMessage, RawSignalMessageAdmin)
+admin.site.register(SignalPayment, SignalPaymentAdmin)
 admin.site.register(MobotResponse, MobotResponseAdmin)
 admin.site.register(Payment, PaymentAdmin)

@@ -35,10 +35,9 @@ class AirDropSession(BaseDropSession):
             claimed_coin: BonusCoin = BonusCoin.objects.claim_random_coin(drop_session)
             if not self.bonus_coin_funds_available(drop_session):
                 self.messenger.log_and_send_message(
-                    customer,
                     ChatStrings.AIRDROP_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
                 )
-                self.payments.send_reply_payment(amount_paid_mob, True)
+                self.payments.send_reply_payment(amount_paid_mob, True, memo="Unavailable Bonus")
                 refunded = True
                 raise NotEnoughFundsException("Not enough MOB in wallet to cover bonus coin")
             ###  This will stop us from sending an initial payment if bonus coins aren't available
@@ -46,10 +45,9 @@ class AirDropSession(BaseDropSession):
             self.logger.exception(f"Could not fulfill drop to customer {customer.source}")
             if not refunded:
                 self.messenger.log_and_send_message(
-                    customer,
                     ChatStrings.BONUS_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
                 )
-                self.payments.send_reply_payment(amount_paid_mob, True)
+                self.payments.send_reply_payment(amount_paid_mob, True, memo="Refund - Sold Out")
         else:
             initial_coin_amount_mob = mc.pmob2mob(
                 drop_session.drop.initial_coin_amount_pmob
@@ -60,7 +58,7 @@ class AirDropSession(BaseDropSession):
                     + amount_paid_mob
                     + mc.pmob2mob(self.payments.get_minimum_fee_pmob())
             )
-            self.payments.send_reply_payment(amount_to_send_mob, True)
+            self.payments.send_reply_payment(amount_to_send_mob, True, memo="Bonus")
 
             total_prize = Decimal(initial_coin_amount_mob + amount_in_mob)
 
@@ -117,7 +115,7 @@ class AirDropSession(BaseDropSession):
                     drop_session.drop.conversion_rate_mob_to_currency
                 )
                 self.logger.info(f"Sending customer {drop_session.customer} initial coin amount...")
-                self.payments.send_reply_payment(amount_in_mob, True)
+                self.payments.send_reply_payment(amount_in_mob, True, memo="Initial coins")
                 self.messenger.log_and_send_message(
                     ChatStrings.AIRDROP_INITIALIZE.format(
                         amount=amount_in_mob.normalize(),

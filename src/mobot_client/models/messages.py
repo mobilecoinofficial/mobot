@@ -5,6 +5,7 @@ import json
 from typing import Optional, Callable
 from datetime import datetime
 
+import mc_util
 from django.db import models
 from django.db import transaction
 from django.utils import timezone
@@ -25,8 +26,25 @@ class SignalPayment(models.Model):
     note = models.TextField(help_text="Note sent with payment", blank=True, null=True)
     receipt = models.CharField(max_length=255, help_text="encoded receipt")
 
+    @property
+    def customer(self):
+        if self.payment:
+            return self.payment.customer
+
+    @property
+    def amount_mob(self):
+        if self.payment:
+            return mc_util.pmob2mob(self.payment.amount_pmob)
+        else:
+            return 0
+
+    @property
+    def direction(self):
+        if self.payment:
+            return self.payment.message.get_direction_display()
+
     def __str__(self):
-        return f"{self.signal_message} -- PAYMENT"
+        return f"PAYMENT - {self.amount_mob} - {self.direction}"
 
 
 class Direction(models.IntegerChoices):
@@ -45,7 +63,7 @@ class Payment(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, null=False, blank=False, related_name='payments')
 
     def __str__(self):
-        return f"Payment () ({self.amount_pmob} PMOB)"
+        return f"Payment ({self.customer}) ({self.message.get_direction_display()}) ({self.amount_pmob} PMOB)"
 
     @property
     def maybe_signal_payment(self):
@@ -53,7 +71,6 @@ class Payment(models.Model):
             return self.signal_payment
         else:
             return None
-
 
 
 class RawMessageManager(models.Manager):
@@ -116,6 +133,7 @@ class MessageQuerySet(models.QuerySet):
             message.processing = timezone.now()
             return message
 
+
 class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
 
     def create_from_signal(self, signal_message: SignalMessage) -> Message:
@@ -157,7 +175,7 @@ class Message(models.Model):
         ordering = ['date', '-processing', 'updated']
 
     def __str__(self):
-        return f'Message: customer: {self.customer} - {self.direction} --- {self.text}'
+        return f'Message: customer: {self.customer} - {self.get_direction_display()} --- {self.text}'
 
 
 class MobotResponse(models.Model):
@@ -165,6 +183,31 @@ class MobotResponse(models.Model):
     incoming = models.ForeignKey(Message, on_delete=models.CASCADE, null=True, blank=True, related_name='responses')
     outgoing_response = models.OneToOneField(Message, on_delete=models.CASCADE, null=True, blank=True, related_name="response_message")
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def customer(self):
+        return self.incoming.customer.phone_number
+
+    @property
+    def incoming_text(self):
+        return self.incoming.text
+
+    @property
+    def incoming_payment(self):
+        if payment := self.incoming.payment:
+            return mc_util.pmob2mob(self.incoming.payment.amount_pmob)
+        else:
+            return 0
+
+    @property
+    def outgoing_payment(self):
+        if payment := self.outgoing_response.payment:
+            return mc_util.pmob2mob(payment.amount_pmob)
+        else:
+            return 0
+
+    def __str__(self):
+        return f"MobotResponse: {self.incoming.customer}: {self.incoming.text} -> {self.outgoing_response.text}({self.outgoing_payment} MOB)"
 
 
 class ProcessingError(models.Model):

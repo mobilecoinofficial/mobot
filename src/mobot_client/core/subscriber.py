@@ -18,8 +18,8 @@ from mobot_client.drop_session import BaseDropSession
 from mobot_client.item_drop_session import ItemDropSession
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import Store, SessionState, DropType, Drop, BonusCoin, Sku, Order, OrderStatus, \
-    CustomerStorePreferences, Customer, DropSession
-from mobot_client.models.messages import Message, Payment, MessageStatus, Direction
+    CustomerStorePreferences, DropSession
+from mobot_client.models.messages import Message, MessageStatus
 from mobot_client.payments import MCClient, Payments
 from mobot_client.core.context import get_current_context, ChatContext
 
@@ -113,7 +113,7 @@ class MOBotSubscriber:
             self.messenger.log_and_send_message(
                 ChatStrings.UNSOLICITED_PAYMENT
             )
-            self.payments.send_reply_payment(amount_paid_mob, False)
+            self.payments.send_reply_payment(amount_paid_mob, False, memo="Unsolicited payment refund")
         else:
             self.messenger.log_and_send_message(
                 ChatStrings.UNSOLICITED_NOT_ENOUGH
@@ -302,10 +302,7 @@ class MOBotSubscriber:
             _, _, func = filtered
             return func
 
-    def process_message(self, sender, instance, created, **kwargs):
-        if not created or instance.direction != Direction.RECEIVED:
-            return
-        message = instance
+    def process_message(self, message: Message):
         """Enter a chat context to manage which message/payment we're currently replying to"""
         with ChatContext(message) as ctx:
             handler = self._find_handler(message)
@@ -320,18 +317,16 @@ class MOBotSubscriber:
 
 
     def run_chat(self, break_on_stop=False, break_after=0):
-        # self.logger.info("Starting timeouts thread")
-        # t = threading.Thread(target=self.timeouts.process_timeouts, args=(), kwargs={})
-        # t.setDaemon(True)
-        # t.start()
         self.logger.info("Now running MOBot chat...")
         while self._run:
-            continue
-            # try:
-            #     message = Message.objects.get_message()
-            #     if message:
-            #         self.logger.info(f"Got message! {message}")
-            #         self._process(message)
-            # except Exception as e:
-            #     self.logger.exception("Exception getting message!")
-            #     time.sleep(5.0)
+            try:
+                message = Message.objects.get_message()
+                if message:
+                    self.logger.info(f"Got message! {message}")
+                    self.process_message(message)
+                else:
+                    self.logger.info(f"Sleeping to await new message")
+                    time.sleep(3)
+            except Exception as e:
+                self.logger.exception("Exception getting message!")
+                time.sleep(5.0)
