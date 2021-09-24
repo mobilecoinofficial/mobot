@@ -65,13 +65,6 @@ class Payment(models.Model):
     def __str__(self):
         return f"Payment ({self.customer}) ({self.message.get_direction_display()}) ({self.amount_pmob} PMOB)"
 
-    @property
-    def maybe_signal_payment(self):
-        if self.signal_payment:
-            return self.signal_payment
-        else:
-            return None
-
 
 class RawMessageManager(models.Manager):
     def store_message(self, signal_message: SignalMessage) -> RawSignalMessage:

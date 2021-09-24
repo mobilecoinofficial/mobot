@@ -117,8 +117,8 @@ class DropAdmin(admin.ModelAdmin):
 
 
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('customer', 'status', 'direction_friendly', 'status', 'updated', 'amount_pmob')
-    readonly_fields = ('customer', 'status', 'direction_friendly', 'updated', 'amount_pmob', 'maybe_signal_payment')
+    list_display = ('customer', 'status', 'direction_friendly', 'status', 'updated', 'amount_pmob',)
+    readonly_fields = ('customer', 'status', 'direction_friendly', 'updated', 'amount_pmob',)
 
     @admin.display(description="direction")
     def direction_friendly(self, obj: Payment):
