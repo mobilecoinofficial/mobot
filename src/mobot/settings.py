@@ -31,13 +31,10 @@ SIGNALD_PROCESS_TIMEOUT = os.getenv("SIGNALD_PROCESS_TIMEOUT", 20)
 FULLSERVICE_ADDRESS = os.getenv("FULLSERVICE_ADDRESS", "127.0.0.1")
 FULLSERVICE_PORT = os.getenv("FULLSERVICE_PORT", "9090")
 FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
-TEST_PASSWORD = "mobot"
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', False)
-LISTENER_THREADS = os.getenv("LISTENER_THREADS", 5)
-PAYMENT_THREADS = os.getenv("PAYMENT_THREADS", 3)
 
 DATABASE = os.environ.get('DATABASE', 'sqlite')
 
