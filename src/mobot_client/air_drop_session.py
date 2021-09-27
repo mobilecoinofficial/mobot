@@ -23,7 +23,7 @@ class AirDropSession(BaseDropSession):
         super().__init__(*args, **kwargs)
 
     def initial_coin_funds_available(self, drop: Drop) -> bool:
-        return self.payments.has_enough_funds_for_payment(drop.initial_mob)
+        return self.payments.has_enough_funds_for_payment(drop.initial_coin_amount_mob)
 
     def bonus_coin_funds_available(self, drop_session: DropSession) -> bool:
         return self.payments.has_enough_funds_for_payment(drop_session.bonus_coin_claimed.amount_mob)
@@ -54,12 +54,12 @@ class AirDropSession(BaseDropSession):
                 )
             drop_session.save()
         else:
-            initial_coin_amount_mob = drop_session.drop.initial_mob
+            initial_coin_amount_mob = drop_session.drop.initial_coin_amount_mob
             amount_in_mob = claimed_coin.amount_mob
             amount_to_send_mob = (
                     amount_in_mob
                     + amount_paid_mob
-                    + Decimal(mc.pmob2mob(self.payments.get_minimum_fee_pmob()))
+                    + mc.pmob2mob(self.payments.get_minimum_fee_pmob())
             )
             self.payments.send_mob_to_customer(customer, source, amount_to_send_mob, True)
 
@@ -123,7 +123,7 @@ class AirDropSession(BaseDropSession):
                 )
                 drop_session.state = SessionState.CANCELLED
             else:
-                amount_in_mob = drop_session.drop.initial_mob
+                amount_in_mob = drop_session.drop.initial_coin_amount_mob
                 value_in_currency = amount_in_mob * Decimal(
                     drop_session.drop.conversion_rate_mob_to_currency
                 )
@@ -179,7 +179,7 @@ class AirDropSession(BaseDropSession):
                 ChatStrings.AIRDROP_COMMANDS
             )
 
-        amount_in_mob = drop_session.drop.initial_mob
+        amount_in_mob = drop_session.drop.initial_coin_amount_mob
 
         value_in_currency = amount_in_mob * Decimal(
             drop_session.drop.conversion_rate_mob_to_currency

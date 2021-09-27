@@ -148,7 +148,7 @@ class Drop(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='drops', db_index=True, null=True, blank=True)
     number_restriction = models.CharField(default="+44", max_length=255, blank=True)
     timezone = models.CharField(default="Europe/London", max_length=255)
-    initial_mob = models.DecimalField(decimal_places=8, max_digits=12, default=Decimal(0), verbose_name="Initial mob award amount")
+    initial_coin_amount_mob = models.DecimalField(decimal_places=8, max_digits=12, default=Decimal(0), verbose_name="Initial mob award amount")
     conversion_rate_mob_to_currency = models.FloatField(default=1.0)
     currency_symbol = models.CharField(default="£", max_length=1)
     country_code_restriction = models.CharField(default="GB", max_length=3)
@@ -194,7 +194,7 @@ class Drop(models.Model):
             return Decimal(0)
 
     def initial_mob_disbursed(self) -> Decimal:
-        return Decimal(self.num_initial_sent() * int(self.initial_mob))
+        return Decimal(self.num_initial_sent() * self.initial_coin_amount_mob)
 
     def initial_coins_available(self) -> Union[int, str]:
         if self.drop_type == DropType.AIRDROP:
