@@ -130,12 +130,13 @@ class Payments:
             raise PaymentException("Could not send payment")
 
     def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund"):
+        self.logger.info(f"Sending payment receipt to {source}")
         receiver_receipt = self.create_receiver_receipt(tx_proposal)
         receiver_receipt = mc.full_service_receipt_to_b64_receipt(
             receiver_receipt
         )
         resp = self.signal.send_payment_receipt(source, receiver_receipt, memo)
-        self.logger.info(f"Send receipt {receiver_receipt} to {source}: {resp}")
+        self.logger.info(f"Sent receipt {receiver_receipt} to {source}: {resp}")
 
     def create_receiver_receipt(self, tx_proposal: dict):
         receiver_receipts = self.mcc.create_receiver_receipts(tx_proposal)
