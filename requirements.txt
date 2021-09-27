@@ -17,7 +17,6 @@ django-extensions==3.1.3
 aenum==3.1.0
 django-phonenumber-field[phonenumberslite]==2.1.0
 tenacity==8.0.1
-django-concurrency==2.3
 
 # Make manage.py shell use an iPython session
 ipython
