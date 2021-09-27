@@ -141,14 +141,14 @@ class DropManager(models.Manager.from_queryset(DropQuerySet)):
 class Drop(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='drops')
     drop_type = models.IntegerField(choices=DropType.choices, default=DropType.AIRDROP, db_index=True)
-    pre_drop_description = models.TextField()
-    advertisment_start_time = models.DateTimeField(db_index=True)
-    start_time = models.DateTimeField(db_index=True)
-    end_time = models.DateTimeField(db_index=True)
+    pre_drop_description = models.TextField(default="MOB")
+    advertisment_start_time = models.DateTimeField(db_index=True, default=timezone.now())
+    start_time = models.DateTimeField(db_index=True, default=timezone.now())
+    end_time = models.DateTimeField(db_index=True, default=timezone.now())
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='drops', db_index=True, null=True, blank=True)
     number_restriction = models.CharField(default="+44", max_length=255, blank=True)
-    timezone = models.CharField(default="UTC", max_length=255)
-    initial_mob = models.DecimalField(decimal_places=8, max_digits=12)
+    timezone = models.CharField(default="Europe/London", max_length=255)
+    initial_mob = models.DecimalField(decimal_places=8, max_digits=12, default=Decimal(0), verbose_name="Initial mob award amount")
     conversion_rate_mob_to_currency = models.FloatField(default=1.0)
     currency_symbol = models.CharField(default="£", max_length=1)
     country_code_restriction = models.CharField(default="GB", max_length=3)
@@ -183,18 +183,18 @@ class Drop(models.Model):
 
     @admin.display(description='Bonus Payments')
     def num_bonus_sent(self) -> int:
-        return BonusCoin.objects.with_available().filter(drop=self).aggregate(Sum('num_claimed_sessions'))[
-            'num_claimed_sessions__sum']
+        return BonusCoin.objects.filter(drop=self).aggregate(Sum('number_claimed'))[
+            'number_claimed__sum']
 
     def bonus_mob_disbursed(self) -> Decimal:
         if self.bonus_coins.count():
-            return BonusCoin.objects.with_available().filter(drop=self).aggregate(Sum('mob_claimed'))[
+            return BonusCoin.objects.with_sum_spent().filter(drop=self).aggregate(Sum('mob_claimed'))[
                 'mob_claimed__sum']
         else:
-            return 0
+            return Decimal(0)
 
     def initial_mob_disbursed(self) -> Decimal:
-        return self.num_initial_sent() * self.initial_mob
+        return Decimal(self.num_initial_sent() * int(self.initial_mob))
 
     def initial_coins_available(self) -> Union[int, str]:
         if self.drop_type == DropType.AIRDROP:
@@ -224,6 +224,8 @@ class Drop(models.Model):
 
 
 class BonusCoinQuerySet(models.QuerySet):
+    def with_sum_spent(self) -> models.QuerySet:
+        return self.annotate(mob_claimed=F('number_claimed') * F('amount_mob')).all()
 
     def available_coins(self) -> models.QuerySet:
         available = self.filter(number_available_at_start__gt=F('number_claimed'))
@@ -245,7 +247,6 @@ class BonusCoinManager(models.Manager.from_queryset(BonusCoinQuerySet)):
 
     @retry(wait=wait_random_exponential(multiplier=1, min=4, max=10), retry=retry_if_exception_type(ConcurrentModificationException))
     def find_and_claim_unclaimed_coin(self) -> BonusCoin:
-
         coins_available = self.available_coins()
         coins_dist = [coin.number_remaining() for coin in coins_available]
         if len(coins_available) > 0:
@@ -286,6 +287,9 @@ class BonusCoin(models.Model):
 
     def number_remaining(self) -> int:
         return self.number_available_at_start - self.number_claimed
+
+    def amount_disbursed(self) -> Decimal:
+        return self.number_claimed * self.amount_mob
 
 
 class Customer(models.Model):
