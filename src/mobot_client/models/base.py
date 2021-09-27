@@ -3,21 +3,20 @@
 from __future__ import annotations
 import random
 from decimal import Decimal
-from typing import Optional, Union, Iterable, List
+from typing import Optional, Union
 import logging
 
-from django.db import models, connection
-from django.db.models import F, Q, Sum
+from django.db import models
+from django.db.models import F, Sum
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.db import transaction
 from django.contrib import admin
 from phonenumber_field.modelfields import PhoneNumberField
-from tenacity import retry_if_exception, wait_random_exponential, retry, retry_if_exception_type
+from tenacity import wait_random_exponential, retry, retry_if_exception_type
 
 from mobot_client.models.exceptions import ConcurrentModificationException
 from mobot_client.models.states import SessionState
-import mobilecoin as mc
 
 
 logger = logging.getLogger("ModelsLogger")
