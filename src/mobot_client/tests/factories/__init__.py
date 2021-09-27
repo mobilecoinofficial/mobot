@@ -1,4 +1,5 @@
 #  Copyright (c) 2021 MobileCoin. All rights reserved.
+from decimal import Decimal
 
 import factory
 import pytz
@@ -57,7 +58,7 @@ class DropFactory(factory.django.DjangoModelFactory):
     end_time = timezone.now() + timedelta(days=2)
     number_restriction = factory.Iterator(['+44', '+1'])
     timezone = 'PST'
-    initial_coin_amount_pmob = 4 * 1e12
+    initial_mob = Decimal(f"{float(0.2):4f}")
 
     @factory.lazy_attribute
     def store_id(self):
@@ -85,7 +86,8 @@ class ItemFactory(factory.django.DjangoModelFactory):
 
     id = factory.Faker('pyint')
     name = f"{factory.Faker('name')}  {factory.Faker('sentence', nb_words=5)}"
-    price_in_pmob = 5 * 1e12
+    price_in_mob = factory.Faker('pydecimal', positive=True, left_digits=3, right_digits=6)
+
     description = factory.Faker('sentence', nb_words=50)
     short_description = factory.Faker('sentence', nb_words=10)
     image_link = factory.Sequence(lambda n: f"https://img.com/image{n}")
@@ -117,13 +119,12 @@ class BonusCoinFactory(factory.django.DjangoModelFactory):
         model = BonusCoin
 
     drop = factory.SubFactory(DropFactory, drop_type=DropType.AIRDROP)
-    amount_pmob = factory.Faker('pyint', min_value=1e12, max_value=5 * 1e12)
+    amount_mob = factory.Faker('pydecimal', positive=True, left_digits=3, right_digits=6)
     number_available_at_start = 10
 
 
 class ItemDropFactory(DropFactory):
     drop_type = DropType.ITEM
-
 
 class AirDropFactory(DropFactory):
     drop_type = DropType.AIRDROP

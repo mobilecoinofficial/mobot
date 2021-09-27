@@ -77,7 +77,7 @@ class Timeouts:
         # FIXME TODO
 
         # Get amount customer paid
-        price = session.drop.item.price_in_pmob
+        price = session.drop.item.price_in_mob
 
         self.payments.send_mob_to_customer(customer, customer.phone_number, mc.pmob2mob(price), True)
         self.set_customer_refunded(customer)

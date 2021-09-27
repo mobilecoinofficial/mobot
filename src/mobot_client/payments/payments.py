@@ -223,8 +223,8 @@ class Payments:
         if amount_paid_mob < item_cost_mob:
             self.handle_not_enough_paid(amount_paid_mob, drop_session)
         elif (
-                mc.mob2pmob(amount_paid_mob)
-                > mc.mob2pmob(item_cost_mob) + self.minimum_fee_pmob
+                amount_paid_mob
+                > item_cost_mob + mc.pmob2mob(self.minimum_fee_pmob)
         ):
             self.handle_excess_payment(amount_paid_mob, drop_session)
         else:
