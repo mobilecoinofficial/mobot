@@ -38,7 +38,7 @@ DEBUG = os.environ.get('DEBUG', False)
 LISTENER_THREADS = os.getenv("LISTENER_THREADS", 5)
 PAYMENT_THREADS = os.getenv("PAYMENT_THREADS", 3)
 
-DATABASE = os.environ.get('DATABASE', 'sqlite')
+DATABASE = os.environ.get('DATABASE', 'postgresql')
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1').split(',')
 
@@ -144,6 +144,7 @@ if DATABASE == "postgresql":
         'test': {
             'ENGINE': 'django.db.backends.postgresql',
             'USER': DATABASE_USER,
+            'NAME': DATABASE_NAME,
             'PASSWORD': DATABASE_PASSWORD,
             'HOST': DATABASE_HOST,
             'PORT': DATABASE_PORT,
