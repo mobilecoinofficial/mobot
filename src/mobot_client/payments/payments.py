@@ -175,6 +175,7 @@ class Payments:
     def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund") -> str:
         receiver_receipt_fs = self.create_receiver_receipt(tx_proposal)
         confirmation = receiver_receipt_fs["confirmation"]
+        self.logger.info(f"Sending payment receipt to {source}")
         receiver_receipt = mc.full_service_receipt_to_b64_receipt(
             receiver_receipt_fs
         )
@@ -197,14 +198,11 @@ class Payments:
             unspent_pmob = int(account_amount_response["unspent_pmob"])
             return unspent_pmob
 
-    def has_enough_funds_for_payment(self, payment_amount: int) -> bool:
+    def has_enough_funds_for_payment(self, payment_amount: Decimal) -> bool:
         """Return a bool to check if we can pay out the desired amount"""
         return self.get_unspent_pmob() >= (
-                payment_amount + int(self.get_minimum_fee_pmob())
+                mc.mob2pmob(payment_amount) + int(self.minimum_fee_pmob)
         )
-
-    def get_minimum_fee_pmob(self) -> int:
-        return self.minimum_fee_pmob
 
     def handle_not_enough_paid(self, amount_paid_mob: Decimal, drop_session: DropSession):
         customer = drop_session.customer
@@ -255,8 +253,8 @@ class Payments:
         if amount_paid_mob < item_cost_mob:
             self.handle_not_enough_paid(amount_paid_mob, drop_session)
         elif (
-                mc.mob2pmob(amount_paid_mob)
-                > mc.mob2pmob(item_cost_mob) + self.minimum_fee_pmob
+                amount_paid_mob
+                > item_cost_mob + mc.pmob2mob(self.minimum_fee_pmob)
         ):
             self.handle_excess_payment(amount_paid_mob, drop_session)
         else:

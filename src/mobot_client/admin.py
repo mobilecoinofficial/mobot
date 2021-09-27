@@ -2,7 +2,6 @@
 import mc_util
 from django.contrib import admin
 
-from mc_util import pmob2mob
 from .models import (
     Store,
     Customer,
@@ -75,8 +74,8 @@ class BonusCoinAdmin(admin.ModelAdmin):
     readonly_fields = ('number_claimed', 'number_remaining',)
 
     @admin.display(description='MOB')
-    def amount_mob(self, obj):
-        return f"{pmob2mob(obj.amount_pmob):.4f}"
+    def amount_mob(self, obj: BonusCoin):
+        return f"{obj.amount_mob:.4f}"
 
 class SkuAdmin(admin.ModelAdmin):
     readonly_fields = ('number_available',)
@@ -109,11 +108,11 @@ class DropAdmin(admin.ModelAdmin):
 
     @admin.display(description='Bonus Coins')
     def bonus_coins_available_display(self, obj):
-        return "\n".join([f"{pmob2mob(coin.amount_pmob):.3f} MOB : ({coin.number_remaining()}/{coin.number_available_at_start}) available" for coin in obj.bonus_coins.all()])
+        return "\n".join([f"{coin.amount_mob:.3f} MOB : ({coin.number_remaining()}/{coin.number_available_at_start}) available" for coin in obj.bonus_coins.all()])
 
     @admin.display(description='Total Spent (MOB)')
-    def total_spent(self, obj):
-        return pmob2mob(obj.total_pmob_spent())
+    def total_spent(self, obj: Drop):
+        return obj.initial_mob_disbursed() + obj.bonus_mob_disbursed()
 
 
 class PaymentAdmin(admin.ModelAdmin):

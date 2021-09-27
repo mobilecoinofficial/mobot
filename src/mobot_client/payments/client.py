@@ -36,7 +36,7 @@ class MCClient(Client):
         self.logger = logging.getLogger("MCClient")
         self._pool = ThreadPoolExecutor(max_workers=settings.PAYMENT_THREADS)
 
-    def _get_minimum_fee_pmob(self):
+    def _get_minimum_fee_pmob(self) -> int:
         get_network_status_response = self.get_network_status()
         return int(get_network_status_response["fee_pmob"])
 

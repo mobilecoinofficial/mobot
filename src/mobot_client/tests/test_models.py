@@ -1,9 +1,9 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 import unittest
 import logging
-from typing import List, Dict
+from typing import List, Dict, Iterable
 from collections import defaultdict
-from django.test import TestCase
+from django.test import TransactionTestCase
 import factory.random
 from mobot_client.tests.factories import *
 
@@ -19,12 +19,18 @@ from mobot_client.models.states import SessionState
 
 factory.random.reseed_random('mobot cleanup')
 
+# l = logging.getLogger('django.db.backends')
+# l.setLevel(logging.DEBUG)
+# l.addHandler(logging.StreamHandler())
 
-class ModelTests(TestCase):
+
+class ModelTests(TransactionTestCase):
+
+    def setUp(self) -> None:
+        self.logger = logging.getLogger("ModelTestsLogger")
 
     def test_items_available(self):
         '''Make sure inventory availability is what's expected, and sold-out logic is correctly applied'''
-        logger = logging.getLogger()
         store = StoreFactory.create()
         item = ItemFactory.create(store=store)
         drop = DropFactory.create(drop_type=DropType.ITEM, store=store, item=item)
@@ -36,7 +42,7 @@ class ModelTests(TestCase):
         self.assertEqual(item.skus.count(), 3)
         self.assertEqual(item.drops.count(), 1)
 
-        print("Creating sessions...")
+        self.logger.info("Creating sessions...")
         drop_sessions: List[DropSession] = list(DropSessionFactory.create_batch(size=10, drop=drop))
         for drop_session in drop_sessions:
             self.assertEqual(drop_session.drop, drop)
@@ -87,12 +93,12 @@ class ModelTests(TestCase):
         coin = BonusCoinFactory.create(drop=drop, number_available_at_start=1)
         session = DropSessionFactory.create(drop=drop)
         self.assertEqual(coin.number_remaining(), coin.number_available_at_start)
-        claimed = BonusCoin.objects.claim_random_coin(drop_session=session)
+        claimed = BonusCoin.objects.claim_random_coin_for_session(drop_session=session)
         session.save()
-        self.assertEqual(coin.number_remaining(), coin.number_available_at_start - 1)
+        self.assertEqual(claimed.number_remaining(), claimed.number_available_at_start - 1)
         new_session = DropSessionFactory.create(drop=drop)
         with self.assertRaises(OutOfStockException):
-            second_claimed = BonusCoin.objects.claim_random_coin(drop_session=session)
+            second_claimed = BonusCoin.objects.claim_random_coin_for_session(drop_session=session)
             session.save()
         self.assertEqual(BonusCoin.objects.available_coins().filter(drop=drop).count(), 0)
 
@@ -102,15 +108,19 @@ class ModelTests(TestCase):
         coin = BonusCoinFactory.create_batch(size=2, drop=drop, number_available_at_start=1)
         session1 = DropSessionFactory.create(drop=drop)
         session2 = DropSessionFactory.create(drop=drop)
+        session3 = DropSessionFactory.create(drop=drop)
+
         self.assertTrue(drop.under_quota())
-        claimed1 = BonusCoin.objects.claim_random_coin(session1)
-        claimed2 = BonusCoin.objects.claim_random_coin(session2)
+        claimed1 = BonusCoin.objects.claim_random_coin_for_session(session1)
+        claimed2 = BonusCoin.objects.claim_random_coin_for_session(session2)
         session1.save()
         session2.save()
+        coins_available = BonusCoin.objects.available_coins().only('number_claimed').count()
+        self.logger.info(f"After claiming two coins, number available: {coins_available}")
         self.assertEqual(BonusCoin.objects.available_coins().count(), 0)
         self.assertFalse(drop.under_quota())
         with self.assertRaises(OutOfStockException):
-            BonusCoin.objects.claim_random_coin(session1)
+            BonusCoin.objects.claim_random_coin_for_session(session3)
 
     def test_active_drop_sessions_found_for_customer(self):
         '''Ensure that customers with old drop sessions don't find themselves unable to participate in current drops'''

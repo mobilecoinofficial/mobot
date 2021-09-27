@@ -35,10 +35,9 @@ FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', False)
-LISTENER_THREADS = os.getenv("LISTENER_THREADS", 5)
-PAYMENT_THREADS = os.getenv("PAYMENT_THREADS", 3)
 
 DATABASE = os.environ.get('DATABASE', 'postgresql')
+
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1').split(',')
 
@@ -117,8 +116,8 @@ WSGI_APPLICATION = 'mobot.wsgi.application'
 if DATABASE == "postgresql":
     try:
         DATABASE_NAME = os.environ.get("DATABASE_NAME", "mobot")
-        DATABASE_USER = os.environ.get("DATABASE_USER", "mobot")
-        DATABASE_PASSWORD = os.environ.get("DATABASE_PASSWORD", "mobot")
+        DATABASE_USER = os.environ["DATABASE_USER"]
+        DATABASE_PASSWORD = os.environ["DATABASE_PASSWORD"]
         DATABASE_HOST = os.environ.get("DATABASE_HOST", "localhost")
     except KeyError:
         print("expecting environment variables for database fields")
@@ -133,25 +132,14 @@ if DATABASE == "postgresql":
             'NAME': DATABASE_NAME,
             'USER': DATABASE_USER,
             'PASSWORD': DATABASE_PASSWORD,
-            'HOST': DATABASE_HOST,
             'PORT': DATABASE_PORT,
             'DISABLE_SERVER_SIDE_CURSORS': True,
             'OPTIONS': {
                 'sslmode': DATABASE_SSL_MODE,
                 'sslrootcert': DATABASE_SSL_ROOT_CERT,
             },
-        },
-        'test': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'USER': DATABASE_USER,
-            'NAME': DATABASE_NAME,
-            'PASSWORD': DATABASE_PASSWORD,
-            'HOST': DATABASE_HOST,
-            'PORT': DATABASE_PORT,
-            'DISABLE_SERVER_SIDE_CURSORS': True,
-            'OPTIONS': {
-                'sslmode': DATABASE_SSL_MODE,
-                'sslrootcert': DATABASE_SSL_ROOT_CERT,
+            'TEST': {
+                'NAME': f"{DATABASE_NAME}_test"
             },
         }
     }
