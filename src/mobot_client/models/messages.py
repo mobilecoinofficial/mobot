@@ -102,6 +102,9 @@ class MessageQuerySet(models.QuerySet):
                            direction=Direction.RECEIVED)\
                     .order_by('date', '-payment').all()
 
+    def queue_size(self) -> int:
+        return self.not_processing().all().count()
+
     @transaction.atomic()
     def get_message(self):
         if message := self.not_processing().select_for_update().first():

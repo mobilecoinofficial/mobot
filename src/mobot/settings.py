@@ -31,6 +31,7 @@ SIGNALD_PROCESS_TIMEOUT = os.getenv("SIGNALD_PROCESS_TIMEOUT", 20)
 FULLSERVICE_ADDRESS = os.getenv("FULLSERVICE_ADDRESS", "127.0.0.1")
 FULLSERVICE_PORT = os.getenv("FULLSERVICE_PORT", "9090")
 FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
+CONCURRENCY_WARNING_MESSAGE_THRESHOLD = os.getenv("CONCURRENCY_WARNING_MESSAGE_THRESHOLD", 3)
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -112,6 +113,7 @@ WSGI_APPLICATION = 'mobot.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
+PGBOUNCER_PORT = os.getenv("PGBOUNCER_PORT", 6432)
 
 if DATABASE == "postgresql":
     try:

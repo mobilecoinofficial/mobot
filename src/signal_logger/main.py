@@ -61,7 +61,7 @@ class SignalLogger:
                     raise
                 return stored_message
 
-    def run_chat(self, auto_send_receipts=True, stop_when_done=False):
+    def listen(self, auto_send_receipts=True, stop_when_done=False):
         """
         Start the chat.
         """
