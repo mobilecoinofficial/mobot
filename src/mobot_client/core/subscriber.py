@@ -334,7 +334,7 @@ class MOBotSubscriber:
     def _get_next_message(self):
         while self._run:
             try:
-                message = Message.objects.get_message()
+                message = Message.objects.get_message(self.store)
                 if message:
                     return message
                 else:

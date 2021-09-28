@@ -101,11 +101,13 @@ class MessageStatus(models.IntegerChoices):
 
 class MessageQuerySet(models.QuerySet):
     def not_processing(self) -> models.QuerySet:
+        """Get the first available unprocessed message for each customer to ensure we only work one message per customer"""
         return self.filter(status=MessageStatus.NOT_PROCESSED,
                            direction=Direction.RECEIVED).distinct('customer_id').order_by('customer_id', 'date', '-payment')
 
     @retry(wait=wait_random_exponential(multiplier=1, min=4, max=10), retry=retry_if_exception_type(ConcurrentModificationException))
     def get_optimistic(self, message: Message):
+        """Ask for a message at the current status, and update to processing if found. Retry/fail a few times if not possible."""
         updated = self.filter(pk=message.pk, status=MessageStatus.NOT_PROCESSED).select_for_update().update(status=MessageStatus.PROCESSING)
         if not updated:
             raise ConcurrentModificationException("Got a message currently being processed")
@@ -113,8 +115,9 @@ class MessageQuerySet(models.QuerySet):
         return message
 
     @transaction.atomic()
-    def get_message(self):
-        if message := self.not_processing().first():
+    def get_message(self, store: Store):
+        """Get next available message for the current MOBot shop"""
+        if message := self.not_processing().filter(store=store).first():
             return self.get_optimistic(message)
 
 

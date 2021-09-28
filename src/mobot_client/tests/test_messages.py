@@ -7,7 +7,8 @@ from decimal import Decimal
 
 from django.test import LiveServerTestCase
 
-from mobot_client.tests.factories import StoreFactory, CustomerFactory
+from mobot_client.core.subscriber import MOBotSubscriber
+from mobot_client.tests.factories import StoreFactory, CustomerFactory, DropFactory
 from mobot_client.models import Store, Customer
 from mobot_client.models.messages import Message
 from mobot_client.payments import MCClient
@@ -45,5 +46,17 @@ class MessageTest(LiveServerTestCase):
         messages = list(Message.objects.all())
         self._compare_message(test_message_1, messages[0])
         self._compare_message(test_message_2, messages[1])
+
+    def test_response(self):
+        drop = DropFactory.create(store=self.store)
+        amount_pmob = int(Decimal("1e12"))
+        test_message_1 = TestMessage(phone_number=self.customer.phone_number, text="Hello World", payment=None)
+        test_message_2 = TestMessage(phone_number=self.customer.phone_number, text=None, payment=amount_pmob)
+        test_messages = [mock_signal_message_with_receipt(message, self.mcc) for message in [test_message_1, test_message_2]]
+        signal = MockSignal(test_messages=test_messages)
+        logger = SignalLogger(signal=signal, mcc=self.mcc)
+        logger.listen(stop_when_done=True)
+        self.assertEqual(Message.objects.all().count(), 2)
+        subscriber = MOBotSubscriber()
 
 
