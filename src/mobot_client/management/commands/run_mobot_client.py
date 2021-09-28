@@ -4,7 +4,7 @@
 The entrypoint for the running MOBot.
 """
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
@@ -76,10 +76,11 @@ class Command(BaseCommand):
                                     payments=payments)
             with ThreadPoolExecutor() as pool:
                 print("Starting logger!")
-                pool.submit(logger.run_chat, True, False)
+                chat_fut = pool.submit(logger.run_chat, True, False)
                 fut = pool.submit(mobot.run_chat)
 
-            print(fut.result())
+            for f in as_completed([fut, chat_fut]):
+                print(f.result())
 
 
         except KeyboardInterrupt as e:

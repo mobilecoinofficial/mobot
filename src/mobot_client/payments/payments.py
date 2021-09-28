@@ -49,6 +49,9 @@ class Payments:
         with self.timers.get_timer("Startup"):
             self.logger.info("Payments started")
 
+    def get_minimum_fee_pmob(self) -> int:
+        return self.mcc.minimum_fee_pmob
+
     def get_payments_address(self, source):
         if isinstance(source, dict):
             source = source["number"]

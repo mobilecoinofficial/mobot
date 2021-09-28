@@ -27,7 +27,7 @@ class SignalPayment(models.Model):
     receipt = models.CharField(max_length=255, help_text="encoded receipt")
 
     def __str__(self):
-        return f"PAYMENT - {self.note} - {self.receipt}"
+        return f"{self.note} - {self.receipt}"
 
 
 class Direction(models.IntegerChoices):
