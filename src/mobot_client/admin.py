@@ -125,9 +125,30 @@ class PaymentAdmin(admin.ModelAdmin):
 
 
 class MobotResponseAdmin(admin.ModelAdmin):
-    list_display = ('customer', 'incoming_text', 'incoming_payment', 'outgoing_payment')
-    readonly_fields = ('customer', 'incoming_text', 'incoming_payment', 'outgoing_payment')
+    list_display = ('customer', 'incoming_text', 'incoming_mob', 'outgoing_response_text',  'outgoing_mob')
+    readonly_fields = ('customer', 'incoming_text', 'outgoing_response_text', 'incoming_mob', 'outgoing_mob')
 
+    @admin.display(description="out")
+    def outgoing_response_text(self, obj: MobotResponse):
+        return obj.outgoing_response.text
+
+    @admin.display(description="in")
+    def incoming_text(self, obj: MobotResponse):
+        return obj.incoming.text
+
+    @admin.display(description="MOB in")
+    def incoming_mob(self, obj: MobotResponse):
+        if obj.incoming.payment is not None:
+            return obj.incoming.payment.amount_mob
+        else:
+            return 0
+
+    @admin.display(description="MOB out")
+    def outgoing_mob(self, obj: MobotResponse):
+        if obj.outgoing_response.payment is not None:
+            return obj.outgoing_response.payment.amount_mob
+        else:
+            return 0
 
 class RawSignalMessageAdmin(admin.ModelAdmin):
     pass

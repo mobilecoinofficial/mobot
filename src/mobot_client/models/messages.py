@@ -176,27 +176,6 @@ class MobotResponse(models.Model):
     def customer(self):
         return self.incoming.customer.phone_number
 
-    @property
-    def incoming_text(self):
-        return self.incoming.text
-
-    @property
-    def incoming_payment(self):
-        if payment := self.incoming.payment:
-            return mc_util.pmob2mob(self.incoming.payment.amount_mob)
-        else:
-            return 0
-
-    @property
-    def outgoing_payment(self):
-        if payment := self.outgoing_response.payment:
-            return mc_util.pmob2mob(payment.amount_mob)
-        else:
-            return 0
-
-    def __str__(self):
-        return f"MobotResponse: {self.incoming.customer}: {self.incoming.text} -> {self.outgoing_response.text}({self.outgoing_payment} MOB)"
-
 
 class ProcessingError(models.Model):
     """Any errors in processing message"""
