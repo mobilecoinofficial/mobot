@@ -116,8 +116,8 @@ WSGI_APPLICATION = 'mobot.wsgi.application'
 if DATABASE == "postgresql":
     try:
         DATABASE_NAME = os.environ.get("DATABASE_NAME", "mobot")
-        DATABASE_USER = os.environ["DATABASE_USER"]
-        DATABASE_PASSWORD = os.environ["DATABASE_PASSWORD"]
+        DATABASE_USER = os.environ.get("DATABASE_USER", "mobot")
+        DATABASE_PASSWORD = os.environ.get("DATABASE_PASSWORD", "mobot")
         DATABASE_HOST = os.environ.get("DATABASE_HOST", "localhost")
     except KeyError:
         print("expecting environment variables for database fields")

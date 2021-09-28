@@ -26,25 +26,8 @@ class SignalPayment(models.Model):
     note = models.TextField(help_text="Note sent with payment", blank=True, null=True)
     receipt = models.CharField(max_length=255, help_text="encoded receipt")
 
-    @property
-    def customer(self):
-        if self.payment:
-            return self.payment.customer
-
-    @property
-    def amount_mob(self):
-        if self.payment:
-            return mc_util.pmob2mob(self.payment.amount_pmob)
-        else:
-            return 0
-
-    @property
-    def direction(self):
-        if self.payment:
-            return self.payment.message.get_direction_display()
-
     def __str__(self):
-        return f"PAYMENT - {self.amount_mob} - {self.direction}"
+        return f"PAYMENT - {self.note} - {self.receipt}"
 
 
 class Direction(models.IntegerChoices):
@@ -53,7 +36,7 @@ class Direction(models.IntegerChoices):
 
 
 class Payment(models.Model):
-    amount_pmob = models.PositiveIntegerField(null=True, blank=True, help_text="Amount of payment, if known")
+    amount_mob = models.DecimalField(null=True, blank=True, decimal_places=8, max_digits=12, help_text="Amount of payment, if known")
     processed = models.DateTimeField(auto_now_add=True, help_text="The date a payment was processed, if it was.")
     updated = models.DateTimeField(auto_now=True, help_text="Time of last update")
     status = models.CharField(choices=PaymentStatus.choices, max_length=255, default=PaymentStatus.TransactionPending,
@@ -63,7 +46,7 @@ class Payment(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, null=False, blank=False, related_name='payments')
 
     def __str__(self):
-        return f"Payment ({self.customer}) ({self.message.get_direction_display()}) ({self.amount_pmob} PMOB)"
+        return f"Payment ({self.customer}) ({self.message.get_direction_display()}) ({self.amount_mob} PMOB)"
 
 
 class RawMessageManager(models.Manager):
@@ -188,14 +171,14 @@ class MobotResponse(models.Model):
     @property
     def incoming_payment(self):
         if payment := self.incoming.payment:
-            return mc_util.pmob2mob(self.incoming.payment.amount_pmob)
+            return mc_util.pmob2mob(self.incoming.payment.amount_mob)
         else:
             return 0
 
     @property
     def outgoing_payment(self):
         if payment := self.outgoing_response.payment:
-            return mc_util.pmob2mob(payment.amount_pmob)
+            return mc_util.pmob2mob(payment.amount_mob)
         else:
             return 0
 

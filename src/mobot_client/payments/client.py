@@ -34,7 +34,6 @@ class MCClient(Client):
         self.minimum_fee_pmob = self._get_minimum_fee_pmob()
         self.b64_public_address = mc_util.b58_wrapper_to_b64_public_address(self.public_address)
         self.logger = logging.getLogger("MCClient")
-        self._pool = ThreadPoolExecutor(max_workers=settings.PAYMENT_THREADS)
 
     def _get_minimum_fee_pmob(self) -> int:
         get_network_status_response = self.get_network_status()
@@ -120,7 +119,7 @@ class MCClient(Client):
 
             payment = Payment.objects.create(
                 customer=message.customer,
-                amount_pmob=mc_util.mob2pmob(amount_paid_mob),
+                amount_mob=amount_paid_mob,
                 txo_id=txo_id,
                 signal_payment=signal_payment,
             )

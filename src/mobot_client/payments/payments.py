@@ -98,7 +98,7 @@ class Payments:
         except Exception:
             self.logger.exception(f"Failed sending reply payment to customer {ctx.customer}: {amount_mob} MOB")
             payment = Payment(
-                amount_pmob=mc.mob2pmob(amount_mob),
+                amount_mob=amount_mob,
                 status=PaymentStatus.Failure,
                 customer=ctx.customer,
             )
@@ -145,7 +145,7 @@ class Payments:
             )
             self.logger.info(f"TXO_ID: {txo_id}")
             payment = Payment(
-                amount_pmob=mc.mob2pmob(amount_in_mob),
+                amount_mob=amount_in_mob,
                 txo_id=txo_id,
                 customer=ctx.customer,
             )

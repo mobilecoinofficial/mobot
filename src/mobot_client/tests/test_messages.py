@@ -26,8 +26,8 @@ class MessageTest(LiveServerTestCase):
     def _compare_message(self, test_message: TestMessage, message: Message):
         print(f"Checking if message phone number {message.customer.phone_number} equals input {test_message.phone_number}")
         self.assertEqual(test_message.phone_number, message.customer.phone_number)
-        print(f"Checking if message payment {message.payment.amount_pmob} equals input {test_message.payment}")
-        self.assertEqual(test_message.payment, message.payment.amount_pmob)
+        print(f"Checking if message payment {message.payment.amount_mob} equals input {test_message.payment}")
+        self.assertEqual(test_message.payment, message.payment.amount_mob)
         print(f"Checking if message text {message.text} equals input {test_message.text}")
         self.assertEqual(test_message.text, message.text)
 

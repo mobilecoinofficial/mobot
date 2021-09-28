@@ -107,7 +107,7 @@ class MOBotSubscriber:
 
     def handle_unsolicited_payment(self, message: Message):
         customer = message.customer
-        amount_paid_mob = mc.pmob2mob(message.payment.amount_pmob)
+        amount_paid_mob = mc.pmob2mob(message.payment.amount_mob)
         self.logger.warning("Could not find drop session for customer; Payment unsolicited!")
         if mc.pmob2mob(self.minimum_fee_pmob) < amount_paid_mob:
             self.messenger.log_and_send_message(
@@ -183,7 +183,7 @@ class MOBotSubscriber:
             )
             for bonus_coin in bonus_coins:
                 message_to_send += (
-                    f"\n{bonus_coin.number_claimed()} / {bonus_coin.number_available_at_start} - {mc.pmob2mob(bonus_coin.amount_pmob).normalize()} claimed"
+                    f"\n{bonus_coin.number_claimed()} / {bonus_coin.number_available_at_start} - {mc.pmob2mob(bonus_coin.amount_mob).normalize()} claimed"
                 )
             self.messenger.log_and_send_message(message_to_send)
 

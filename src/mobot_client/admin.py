@@ -19,7 +19,7 @@ from .models.messages import (
     Message,
     MobotResponse,
     Payment,
-    SignalMessage, RawSignalMessage, SignalPayment, PaymentStatus,
+    RawSignalMessage, SignalPayment
 )
 
 class StoreAdmin(admin.ModelAdmin):
@@ -64,7 +64,7 @@ class MessageAdmin(admin.ModelAdmin):
     @admin.display(description='payment')
     def payment_friendly(self, obj: Message):
         if obj.payment:
-            return mc_util.pmob2mob(obj.payment.amount_pmob)
+            return mc_util.pmob2mob(obj.payment.amount_mob)
         else:
             return 0
 
@@ -116,8 +116,8 @@ class DropAdmin(admin.ModelAdmin):
 
 
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('customer', 'status', 'direction_friendly', 'status', 'updated', 'amount_pmob',)
-    readonly_fields = ('customer', 'status', 'direction_friendly', 'updated', 'amount_pmob',)
+    list_display = ('customer', 'status', 'direction_friendly', 'status', 'updated', 'amount_mob',)
+    readonly_fields = ('customer', 'status', 'direction_friendly', 'updated', 'amount_mob',)
 
     @admin.display(description="direction")
     def direction_friendly(self, obj: Payment):
@@ -133,19 +133,6 @@ class RawSignalMessageAdmin(admin.ModelAdmin):
     pass
 
 
-class SignalPaymentAdmin(admin.ModelAdmin):
-    list_display = ('customer',  'direction', 'amount_mob', 'status',)
-    readonly_fields = ('customer', 'direction', 'amount_mob', 'status',)
-
-    @admin.display(description="status")
-    def status(self, obj: SignalPayment):
-        if obj.payment:
-            return obj.payment.get_status_display()
-        else:
-            return "Failure"
-
-
-
 admin.site.register(Store, StoreAdmin)
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Drop, DropAdmin)
@@ -159,6 +146,5 @@ admin.site.register(BonusCoin, BonusCoinAdmin)
 admin.site.register(Sku, SkuAdmin)
 admin.site.register(Order, OrderAdmin)
 admin.site.register(RawSignalMessage, RawSignalMessageAdmin)
-admin.site.register(SignalPayment, SignalPaymentAdmin)
 admin.site.register(MobotResponse, MobotResponseAdmin)
 admin.site.register(Payment, PaymentAdmin)
