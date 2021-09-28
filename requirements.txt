@@ -29,3 +29,4 @@ faker==8.11.0
 mypy==0.910
 types-python-dateutil
 types-pytz
+halo==0.0.31

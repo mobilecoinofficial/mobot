@@ -4,6 +4,7 @@ import logging
 import re
 import threading
 import time
+from halo import Halo
 from typing import Callable
 
 import mc_util
@@ -179,11 +180,11 @@ class MOBotSubscriber:
             bonus_coins = BonusCoin.objects.filter(drop=active_drop)
             message_to_send = ChatStrings.COINS_SENT.format(
                 initial_num_sent=active_drop.num_initial_sent(),
-                total=mc.pmob2mob(active_drop.initial_pmob_disbursed()),
+                total=active_drop.initial_mob_disbursed(),
             )
             for bonus_coin in bonus_coins:
                 message_to_send += (
-                    f"\n{bonus_coin.number_claimed()} / {bonus_coin.number_available_at_start} - {mc.pmob2mob(bonus_coin.amount_mob).normalize()} claimed"
+                    f"\n{bonus_coin.number_claimed} / {bonus_coin.number_available_at_start} - {bonus_coin.amount_mob.normalize()} claimed"
                 )
             self.messenger.log_and_send_message(message_to_send)
 
@@ -315,18 +316,25 @@ class MOBotSubscriber:
                 self.logger.exception("Processing message failed!")
                 message.status = MessageStatus.ERROR
 
-
-    def run_chat(self, break_on_stop=False, break_after=0):
-        self.logger.info("Now running MOBot chat...")
+    @Halo(text='Waiting for next message...', spinner='dots')
+    def _get_next_message(self):
         while self._run:
             try:
                 message = Message.objects.get_message()
                 if message:
-                    self.logger.info(f"Got message! {message}")
-                    self.process_message(message)
+                    return message
                 else:
-                    self.logger.info(f"Sleeping to await new message")
-                    time.sleep(3)
+                    time.sleep(1)
             except Exception as e:
                 self.logger.exception("Exception getting message!")
-                time.sleep(5.0)
+                raise e
+
+    def run_chat(self):
+        self.logger.info("Now running MOBot chat...")
+        while self._run:
+            message = self._get_next_message()
+            self.logger.info(f"Got message! {message}")
+            try:
+                self.process_message(message)
+            except Exception as e:
+                self.logger.exception(f"Exception processing message {message}")

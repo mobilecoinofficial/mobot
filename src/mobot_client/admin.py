@@ -71,7 +71,7 @@ class MessageAdmin(admin.ModelAdmin):
 
 class BonusCoinAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'number_remaining', 'amount_mob')
-    readonly_fields = ('number_claimed', 'number_remaining',)
+    readonly_fields = ('number_remaining',)
 
     @admin.display(description='MOB')
     def amount_mob(self, obj: BonusCoin):

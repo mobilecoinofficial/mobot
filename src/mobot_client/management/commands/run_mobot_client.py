@@ -76,7 +76,7 @@ class Command(BaseCommand):
                                     payments=payments)
             with ThreadPoolExecutor() as pool:
                 print("Starting logger!")
-                chat_fut = pool.submit(logger.run_chat, True, False)
+                chat_fut = pool.submit(logger.listen, True, False)
                 fut = pool.submit(mobot.run_chat)
 
             for f in as_completed([fut, chat_fut]):

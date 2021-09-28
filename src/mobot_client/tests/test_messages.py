@@ -39,7 +39,7 @@ class MessageTest(LiveServerTestCase):
         test_messages = [mock_signal_message_with_receipt(message, self.mcc) for message in [test_message_1, test_message_2]]
         signal = MockSignal(test_messages=test_messages)
         logger = SignalLogger(signal=signal, mcc=self.mcc)
-        logger.run_chat(stop_when_done=True)
+        logger.listen(stop_when_done=True)
         self.assertEqual(Message.objects.all().count(), 2)
         messages = list(Message.objects.all())
         self._compare_message(test_message_1, messages[0])
