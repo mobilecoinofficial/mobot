@@ -1,6 +1,7 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 import logging
 import uuid
+import mc_util
 
 from decimal import Decimal
 
@@ -27,7 +28,7 @@ class MessageTest(LiveServerTestCase):
         print(f"Checking if message phone number {message.customer.phone_number} equals input {test_message.phone_number}")
         self.assertEqual(test_message.phone_number, message.customer.phone_number)
         print(f"Checking if message payment {message.payment.amount_mob} equals input {test_message.payment}")
-        self.assertEqual(test_message.payment, message.payment.amount_mob)
+        self.assertEqual(mc_util.pmob2mob(test_message.payment), message.payment.amount_mob)
         print(f"Checking if message text {message.text} equals input {test_message.text}")
         self.assertEqual(test_message.text, message.text)
 

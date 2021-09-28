@@ -1,5 +1,6 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 
+## CLASS IS DEPRECATED --- HERE AS A REFERENCE ONLY
 
 import os
 import mobilecoin as mc
@@ -39,7 +40,7 @@ class ConfigurationException(Exception):
     pass
 
 
-class MOBot:
+class MOBotDEPRECATED:
     """
     MOBot is the container which holds all of the business logic relevant to a Drop.
     """

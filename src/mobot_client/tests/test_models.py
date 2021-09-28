@@ -122,6 +122,16 @@ class ModelTests(TransactionTestCase):
         with self.assertRaises(OutOfStockException):
             BonusCoin.objects.claim_random_coin_for_session(session3)
 
+    def test_claim_multithreaded(self):
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        from django.db import connection
+        drop = DropFactory.create(drop_type=DropType.AIRDROP)
+        coin = BonusCoinFactory.create_batch(size=3, drop=drop, number_available_at_start=10)
+
+        with ThreadPoolExecutor(max_workers=5) as pool:
+            pool.submit(BonusCoin.objects.find_and_claim_unclaimed_coin, drop)
+
+
     def test_active_drop_sessions_found_for_customer(self):
         '''Ensure that customers with old drop sessions don't find themselves unable to participate in current drops'''
         customer = CustomerFactory.create()
