@@ -177,7 +177,6 @@ class AirDropSession(BaseDropSession):
     def handle_no_active_airdrop_drop_session(self, customer: Customer, message: Message, drop: Drop):
         if customer.has_completed_drop(drop):
             self.messenger.log_and_send_message(ChatStrings.AIRDROP_SUMMARY)
-
         elif customer.has_completed_drop_with_error(drop):
             self.messenger.log_and_send_message(
                 ChatStrings.AIRDROP_INCOMPLETE_SUMMARY

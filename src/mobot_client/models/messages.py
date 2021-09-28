@@ -12,8 +12,11 @@ from django.utils import timezone
 from django.db.models import IntegerChoices
 from phonenumber_field.modelfields import PhoneNumberField
 from signald.types import Message as SignalMessage
+from tenacity import wait_random_exponential, retry, retry_if_exception_type
+from cached_property import threaded_cached_property_with_ttl
 
-from mobot_client.models import Customer, Store
+
+from mobot_client.models import Customer, Store, ConcurrentModificationException
 
 
 class PaymentStatus(models.TextChoices):
@@ -99,21 +102,27 @@ class MessageStatus(models.IntegerChoices):
 class MessageQuerySet(models.QuerySet):
     def not_processing(self) -> models.QuerySet:
         return self.filter(status=MessageStatus.NOT_PROCESSED,
-                           direction=Direction.RECEIVED)\
-                    .order_by('date', '-payment').all()
+                           direction=Direction.RECEIVED).distinct('customer_id').order_by('customer_id', 'date', '-payment')
 
-    def queue_size(self) -> int:
-        return self.not_processing().all().count()
+    @retry(wait=wait_random_exponential(multiplier=1, min=4, max=10), retry=retry_if_exception_type(ConcurrentModificationException))
+    def get_optimistic(self, message: Message):
+        updated = self.filter(pk=message.pk, status=MessageStatus.NOT_PROCESSED).select_for_update().update(status=MessageStatus.PROCESSING)
+        if not updated:
+            raise ConcurrentModificationException("Got a message currently being processed")
+        message.refresh_from_db()
+        return message
 
     @transaction.atomic()
     def get_message(self):
-        if message := self.not_processing().select_for_update().first():
-            message.status = MessageStatus.PROCESSING
-            message.processing = timezone.now()
-            return message
+        if message := self.not_processing().first():
+            return self.get_optimistic(message)
 
 
 class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
+
+    @threaded_cached_property_with_ttl(ttl=5)
+    def queue_size(self) -> int:
+        return int(self.not_processing().all().count())
 
     def create_from_signal(self, signal_message: SignalMessage) -> Message:
         raw = RawSignalMessage.objects.store_message(signal_message=signal_message)
@@ -151,7 +160,7 @@ class Message(models.Model):
     objects = MessageManager()
 
     class Meta:
-        ordering = ['date', '-processing', 'updated']
+        ordering = ['customer_id', 'date', '-processing', 'updated']
 
     def __str__(self):
         return f'Message: customer: {self.customer} - {self.get_direction_display()} --- {self.text}'

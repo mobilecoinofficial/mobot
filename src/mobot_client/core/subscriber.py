@@ -2,15 +2,20 @@
 
 import logging
 import re
+import sys
 import threading
 import time
+import signal
 from halo import Halo
 from typing import Callable
+from concurrent.futures import as_completed, ThreadPoolExecutor, Future
 
 import mc_util
 import mobilecoin as mc
 import pytz
 from django.utils import timezone
+from django.db import connection
+from django.conf import settings
 
 from mobot_client.air_drop_session import AirDropSession
 from mobot_client.chat_strings import ChatStrings
@@ -47,8 +52,9 @@ class MOBotSubscriber:
         self._thread_count = 0
         self._number_processed = 0
         self._thread_lock = threading.Lock()
+        self._pool = ThreadPoolExecutor(max_workers=4)
         self.payments = payments
-        self._futures = []
+        self._futures = {}
 
         # self.timeouts = Timeouts(self.messenger, self.payments, schedule=30, idle_timeout=60, cancel_timeout=300)
 
@@ -303,18 +309,26 @@ class MOBotSubscriber:
             _, _, func = filtered
             return func
 
-    def process_message(self, message: Message):
+    def acknowledge_message(self, message: Message):
+        if message.payment is not None:
+            self.logger.info("Customer sent payment; acknowledging immediately")
+            self.messenger.log_and_send_message(ChatStrings.PAYMENT_RECEIVED)
+        if Message.objects.queue_size >= settings.CONCURRENCY_WARNING_MESSAGE_THRESHOLD:
+            self.logger.info(f"Queue threshold {Message.objects.queue_size} above {settings.CONCURRENCY_WARNING_MESSAGE_THRESHOLD}")
+            self.messenger.log_and_send_message(ChatStrings.MOBOT_HEAVY_LOAD)
+
+    def process_message(self, message: Message) -> Message:
         """Enter a chat context to manage which message/payment we're currently replying to"""
         with ChatContext(message) as ctx:
-            handler = self._find_handler(message)
-            self.logger.info(f"Found handler {handler}")
             try:
+                self.acknowledge_message(message)
+                self.logger.exception("Got exception acking")
+                handler = self._find_handler(message)
                 result = handler(ctx)
-                message.processed = timezone.now()
-                message.save()
+                return message
             except Exception as e:
                 self.logger.exception("Processing message failed!")
-                message.status = MessageStatus.ERROR
+                raise e
 
     @Halo(text='Waiting for next message...', spinner='dots')
     def _get_next_message(self):
@@ -331,10 +345,14 @@ class MOBotSubscriber:
 
     def run_chat(self):
         self.logger.info("Now running MOBot chat...")
-        while self._run:
-            message = self._get_next_message()
-            self.logger.info(f"Got message! {message}")
-            try:
-                self.process_message(message)
-            except Exception as e:
-                self.logger.exception(f"Exception processing message {message}")
+        with self._pool as pool:
+            while self._run:
+                try:
+                    message: Message = self._get_next_message()
+                    self.logger.info("Got message!")
+                    process_fut = pool.submit(self.process_message, message)
+                    self._futures[(message.raw.timestamp, message.raw.text)] = process_fut
+                except Exception as e:
+                    self.logger.exception(f"Exception processing messages.")
+        for future in as_completed(self._futures.items()):
+            future.result()

@@ -30,3 +30,4 @@ mypy==0.910
 types-python-dateutil
 types-pytz
 halo==0.0.31
+cached-property==1.2.0

@@ -4,6 +4,7 @@
 class ChatStrings:
     # General
     BYE = "Thanks! MOBot OUT. Buh-bye!"
+    PAYMENT_RECEIVED = "We got your payment! Please be patient while we process!"
 
     PRIVACY_POLICY = "Our privacy policy is available here: {url}"
     PRIVACY_POLICY_REPROMPT = """Our privacy policy is available here: {url}
@@ -263,3 +264,4 @@ if you have any questions or issues"""
     WE_RECEIVED_MOB = "We received {amount_mob} MOB"
     PLUS_SIGN_HELP = "Whoops! Looks like you meant to hit the '+' button to the left of the text field."
     COINS_SENT = """{initial_num_sent} customers sent initial coins, totalling {total} MOB."""
+    MOBOT_HEAVY_LOAD = """MOBot is currently processing a large number ofg requests. Please be patient!"""

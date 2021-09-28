@@ -2,6 +2,7 @@
 import threading
 import logging
 
+from django.db import connection
 from mobot_client.models.messages import Message, MessageStatus, ProcessingError
 
 Context = threading.local()
@@ -29,7 +30,7 @@ def unset_context():
 
 
 class ChatContext:
-    def __init__(self, message):
+    def __init__(self, message: Message):
         self._logger = logging.getLogger("MessageContext")
         self.message = message
         self.customer = self.message.customer
@@ -54,9 +55,14 @@ class ChatContext:
             else:
                 self.message.status = MessageStatus.PROCESSED
             self.message.save()
-        except Exception:
+        except Exception as e:
             self._logger.exception("Error leaving message context")
+            raise e
         finally:
+            try:
+                connection.close()
+            except Exception as e:
+                self._logger.exception("Exception closing DB connection")
             unset_context()
 
 
