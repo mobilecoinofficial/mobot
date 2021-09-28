@@ -245,8 +245,8 @@ class BonusCoinManager(models.Manager.from_queryset(BonusCoinQuerySet)):
         return coin
 
     @retry(wait=wait_random_exponential(multiplier=1, min=4, max=10), retry=retry_if_exception_type(ConcurrentModificationException))
-    def find_and_claim_unclaimed_coin(self) -> BonusCoin:
-        coins_available = self.available_coins()
+    def find_and_claim_unclaimed_coin(self, drop: Drop) -> BonusCoin:
+        coins_available = self.available_coins().filter(drop=drop)
         coins_dist = [coin.number_remaining() for coin in coins_available]
         if len(coins_available) > 0:
             coin: BonusCoin = random.choices(coins_available, weights=coins_dist)[0]
@@ -262,7 +262,7 @@ class BonusCoinManager(models.Manager.from_queryset(BonusCoinQuerySet)):
 
     def claim_random_coin_for_session(self, drop_session: DropSession):
         try:
-            coin = self.find_and_claim_unclaimed_coin()
+            coin = self.find_and_claim_unclaimed_coin(drop_session.drop)
             drop_session.bonus_coin_claimed = coin
             drop_session.state = SessionState.ALLOW_CONTACT_REQUESTED
             drop_session.save()
