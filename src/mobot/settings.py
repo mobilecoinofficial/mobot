@@ -117,7 +117,7 @@ if DATABASE == "postgresql":
         DATABASE_NAME = os.environ.get("DATABASE_NAME", "mobot")
         DATABASE_USER = os.environ["DATABASE_USER"]
         DATABASE_PASSWORD = os.environ["DATABASE_PASSWORD"]
-        DATABASE_HOST = os.environ.get("DATABASE_HOST", "localhost")
+        DATABASE_HOST = os.environ.get("DATABASE_HOST", "127.0.0.1")
     except KeyError:
         print("expecting environment variables for database fields")
 
