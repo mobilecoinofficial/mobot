@@ -159,6 +159,9 @@ class Payments:
                 mc.mob2pmob(payment_amount) + int(self.minimum_fee_pmob)
         )
 
+    def get_minimum_fee_pmob(self) -> int:
+        return self.mcc.minimum_fee_pmob
+
     def handle_not_enough_paid(self, amount_paid_mob: Decimal, drop_session: DropSession):
         customer = drop_session.customer
         source = drop_session.customer.phone_number.as_e164
