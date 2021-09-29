@@ -151,7 +151,14 @@ class MobotResponseAdmin(admin.ModelAdmin):
             return 0
 
 class RawSignalMessageAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('__str__', 'timestamp', 'source', 'text', 'is_payment')
+
+    @admin.display(description="payment")
+    def is_payment(self, obj: RawSignalMessage):
+        if obj.payment is None:
+            return "Y"
+        else:
+            return "N"
 
 
 admin.site.register(Store, StoreAdmin)

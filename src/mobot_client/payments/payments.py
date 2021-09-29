@@ -134,6 +134,9 @@ class Payments:
                 raise Exception(f"TXO ID not a string: {txo_id}")
             return txo_id, tx_proposal
 
+    def get_minimum_fee_pmob(self) -> int:
+        return self.mcc.minimum_fee_pmob
+
     def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund") -> Payment:
         # customer_payments_address is b64 encoded, but full service wants a b58 address
         ctx = get_current_context()

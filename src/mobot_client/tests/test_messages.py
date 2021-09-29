@@ -50,13 +50,12 @@ class MessageTest(LiveServerTestCase):
     def test_response(self):
         drop = DropFactory.create(store=self.store)
         amount_pmob = int(Decimal("1e12"))
-        test_message_1 = TestMessage(phone_number=self.customer.phone_number, text="Hello World", payment=None)
-        test_message_2 = TestMessage(phone_number=self.customer.phone_number, text=None, payment=amount_pmob)
-        test_messages = [mock_signal_message_with_receipt(message, self.mcc) for message in [test_message_1, test_message_2]]
-        signal = MockSignal(test_messages=test_messages)
+        test_hello_mobot = mock_signal_message_with_receipt(TestMessage(phone_number=self.customer.phone_number, text="Hi MOBot!", payment=None), self.mcc)
+        signal = MockSignal(test_messages=[test_hello_mobot])
         logger = SignalLogger(signal=signal, mcc=self.mcc)
         logger.listen(stop_when_done=True)
-        self.assertEqual(Message.objects.all().count(), 2)
-        subscriber = MOBotSubscriber()
+        self.assertEqual(Message.objects.all().count(), 1)
+        subscriber = MOBotSubscriber(store=self.store)
+        subscriber.run_chat()
 
 

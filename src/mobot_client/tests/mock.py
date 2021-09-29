@@ -54,6 +54,7 @@ class TestMessage:
 
 
 def mock_signal_message_with_receipt(test_message: TestMessage, mcc: MockMCC, status: PaymentStatus = PaymentStatus.TransactionSuccess):
+    """Generate a mock signal message with payment at a specified state, defaulting to success"""
     if test_message.payment:
         receipt = mcc.add_mock_payment(test_message.payment, status)
         payment = SignalPayment(
