@@ -58,7 +58,7 @@ class DropSessionAdmin(admin.ModelAdmin):
 
 
 class MessageAdmin(admin.ModelAdmin):
-    list_display = ('customer', 'payment_friendly')
+    list_display = ('customer', 'direction', 'text', 'payment_friendly')
     readonly_fields = ('payment_friendly',)
 
     @admin.display(description='payment')
