@@ -76,10 +76,7 @@ class Timeouts:
         # Confirm drop session is active
         # FIXME TODO
 
-        # Get amount customer paid
-        price = session.drop.item.price_in_mob
-
-        self.payments.send_mob_to_customer(customer, customer.phone_number, mc.pmob2mob(price), True)
+        self.payments.send_mob_to_customer(customer, customer.phone_number, session.drop.item.price_in_mob, True)
         self.set_customer_refunded(customer)
 
     # FIXME: might need to not be a class method in order to get discovered
