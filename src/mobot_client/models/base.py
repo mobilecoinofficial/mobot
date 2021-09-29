@@ -225,6 +225,8 @@ class Drop(models.Model):
 
 
 class BonusCoinQuerySet(models.QuerySet):
+    def with_sum_spent(self) -> models.QuerySet:
+        return self.annotate(mob_claimed=F('number_claimed') * F('amount_mob')).all()
 
     def available_coins(self) -> models.QuerySet:
         available = self.filter(number_available_at_start__gt=F('number_claimed'))
