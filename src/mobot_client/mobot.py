@@ -185,7 +185,7 @@ class MOBot:
             )
             for bonus_coin in bonus_coins:
                 message_to_send += (
-                    f"\n{bonus_coin.number_claimed()} / {bonus_coin.number_available_at_start} - {bonus_coin.amount_mob.normalize()} claimed"
+                    f"\n{bonus_coin.number_claimed} / {bonus_coin.number_available_at_start} - {bonus_coin.amount_mob.normalize()} claimed"
                 )
             self.messenger.log_and_send_message(customer, customer.phone_number, message_to_send)
 

@@ -38,6 +38,7 @@ services:
     - --peer=mc://node2.test.mobilecoin.com/
     - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node1.test.mobilecoin.com/
     - --tx-source-url=https://s3-us-west-1.amazonaws.com/mobilecoin.chain/node2.test.mobilecoin.com/
+    - --fog-ingest-enclave-css=/usr/local/bin/ingest-enclave.css
     expose:
     - 9090
     ports:
