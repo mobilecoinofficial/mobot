@@ -10,7 +10,7 @@ from mobot_client.drop_session import BaseDropSession
 from mobot_client.models import (
     Drop,
     DropSession,
-    BonusCoin, SessionState, OutOfStockException,
+    BonusCoin, SessionState, OutOfStockException, Customer,
 )
 
 import mobilecoin as mc
@@ -23,15 +23,15 @@ class AirDropSession(BaseDropSession):
         super().__init__(*args, **kwargs)
 
     def initial_coin_funds_available(self, drop: Drop) -> bool:
-        return self.payments.has_enough_funds_for_payment(drop.initial_coin_amount_pmob)
+        return self.payments.has_enough_funds_for_payment(drop.initial_coin_amount_mob)
 
     def bonus_coin_funds_available(self, drop_session: DropSession) -> bool:
-        return self.payments.has_enough_funds_for_payment(drop_session.bonus_coin_claimed.amount_pmob)
+        return self.payments.has_enough_funds_for_payment(drop_session.bonus_coin_claimed.amount_mob)
 
-    def handle_airdrop_payment(self, source, customer, amount_paid_mob, drop_session: DropSession):
+    def handle_airdrop_payment(self, source, customer: Customer, amount_paid_mob: Decimal, drop_session: DropSession):
         refunded = False
         try:
-            claimed_coin: BonusCoin = BonusCoin.objects.claim_random_coin(drop_session)
+            claimed_coin: BonusCoin = BonusCoin.objects.claim_random_coin_for_session(drop_session)
             if not self.bonus_coin_funds_available(drop_session):
                 self.payments.send_mob_to_customer(customer, source, amount_paid_mob, True)
                 self.messenger.log_and_send_message(
@@ -54,10 +54,8 @@ class AirDropSession(BaseDropSession):
                 )
             drop_session.save()
         else:
-            initial_coin_amount_mob = mc.pmob2mob(
-                drop_session.drop.initial_coin_amount_pmob
-            )
-            amount_in_mob = mc.pmob2mob(claimed_coin.amount_pmob)
+            initial_coin_amount_mob = drop_session.drop.initial_coin_amount_mob
+            amount_in_mob = claimed_coin.amount_mob
             amount_to_send_mob = (
                     amount_in_mob
                     + amount_paid_mob
@@ -125,7 +123,7 @@ class AirDropSession(BaseDropSession):
                 )
                 drop_session.state = SessionState.CANCELLED
             else:
-                amount_in_mob = mc.pmob2mob(drop_session.drop.initial_coin_amount_pmob)
+                amount_in_mob = drop_session.drop.initial_coin_amount_mob
                 value_in_currency = amount_in_mob * Decimal(
                     drop_session.drop.conversion_rate_mob_to_currency
                 )
@@ -181,7 +179,7 @@ class AirDropSession(BaseDropSession):
                 ChatStrings.AIRDROP_COMMANDS
             )
 
-        amount_in_mob = mc.pmob2mob(drop_session.drop.initial_coin_amount_pmob)
+        amount_in_mob = drop_session.drop.initial_coin_amount_mob
 
         value_in_currency = amount_in_mob * Decimal(
             drop_session.drop.conversion_rate_mob_to_currency

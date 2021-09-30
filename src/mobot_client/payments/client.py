@@ -14,7 +14,7 @@ class MCClient(Client):
         self.minimum_fee_pmob = self._get_minimum_fee_pmob()
         self.b64_public_address = b58_wrapper_to_b64_public_address(self.public_address)
 
-    def _get_minimum_fee_pmob(self):
+    def _get_minimum_fee_pmob(self) -> int:
         get_network_status_response = self.get_network_status()
         return int(get_network_status_response["fee_pmob"])
 
