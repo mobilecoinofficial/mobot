@@ -10,7 +10,7 @@ from argparse import ArgumentParser
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
-from signal_logger import Signal
+from signald import Signal
 from mobot_client.logger import SignalMessenger
 from mobot_client.chat_strings import ChatStrings
 from mobot_client.models import Customer, ChatbotSettings
@@ -25,7 +25,7 @@ class Command(BaseCommand):
         super().__init__(*args, **kwargs)
         store = ChatbotSettings.load().store
         signal = Signal(
-            store.source.as_e164, socket_path=(settings.SIGNALD_ADDRESS, int(settings.SIGNALD_PORT))
+            store.phone_number.as_e164, socket_path=(settings.SIGNALD_ADDRESS, int(settings.SIGNALD_PORT))
         )
         self.logger = getLogger("SendMobToCustomer")
         self.messenger = SignalMessenger(signal, store)
@@ -78,14 +78,11 @@ class Command(BaseCommand):
         message_text = kwargs['text'].format(mob=mob)
 
         for customer in customers:
-            customer_phone_number = customer.source.as_e164
             try:
-                self.payments.send_reply_payment(
-
-                                                 amount_mob=mob,
+                self.payments.send_reply_payment(amount_mob=mob,
                                                  cover_transaction_fee=cover_fee,
                                                  memo=memo)
-                self.messenger.log_and_send_message(message_text)
+                self.messenger._log_and_send_message(customer, message_text)
             except Exception as e:
-                self.logger.exception(f"Payment to Customer {customer.source.as_e164} of {mob} MOB failed!")
-            self.logger.info(f"Payment to customer {customer.source.as_e164} succeeded!")
+                self.logger.exception(f"Payment to Customer {customer.phone_number.as_e164} of {mob} MOB failed!")
+            self.logger.info(f"Payment to customer {customer.phone_number.as_e164} succeeded!")
