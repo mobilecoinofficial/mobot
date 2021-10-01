@@ -21,7 +21,7 @@ from mobot_client.models.messages import (
 from mobot_client.chat_strings import ChatStrings
 from mobot_client.payments.client import MCClient
 from mobot_client.utils import TimerFactory
-from mobot_client.core.context import get_current_context
+from mobot_client.core.context import ChatContext
 
 
 class NotEnoughFundsException(Exception):
@@ -92,7 +92,7 @@ class Payments:
                 )
 
     def send_reply_payment(self, amount_mob, cover_transaction_fee, memo="Refund"):
-        ctx = get_current_context()
+        ctx = ChatContext.get_current_context()
         self.logger.info(f"Sending reply payment to {ctx.customer}: {amount_mob} MOB...")
 
         try:
@@ -139,7 +139,7 @@ class Payments:
 
     def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund") -> Payment:
         # customer_payments_address is b64 encoded, but full service wants a b58 address
-        ctx = get_current_context()
+        ctx = ChatContext.get_current_context()
         customer_payments_address = mc.b64_public_address_to_b58_wrapper(
             customer_payments_address
         )

@@ -1,4 +1,5 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
+from __future__ import annotations
 import threading
 import logging
 
@@ -13,20 +14,11 @@ class ContextNotFoundException(Exception):
     pass
 
 
-def set_context(message: Message):
-    Context.message = message
-
-
 def get_current_context():
-    if hasattr(Context, "message"):
-        return ChatContext(message=Context.message)
+    if hasattr(Context, "current"):
+        return Context.current
     else:
-        raise ContextNotFoundException("No context found for current message!")
-
-
-def unset_context():
-    if hasattr(Context, 'message'):
-        del Context.message
+        raise ContextNotFoundException("No current context for this thread")
 
 
 class ChatContext:
@@ -34,9 +26,17 @@ class ChatContext:
         self._logger = logging.getLogger("MessageContext")
         self.message = message
         self.customer = self.message.customer
+        self.set_context()
+
+    @staticmethod
+    def get_current_context() -> ChatContext:
+        if hasattr(Context, "current"):
+            return Context.current
+        else:
+            raise ContextNotFoundException("No current context for this thread")
 
     def set_context(self):
-        Context.message = self.message
+        Context.current = self
 
     def __enter__(self):
         self.set_context()

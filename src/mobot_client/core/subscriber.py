@@ -7,7 +7,7 @@ import threading
 import time
 import signal
 from halo import Halo
-from typing import Callable
+from typing import Callable, Iterator
 from concurrent.futures import as_completed, ThreadPoolExecutor, Future
 
 import mc_util
@@ -25,9 +25,9 @@ from mobot_client.item_drop_session import ItemDropSession
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import Store, SessionState, DropType, Drop, BonusCoin, Sku, Order, OrderStatus, \
     CustomerStorePreferences, DropSession
-from mobot_client.models.messages import Message, MessageStatus
+from mobot_client.models.messages import Message, MessageStatus, MobotResponse
 from mobot_client.payments import MCClient, Payments
-from mobot_client.core.context import get_current_context, ChatContext
+from mobot_client.core.context import ChatContext
 
 
 class MOBotSubscriber:
@@ -58,13 +58,14 @@ class MOBotSubscriber:
 
         # self.timeouts = Timeouts(self.messenger, self.payments, schedule=30, idle_timeout=60, cancel_timeout=300)
 
-        self._register_payment_handler(self.handle_payment)
-        self._register_chat_handler("\+", self.chat_router_plus)
-        self._register_chat_handler("coins", self.chat_router_coins)
-        self._register_chat_handler("items", self.chat_router_items)
-        self._register_chat_handler("unsubscribe", self.unsubscribe_handler)
-        self._register_chat_handler("subscribe", self.subscribe_handler)
-        self._register_chat_handler("", self.default_handler)
+        self.register_payment_handler(self.handle_payment)
+        self.register_chat_handler("\+", self.chat_router_plus)
+        self.register_chat_handler("coins", self.chat_router_coins)
+        self.register_chat_handler("items", self.chat_router_items)
+        self.register_chat_handler("unsubscribe", self.unsubscribe_handler)
+        self.register_chat_handler("subscribe", self.subscribe_handler)
+        self.register_chat_handler("health", self.health_handler)
+        self.register_chat_handler("", self.default_handler)
 
     def _isolated_handler(self, func):
         def isolated(*args, **kwargs):
@@ -74,7 +75,7 @@ class MOBotSubscriber:
                 self.logger.exception(f"Chat exception while processing: --- {func.__name__}({args}, {kwargs})\n")
         return isolated
 
-    def _register_chat_handler(self, regex, func, order=100):
+    def register_chat_handler(self, regex, func, order=100):
         self.logger.info(f"Registering chat handler for {regex if regex else 'default'}")
         regex = re.compile(regex, re.I)
 
@@ -82,7 +83,7 @@ class MOBotSubscriber:
         # Use only the first value to sort so that declaration order doesn't change.
         self._chat_handlers.sort(key=lambda x: x[0])
 
-    def _register_payment_handler(self, func):
+    def register_payment_handler(self, func):
         isolated = self._isolated_handler(func)
         self._payment_handlers.append(isolated)
         return isolated
@@ -172,11 +173,13 @@ class MOBotSubscriber:
         else:
             self.handle_unsolicited_payment(payment.message)
 
-    def chat_router_plus(self, ctx: ChatContext):
-        self.logger.debug(ctx.message)
+    def chat_router_plus(self, _: ChatContext):
         message_to_send = ChatStrings.PLUS_SIGN_HELP
         message_to_send += f"\n{ChatStrings.PAY_HELP}"
         self.messenger.log_and_send_message(message_to_send)
+
+    def health_handler(self, _: ChatContext):
+        self.messenger.log_and_send_message("Ok!")
 
     def chat_router_coins(self, ctx: ChatContext):
         active_drop = Drop.objects.get_active_drop()
@@ -239,7 +242,7 @@ class MOBotSubscriber:
             self.messenger.log_and_send_message(ChatStrings.SUBSCRIBE_NOTIFICATIONS)
 
     def handle_new_drop_session(self, active_drop: Drop):
-        ctx = get_current_context()
+        ctx = ChatContext.get_current_context()
         customer, message = (ctx.customer, ctx.message)
         if active_drop.drop_type == DropType.AIRDROP:
         # if this is an airdrop session, dispatch to the
@@ -318,7 +321,12 @@ class MOBotSubscriber:
             self.messenger.log_and_send_message(ChatStrings.MOBOT_HEAVY_LOAD)
 
     def process_message(self, message: Message) -> Message:
-        """Enter a chat context to manage which message/payment we're currently replying to"""
+        """Enter a chat context to manage which message/payment we're currently replying to
+            :param: message: Message to process
+
+            :return: The processed message
+            :rtype: Message
+        """
         with ChatContext(message) as ctx:
             try:
                 self.acknowledge_message(message)
@@ -331,7 +339,13 @@ class MOBotSubscriber:
                 raise e
 
     @Halo(text='Waiting for next message...', spinner='dots')
-    def _get_next_message(self):
+    def _get_next_message(self) -> Message:
+        """
+        Get a message off the DB, show a spinner while waiting
+
+        :return: The next available message to process
+        :rtype: Message
+        """
         while self._run:
             try:
                 message = Message.objects.get_message(self.store)
@@ -343,16 +357,51 @@ class MOBotSubscriber:
                 self.logger.exception("Exception getting message!")
                 raise e
 
-    def run_chat(self):
+    def _get_and_process(self, pool: ThreadPoolExecutor) -> Future[Message]:
+        try:
+            message: Message = self._get_next_message()
+            self.logger.info("Got message!")
+            process_fut = pool.submit(self.process_message, message)
+            self._futures[message.pk] = process_fut
+            return process_fut
+        except Exception as e:
+            self.logger.exception(f"Exception processing messages.")
+
+    def stop_chat(self):
+        self._run = False
+        try:
+            for future in as_completed(self._futures.values()):
+                future.result()
+        except Exception:
+            self.logger.exception("Error stopping chat")
+
+        self.logger.warning("Stopping message processing!")
+
+    def _done(self, fut: Future[Message]):
+        """
+        Clean up future list
+        :param fut: The message future
+        :return: None
+        """
+        try:
+            result = fut.result()
+            del self._futures[result.pk]
+        except TimeoutError as e:
+            self.logger.exception("Message processing timed out.")
+        except Exception as e:
+            self.logger.exception("Error cleaning up future")
+
+    def run_chat(self, process_max: int = 0) -> int:
+        """Start looking for messages off DB and process.
+                :argument process_max: Number of messages to process before stopping, if > 0
+        """
         self.logger.info("Now running MOBot chat...")
         with self._pool as pool:
             while self._run:
-                try:
-                    message: Message = self._get_next_message()
-                    self.logger.info("Got message!")
-                    process_fut = pool.submit(self.process_message, message)
-                    self._futures[(message.raw.timestamp, message.raw.text)] = process_fut
-                except Exception as e:
-                    self.logger.exception(f"Exception processing messages.")
-        for future in as_completed(self._futures.items()):
-            future.result()
+                processed = self._get_and_process(pool)
+                processed.add_done_callback(self._done)
+                self._number_processed += 1
+                if process_max > 0 and self._number_processed == process_max:
+                    self.stop_chat()
+            self.stop_chat()
+

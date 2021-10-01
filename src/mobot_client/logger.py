@@ -5,7 +5,7 @@ from typing import Optional
 from mobot_client.models import Store, Customer
 from signald import Signal
 from mobot_client.models.messages import Message, MobotResponse, Direction, MessageStatus
-from mobot_client.core.context import get_current_context
+from mobot_client.core.context import ChatContext
 
 
 class SignalMessenger:
@@ -39,7 +39,7 @@ class SignalMessenger:
             raise e
 
     def log_and_send_message(self, text: str, attachments=[]):
-        ctx = get_current_context()
+        ctx = ChatContext.get_current_context()
         incoming = ctx.message
         customer = ctx.message.customer
         self._log_and_send_message(customer, text, incoming, attachments)

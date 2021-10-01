@@ -43,6 +43,13 @@ class MockMCC(MCClient):
     def get_receipt_status(self, receipt: str) -> dict:
         return self.receipt_status_responses[receipt]
 
+    @property
+    def minimum_fee_pmob(self) -> int:
+        return 400000000
+
+    @property
+    def account_id(self) -> str:
+        return "foo"
 
 
 @attr.s
@@ -74,7 +81,7 @@ def mock_signal_message_with_receipt(test_message: TestMessage, mcc: MockMCC, st
 
 
 class MockSignal(Signal):
-    def __init__(self, test_messages: List[SignalMessage], store_number: str = "+14156665666"):
+    def __init__(self, test_messages: List[SignalMessage] = [], store_number: str = "+14156665666"):
         self.received_messages = test_messages
         self.sent_messages = defaultdict(list)
         self.store_number = store_number
@@ -85,7 +92,7 @@ class MockSignal(Signal):
 
     def send_message(
         self,
-        recipient: Union[str, dict],
+        recipient: str,
         text: str,
         block: bool = True,
         attachments: List[str] = [],

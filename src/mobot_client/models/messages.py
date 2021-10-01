@@ -54,6 +54,10 @@ class Payment(models.Model):
 
 class RawMessageManager(models.Manager):
     def store_message(self, signal_message: SignalMessage) -> RawSignalMessage:
+        """Store a message from signal with its payment.
+
+        :return: The RawSignalMessage
+        """
         if isinstance(signal_message.source, dict):
             number = signal_message.source['number']
         else:
@@ -101,13 +105,17 @@ class MessageStatus(models.IntegerChoices):
 
 class MessageQuerySet(models.QuerySet):
     def not_processing(self) -> models.QuerySet:
-        """Get the first available unprocessed message for each customer to ensure we only work one message per customer"""
+        """Queryset of first unprocessed message for each customer to ensure we only work one message per customer"""
         return self.filter(status=MessageStatus.NOT_PROCESSED,
-                           direction=Direction.RECEIVED).distinct('customer_id').order_by('customer_id', 'date', '-payment')
+                           direction=Direction.RECEIVED).distinct('customer_id').order_by('customer_id')
 
     @retry(wait=wait_random_exponential(multiplier=1, min=4, max=10), retry=retry_if_exception_type(ConcurrentModificationException))
-    def get_optimistic(self, message: Message):
-        """Ask for a message at the current status, and update to processing if found. Retry/fail a few times if not possible."""
+    def claim_message(self, message: Message) -> Message:
+        """Ask for a message at the current status, and update to processing if found. Retry/fail a few times if not possible.
+
+            :param: The message to declare as currently being worked on.
+            :return: Message claimed
+        """
         updated = self.filter(pk=message.pk, status=MessageStatus.NOT_PROCESSED).select_for_update().update(status=MessageStatus.PROCESSING)
         if not updated:
             raise ConcurrentModificationException("Got a message currently being processed")
@@ -115,19 +123,31 @@ class MessageQuerySet(models.QuerySet):
         return message
 
     @transaction.atomic()
-    def get_message(self, store: Store):
-        """Get next available message for the current MOBot shop"""
+    def get_message(self, store: Store) -> Message:
+        """Get next available message for the current MOBot store.
+
+        :return: The next available message to handle
+        :raises: ConcurrentModificationException
+        """
         if message := self.not_processing().filter(store=store).first():
-            return self.get_optimistic(message)
+            return self.claim_message(message)
 
 
 class MessageManager(models.Manager.from_queryset(MessageQuerySet)):
 
     @threaded_cached_property_with_ttl(ttl=5)
     def queue_size(self) -> int:
+        """Get the current number of messages awaiting processing
+
+            :rtype: int
+        """
         return int(self.not_processing().all().count())
 
     def create_from_signal(self, signal_message: SignalMessage) -> Message:
+        """Take a message from Signal and parse into a Message
+
+        :return: The parsed message
+        """
         raw = RawSignalMessage.objects.store_message(signal_message=signal_message)
         dt = timezone.make_aware(datetime.fromtimestamp(float(signal_message.timestamp/1000)))
         store, _ = Store.objects.get_or_create(phone_number=raw.account)
@@ -164,6 +184,7 @@ class Message(models.Model):
 
     class Meta:
         ordering = ['customer_id', 'date', '-processing', 'updated']
+        get_latest_by = ['date']
 
     def __str__(self):
         return f'Message: customer: {self.customer} - {self.get_direction_display()} --- {self.text}'
