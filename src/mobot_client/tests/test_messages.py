@@ -9,7 +9,7 @@ from decimal import Decimal
 
 from django.test import LiveServerTestCase
 
-from mobot_client.core.subscriber import MOBotSubscriber
+from mobot_client.core.subscriber import Subscriber
 from mobot_client.logger import SignalMessenger
 from mobot_client.tests.factories import StoreFactory, CustomerFactory, DropFactory, BonusCoinFactory
 from mobot_client.models import Store, Customer
@@ -29,7 +29,7 @@ class AbstractMessageTest(LiveServerTestCase):
         self.payments = Payments(mobilecoin_client=self.mcc, store=self.store, messenger=self.messenger, signal=self.signal)
         self.payments.get_payments_address = MagicMock(autospec=True, return_value="123")
         self.payments.has_enough_funds_for_payment = MagicMock(autospec=True, return_value=True)
-        self.subscriber = MOBotSubscriber(store=self.store, messenger=self.messenger, mcc=self.mcc, payments=self.payments)
+        self.subscriber = Subscriber(store=self.store, messenger=self.messenger)
 
     def create_incoming_message(self, customer: Customer, store: Store, text: str = "", payment_mob: int = 0):
         if payment_mob > 0:

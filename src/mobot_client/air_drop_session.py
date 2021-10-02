@@ -1,11 +1,7 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
-
-import random
-
 from decimal import Decimal
 
-from django.db import transaction
-
+from mobot_client.core.context import ChatContext
 from mobot_client.drop_session import BaseDropSession
 from mobot_client.models import (
     Drop,
@@ -174,7 +170,8 @@ class AirDropSession(BaseDropSession):
         elif drop_session.state == SessionState.ALLOW_CONTACT_REQUESTED:
             self.handle_drop_session_allow_contact_requested(message, drop_session)
 
-    def handle_no_active_airdrop_drop_session(self, customer: Customer, message: Message, drop: Drop):
+    def handle_no_active_airdrop_drop_session(self, drop: Drop):
+        customer = ChatContext.get_current_context().customer
         if customer.has_completed_drop(drop):
             self.messenger.log_and_send_message(ChatStrings.AIRDROP_SUMMARY)
         elif customer.has_completed_drop_with_error(drop):

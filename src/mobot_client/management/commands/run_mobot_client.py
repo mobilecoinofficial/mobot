@@ -23,7 +23,7 @@ from signal_logger import SignalLogger
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import ChatbotSettings, Store
 from mobot_client.models.messages import Message
-from mobot_client.core.subscriber import MOBotSubscriber
+from mobot_client.core.subscriber import Subscriber
 
 
 
@@ -92,10 +92,7 @@ class Command(BaseCommand):
         try:
             loop = asyncio.get_event_loop()
             logger = SignalLogger(signal=signal, mcc=mcc)
-            mobot = MOBotSubscriber(store=cb_settings.store,
-                                    messenger=messenger,
-                                    mcc=mcc,
-                                    payments=payments)
+            mobot = Subscriber(store=cb_settings.store, messenger=messenger, mcc=mcc)
             with ThreadPoolExecutor() as pool:
                 if listen:
                     listen_task = pool.submit(logger.listen, True, True)

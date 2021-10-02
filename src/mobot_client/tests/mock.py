@@ -10,7 +10,7 @@ from decimal import Decimal
 from django.utils import timezone
 from signald.types import Payment as SignalPayment, Message as SignalMessage
 
-from mobot_client.models.messages import Message, PaymentStatus
+from mobot_client.models.messages import PaymentStatus
 from signald import Signal
 
 from mobot_client.payments import MCClient

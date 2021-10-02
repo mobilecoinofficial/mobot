@@ -11,7 +11,7 @@ from decimal import Decimal
 from django.test import LiveServerTestCase
 
 from mobot_client.chat_strings import ChatStrings
-from mobot_client.core.subscriber import MOBotSubscriber
+from mobot_client.core.subscriber import Subscriber
 from mobot_client.logger import SignalMessenger
 from mobot_client.tests.factories import StoreFactory, CustomerFactory, DropFactory, BonusCoinFactory
 from mobot_client.models import Store, Customer
@@ -43,6 +43,9 @@ class DropSessionTest(AbstractMessageTest):
         ]
         self.check_replies(messages=replies, expected_replies=expected_responses)
         self.assertEqual(customer.active_drop_sessions().filter(drop__store=self.store).count(), 1)
+
+    def test_run_as_dag(self):
+        pass
 
 
 
