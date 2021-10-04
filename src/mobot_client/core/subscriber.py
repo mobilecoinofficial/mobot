@@ -67,19 +67,25 @@ class Subscriber:
         """Perform a regex match search to find an appropriate handler for an incoming message"""
         self.logger.info(f"Finding handler for message {message}")
         if message.text is None:
-            return self.handle_payment
+            return self._payment_handlers[0]
         else:
             filtered = list(filter(lambda handler: re.search(handler[1], message.text), self._chat_handlers))[0]
             _, _, func = filtered
             return func
 
-    def acknowledge_message(self, message: Message):
-        if message.payment is not None:
-            self.logger.info("Customer sent payment; acknowledging immediately")
-            self.messenger.log_and_send_message(ChatStrings.PAYMENT_RECEIVED)
-        if Message.objects.queue_size >= settings.CONCURRENCY_WARNING_MESSAGE_THRESHOLD:
-            self.logger.info(f"Queue threshold {Message.objects.queue_size} above {settings.CONCURRENCY_WARNING_MESSAGE_THRESHOLD}")
-            self.messenger.log_and_send_message(ChatStrings.MOBOT_HEAVY_LOAD)
+    def _should_acknowledge_payment(self, message: Message) -> bool:
+        return message.payment is not None
+
+    def _should_acknowledge_load(self) -> bool:
+        return Message.objects.queue_size >= settings.CONCURRENCY_WARNING_MESSAGE_THRESHOLD
+
+    def _ack_payment(self):
+        self.logger.info("Acknowledging payment...")
+        self.messenger.log_and_send_message(ChatStrings.PAYMENT_RECEIVED)
+
+    def _ack_heavy_load(self):
+        self.logger.info("Acknowledging heavy load...")
+        self.messenger.log_and_send_message(ChatStrings.MOBOT_HEAVY_LOAD)
 
     def process_message(self, message: Message) -> Message:
         """Enter a chat context to manage which message/payment we're currently replying to
@@ -90,10 +96,13 @@ class Subscriber:
         """
         with ChatContext(message) as ctx:
             try:
-                self.acknowledge_message(message)
-                self.logger.exception("Got exception acking")
+                if self._should_acknowledge_payment(message):
+                    self._ack_payment()
+                if self._should_acknowledge_load():
+                    self._ack_heavy_load()
                 handler = self._find_handler(message)
                 result = handler(ctx)
+                self.logger.info(f"Message handled: {message.customer}:{message.text}:{message.payment}")
                 return message
             except Exception as e:
                 self.logger.exception("Processing message failed!")
@@ -129,6 +138,10 @@ class Subscriber:
             self.logger.exception(f"Exception processing messages.")
 
     def stop_chat(self):
+        """
+        Clean up all remaining response futures
+        :return: None
+        """
         self._run = False
         try:
             for future in as_completed(self._futures.values()):
@@ -154,7 +167,7 @@ class Subscriber:
 
     def run_chat(self, process_max: int = 0) -> int:
         """Start looking for messages off DB and process.
-                :argument process_max: Number of messages to process before stopping, if > 0
+                :param process_max: Number of messages to process before stopping, if > 0
         """
         self.logger.info("Now running MOBot chat...")
         with self._pool as pool:
@@ -162,7 +175,7 @@ class Subscriber:
                 processed = self._get_and_process(pool)
                 processed.add_done_callback(self._done)
                 self._number_processed += 1
-                if process_max > 0 and self._number_processed == process_max:
+                if 0 < process_max == self._number_processed:
                     self.stop_chat()
             self.stop_chat()
 

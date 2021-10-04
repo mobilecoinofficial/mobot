@@ -38,6 +38,10 @@ class ChatContext:
     def set_context(self):
         Context.current = self
 
+    def unset_context(self):
+        if hasattr(Context, 'current'):
+            del Context.current
+
     def __enter__(self):
         self.set_context()
         return self
@@ -63,7 +67,7 @@ class ChatContext:
                 connection.close()
             except Exception as e:
                 self._logger.exception("Exception closing DB connection")
-            unset_context()
+            self.unset_context()
 
 
 
