@@ -19,11 +19,12 @@ from mobot_client.logger import SignalMessenger
 from mobot_client.models import ChatbotSettings, Store
 
 
-
 class Command(BaseCommand):
     help = 'Run MOBot Client'
 
     def add_arguments(self, parser: ArgumentParser):
+        """Somewhat meaningless for the moment, as they both default to true, but the listener logs messages
+        from signal to the DB, and the subscriber runs a drop"""
         parser.add_argument(
             '-l',
             '--listen',
