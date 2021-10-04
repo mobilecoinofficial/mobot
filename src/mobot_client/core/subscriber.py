@@ -39,8 +39,10 @@ class Subscriber:
         self.messenger = messenger
 
         self._number_processed = 0
-        self._pool = ThreadPoolExecutor(max_workers=4)
         self._futures = {}
+
+    def _get_pool(self):
+        return ThreadPoolExecutor(max_workers=4)
 
     def _isolated_handler(self, func):
         def isolated(*args, **kwargs):
@@ -169,8 +171,9 @@ class Subscriber:
         """Start looking for messages off DB and process.
                 :param process_max: Number of messages to process before stopping, if > 0
         """
+        self._run = True
         self.logger.info("Now running MOBot chat...")
-        with self._pool as pool:
+        with self._get_pool() as pool:
             while self._run:
                 processed = self._get_and_process(pool)
                 processed.add_done_callback(self._done)

@@ -58,15 +58,17 @@ class DropSessionAdmin(admin.ModelAdmin):
 
 
 class MessageAdmin(admin.ModelAdmin):
-    list_display = ('customer', 'direction', 'text', 'payment_friendly')
+    list_display = ('id', 'time_seconds', 'customer', 'direction', 'text', 'payment_friendly')
     readonly_fields = ('payment_friendly',)
+
+    @admin.display(description='Precise Time', ordering='date')
+    def time_seconds(self, obj: Message):
+        return obj.date.strftime("%m/%d/%Y %H:%M:%S")
 
     @admin.display(description='payment')
     def payment_friendly(self, obj: Message):
         if obj.payment:
-            return mc_util.pmob2mob(obj.payment.amount_mob)
-        else:
-            return 0
+            return f"{obj.payment.amount_mob:.4f} MOB"
 
 
 class BonusCoinAdmin(admin.ModelAdmin):

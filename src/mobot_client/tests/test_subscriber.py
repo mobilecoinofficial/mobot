@@ -49,7 +49,7 @@ class SubscriberTestCase(AbstractMessageTest):
             self.messenger.log_and_send_message(TEST_RESPONSE)
 
         self.subscriber.register_chat_handler("test", test_handler)
-        self.subscriber.run_chat(process_max=5)
+        self.subscriber.run_chat(process_max=1)
         received = Message.objects.filter(direction=Direction.RECEIVED)
         self.assertEqual(received.count(), 1)
         self.assertEqual(Message.objects.filter(direction=Direction.RECEIVED).first().text, "test")

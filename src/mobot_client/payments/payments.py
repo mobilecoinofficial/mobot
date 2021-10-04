@@ -91,7 +91,7 @@ class Payments:
                     source, self.account_id, amount_mob, customer_payments_address, memo=memo
                 )
 
-    def send_reply_payment(self, amount_mob, cover_transaction_fee, memo="Refund"):
+    def send_reply_payment(self, amount_mob, cover_transaction_fee, memo="Refund") -> Payment:
         ctx = ChatContext.get_current_context()
         self.logger.info(f"Sending reply payment to {ctx.customer}: {amount_mob} MOB...")
 
@@ -106,6 +106,7 @@ class Payments:
                 customer=ctx.customer,
             )
         payment.save()
+        self.logger.info("Logging response object")
         response = MobotResponse.objects.create(
             incoming=ctx.message,
             outgoing_response=Message.objects.create(
@@ -116,6 +117,7 @@ class Payments:
                 payment=payment,
             ),
         )
+        return payment
 
     def build_and_submit_transaction_with_proposal(self, account_id: str, amount_in_mob: Decimal,
                                                    customer_payments_address: str) -> (str, dict):

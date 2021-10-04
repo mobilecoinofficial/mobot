@@ -1,31 +1,16 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
-# This code is copied from [pysignald](https://pypi.org/project/pysignald/) and modified to run locally with payments
-import asyncio
 import logging
-import re
 import time
-from concurrent.futures import ThreadPoolExecutor
-from typing import Protocol
 
 from signald import Signal as _Signal
 from signald.types import Message as SignalMessage
 
-from django.conf import settings
 from mobot_client.models.messages import Message
 from mobot_client.payments.client import MCClient
 
 
-# We'll need to know the compiled RE object later.
-
-RE_TYPE = type(re.compile(""))
-
-
 class SignalMessageException(Exception):
     pass
-
-
-class SignalReceiver(Protocol):
-    def __call__(self, signal_message: SignalMessage) -> bool: ...
 
 
 class SignalLogger:
@@ -65,6 +50,8 @@ class SignalLogger:
     def listen(self, auto_send_receipts=True, stop_when_done=False):
         """
         Start the chat.
+        :param auto_send_receipts: Send read receipts when we've stored a message in the DB
+        :param stop_when_done: If there are no more messages on the iterator, shut down gracefully
         """
         self._run = True
         self.logger.debug("Registering interrupt handler...")

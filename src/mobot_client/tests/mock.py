@@ -4,7 +4,7 @@ import attr
 import uuid
 import logging
 from collections import defaultdict
-from typing import Optional, Iterator, Union, List
+from typing import Optional, Iterator, List
 from decimal import Decimal
 
 from django.utils import timezone

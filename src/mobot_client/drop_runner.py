@@ -40,6 +40,7 @@ class DropRunner(Subscriber):
         self.register_payment_handler(self.handle_payment)
         self.register_chat_handler("\+", self.chat_router_plus)
         self.register_chat_handler("coins", self.chat_router_coins)
+        # TODO: Split up items/event runner vs. Airdrop runner?
         self.register_chat_handler("items", self.chat_router_items)
         self.register_chat_handler("unsubscribe", self.unsubscribe_handler)
         self.register_chat_handler("subscribe", self.subscribe_handler)
@@ -47,6 +48,7 @@ class DropRunner(Subscriber):
         self.register_chat_handler("", self.default_handler)
 
     def maybe_advertise_drop(self, customer):
+        """Figure out whether or not there's a drop running, and send a message if it is"""
         self.logger.info("Checking for advertising drop")
         drop_to_advertise = BaseDropSession.get_advertising_drop()
         if drop_to_advertise is not None:
@@ -72,7 +74,6 @@ class DropRunner(Subscriber):
             return False
 
     def handle_unsolicited_payment(self, message: Message):
-        customer = message.customer
         amount_paid_mob = mc.pmob2mob(message.payment.amount_mob)
         self.logger.warning("Could not find drop session for customer; Payment unsolicited!")
         if mc.pmob2mob(self.payments.minimum_fee_pmob) < amount_paid_mob:
@@ -137,9 +138,14 @@ class DropRunner(Subscriber):
         self.messenger.log_and_send_message(message_to_send)
 
     def health_handler(self, _: ChatContext):
+        """A health check chat router; in the future:
+           - Should ensure connection to DB
+           - Should ensure connection to Signal
+           - Should esnure connection to Full-Service
+        """
         self.messenger.log_and_send_message("Ok!")
 
-    def chat_router_coins(self, ctx: ChatContext):
+    def chat_router_coins(self, _: ChatContext):
         active_drop = Drop.objects.get_active_drop()
         if not active_drop:
             return "No active drop to check on coins"
@@ -158,16 +164,16 @@ class DropRunner(Subscriber):
     def chat_router_items(self, _: ChatContext):
         active_drop = Drop.objects.get_active_drop()
         if active_drop is None:
-            return "No active drop to check on items"
-
-        skus = Sku.objects.filter(item=active_drop.item).order_by("sort_order")
-        message_to_send = ""
-        for sku in skus:
-            number_ordered = Order.objects.filter(sku=sku).exclude(status=OrderStatus.CANCELLED).count()
-            message_to_send += (
-                f"{sku.identifier} - {number_ordered} / {sku.quantity} ordered\n"
-            )
-        return message_to_send
+            message_to_send = "No active drop to check on Items"
+        else:
+            skus = Sku.objects.filter(item=active_drop.item).order_by("sort_order")
+            message_to_send = ""
+            for sku in skus:
+                number_ordered = Order.objects.filter(sku=sku).exclude(status=OrderStatus.CANCELLED).count()
+                message_to_send += (
+                    f"{sku.identifier} - {number_ordered} / {sku.quantity} ordered\n"
+                )
+        self.messenger.log_and_send_message(message_to_send)
 
     def unsubscribe_handler(self, ctx: ChatContext):
         customer = ctx.customer
@@ -200,8 +206,6 @@ class DropRunner(Subscriber):
             self.messenger.log_and_send_message(ChatStrings.SUBSCRIBE_NOTIFICATIONS)
 
     def handle_new_drop_session(self, active_drop: Drop):
-        ctx = ChatContext.get_current_context()
-        customer, message = (ctx.customer, ctx.message)
         if active_drop.drop_type == DropType.AIRDROP:
         # if this is an airdrop session, dispatch to the
         # no_active_airdrop session handler to initiate a session

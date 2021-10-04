@@ -5,25 +5,18 @@ The entrypoint for the running MOBot.
 """
 import time
 from argparse import ArgumentParser
-from asyncio import Task
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import asyncio
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from django.db.models.signals import post_save, pre_delete
-import django.db.models.signals as db_signals
-from django.dispatch import receiver
 from signald import Signal
 
-
+from mobot_client.drop_runner import DropRunner
 from mobot_client.payments import MCClient, Payments
 from signal_logger import SignalLogger
 
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import ChatbotSettings, Store
-from mobot_client.models.messages import Message
-from mobot_client.core.subscriber import Subscriber
 
 
 
@@ -46,7 +39,6 @@ class Command(BaseCommand):
 
     def get_signal(self, cb_settings: ChatbotSettings, b64_public_address: str) -> Signal:
         store = cb_settings.store
-        bot_avatar_filename = cb_settings.avatar_filename
         bot_name = cb_settings.name
         signal = Signal(str(store.phone_number), socket_path=(settings.SIGNALD_ADDRESS, int(settings.SIGNALD_PORT)))
         resp = signal.set_profile(
@@ -66,7 +58,6 @@ class Command(BaseCommand):
             signal=signal,
             messenger=messenger,
         )
-
 
     def handle(self, *args, **kwargs):
         cb_settings = ChatbotSettings.load()
@@ -90,18 +81,19 @@ class Command(BaseCommand):
         futures = []
 
         try:
-            loop = asyncio.get_event_loop()
             logger = SignalLogger(signal=signal, mcc=mcc)
-            mobot = Subscriber(store=cb_settings.store, messenger=messenger, mcc=mcc)
+            mobot = DropRunner(store=cb_settings.store, messenger=messenger, payments=payments)
             with ThreadPoolExecutor() as pool:
                 if listen:
                     listen_task = pool.submit(logger.listen, True, True)
+                    futures.append(listen_task)
                 if subscribe:
                     subscribe_task = pool.submit(mobot.run_chat)
+                    futures.append(subscribe_task)
 
             for fut in as_completed(futures):
                 print(fut.result())
 
         except KeyboardInterrupt as e:
-            print()
+            print("Got an interrupt")
             pass

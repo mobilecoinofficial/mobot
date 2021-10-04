@@ -1,23 +1,20 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 import logging
-from datetime import time
-from typing import List, Callable
+from typing import List
 from unittest.mock import MagicMock
 
 import mc_util
 
-from decimal import Decimal
 
 from django.test import LiveServerTestCase
 
 from mobot_client.core.subscriber import Subscriber
 from mobot_client.logger import SignalMessenger
-from mobot_client.tests.factories import StoreFactory, CustomerFactory, DropFactory, BonusCoinFactory
+from mobot_client.tests.factories import StoreFactory
 from mobot_client.models import Store, Customer
 from mobot_client.models.messages import Message, Payment, PaymentStatus, Direction
-from mobot_client.payments import MCClient, Payments
-from mobot_client.tests.mock import TestMessage, MockSignal, MockMCC, mock_signal_message_with_receipt
-from signal_logger import SignalLogger
+from mobot_client.payments import Payments
+from mobot_client.tests.mock import TestMessage, MockSignal, MockMCC
 
 
 class AbstractMessageTest(LiveServerTestCase):
@@ -30,9 +27,12 @@ class AbstractMessageTest(LiveServerTestCase):
         self.payments = Payments(mobilecoin_client=self.mcc, store=self.store, messenger=self.messenger, signal=self.signal)
         self.payments.get_payments_address = MagicMock(autospec=True, return_value="123")
         self.payments.has_enough_funds_for_payment = MagicMock(autospec=True, return_value=True)
+        self.payments.send_reply_payment = MagicMock(autospec=True)
         self.subscriber = Subscriber(store=self.store, messenger=self.messenger)
 
-    def create_incoming_message(self, customer: Customer, store: Store, text: str = "", payment_mob: int = 0):
+    def create_incoming_message(self, customer: Customer, store: Store = None, text: str = "", payment_mob: int = 0) -> Message:
+        if not store:
+            store = self.store
         if payment_mob > 0:
             payment = Payment.objects.create(
                 amount_mob=payment_mob,

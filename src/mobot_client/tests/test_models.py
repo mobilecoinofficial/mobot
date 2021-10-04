@@ -1,9 +1,8 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
-import unittest
 import logging
-from typing import List, Dict, Iterable
+from typing import List, Dict
 from collections import defaultdict
-from django.test import TransactionTestCase
+from django.test import LiveServerTestCase
 import factory.random
 from mobot_client.tests.factories import *
 
@@ -12,19 +11,13 @@ from mobot_client.models import (Drop,
                                  Sku,
                                  DropType,
                                  BonusCoin,
-                                 Order,
-                                 OrderStatus,
                                  OutOfStockException)
 from mobot_client.models.states import SessionState
 
 factory.random.reseed_random('mobot cleanup')
 
-# l = logging.getLogger('django.db.backends')
-# l.setLevel(logging.DEBUG)
-# l.addHandler(logging.StreamHandler())
 
-
-class ModelTests(TransactionTestCase):
+class ModelTests(LiveServerTestCase):
 
     def setUp(self) -> None:
         self.logger = logging.getLogger("ModelTestsLogger")
@@ -123,8 +116,7 @@ class ModelTests(TransactionTestCase):
             BonusCoin.objects.claim_random_coin_for_session(session3)
 
     def test_claim_multithreaded(self):
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        from django.db import connection
+        from concurrent.futures import ThreadPoolExecutor
         drop = DropFactory.create(drop_type=DropType.AIRDROP)
         coin = BonusCoinFactory.create_batch(size=3, drop=drop, number_available_at_start=10)
 
