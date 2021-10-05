@@ -1,5 +1,4 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
-import mc_util
 from django.contrib import admin
 
 from .models import (
@@ -19,7 +18,7 @@ from .models.messages import (
     Message,
     MobotResponse,
     Payment,
-    RawSignalMessage, SignalPayment
+    RawSignalMessage
 )
 
 class StoreAdmin(admin.ModelAdmin):
@@ -78,6 +77,7 @@ class BonusCoinAdmin(admin.ModelAdmin):
     @admin.display(description='MOB')
     def amount_mob(self, obj: BonusCoin):
         return f"{obj.amount_mob:.4f}"
+
 
 class SkuAdmin(admin.ModelAdmin):
     readonly_fields = ('number_available',)

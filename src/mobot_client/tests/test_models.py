@@ -3,6 +3,7 @@ import logging
 from typing import List, Dict
 from collections import defaultdict
 from django.test import LiveServerTestCase
+
 import factory.random
 from mobot_client.tests.factories import *
 
@@ -121,7 +122,9 @@ class ModelTests(LiveServerTestCase):
         coin = BonusCoinFactory.create_batch(size=3, drop=drop, number_available_at_start=10)
 
         with ThreadPoolExecutor(max_workers=5) as pool:
-            pool.submit(BonusCoin.objects.find_and_claim_unclaimed_coin, drop)
+            for i in range(5):
+                pool.submit(BonusCoin.objects.find_and_claim_unclaimed_coin, drop)
+
 
 
     def test_active_drop_sessions_found_for_customer(self):

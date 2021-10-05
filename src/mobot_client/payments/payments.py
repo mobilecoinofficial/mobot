@@ -184,12 +184,14 @@ class Payments:
         receiver_receipt_fs = self.create_receiver_receipt(tx_proposal)
         confirmation = receiver_receipt_fs["confirmation"]
         self.logger.info(f"Sending payment receipt to {source}")
+
         receiver_receipt = mc.full_service_receipt_to_b64_receipt(
             receiver_receipt_fs
         )
         resp = self.signal.send_payment_receipt(source, receiver_receipt, memo)
         self.logger.info(f"Send receipt {receiver_receipt} to {source}: {resp}")
         return receiver_receipt
+
 
     def create_receiver_receipt(self, tx_proposal: dict):
         receiver_receipts = self.mcc.create_receiver_receipts(tx_proposal)
@@ -211,6 +213,9 @@ class Payments:
         return self.get_unspent_pmob() >= (
                 mc.mob2pmob(payment_amount) + int(self.minimum_fee_pmob)
         )
+
+    def get_minimum_fee_pmob(self) -> int:
+        return self.mcc.minimum_fee_pmob
 
     def handle_not_enough_paid(self, amount_paid_mob: Decimal, drop_session: DropSession):
         customer = drop_session.customer

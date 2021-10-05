@@ -261,6 +261,33 @@ class BonusCoinManager(models.Manager.from_queryset(BonusCoinQuerySet)):
         else:
             raise OutOfStockException("No more bonus coins available to give out!")
 
+    def _claim_optimistic(self, coin: BonusCoin, number_claimed: int):
+        """Try to claim a coin using optimistic locking - assume we know the number claimed is the same as it was when we
+           entered the transaction, and fail if the update fails
+        """
+        with transaction.atomic():
+            updated = self.available_coins().filter(pk=coin.pk, number_claimed=number_claimed).select_for_update().update(number_claimed=number_claimed + 1)
+            if not updated:
+                raise ConcurrentModificationException()
+        coin.refresh_from_db()
+        return coin
+
+    @retry(wait=wait_random_exponential(multiplier=1, min=4, max=10), retry=retry_if_exception_type(ConcurrentModificationException))
+    def find_and_claim_unclaimed_coin(self, drop: Drop) -> BonusCoin:
+        coins_available = self.available_coins().filter(drop=drop)
+        coins_dist = [coin.number_remaining() for coin in coins_available]
+        if len(coins_available) > 0:
+            coin: BonusCoin = random.choices(coins_available, weights=coins_dist)[0]
+            if coin.number_remaining() < 1:
+                raise ConcurrentModificationException("Coin no longer available; looking for another")
+            logger.debug(f"Trying to claim a coin {coin} with number claimed {coin.number_claimed}")
+            claimed_coin = self._claim_optimistic(coin, coin.number_claimed)
+            logger.info(f"Got a coin! {claimed_coin}")
+            claimed_coin.save()
+            return claimed_coin
+        else:
+            raise OutOfStockException("No more bonus coins available to give out!")
+
     def claim_random_coin_for_session(self, drop_session: DropSession):
         try:
             coin = self.find_and_claim_unclaimed_coin(drop_session.drop)

@@ -39,7 +39,6 @@ DEBUG = os.environ.get('DEBUG', False)
 
 DATABASE = os.environ.get('DATABASE', 'postgresql')
 
-
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1').split(',')
 
 # Application definition
@@ -118,8 +117,8 @@ PGBOUNCER_PORT = os.getenv("PGBOUNCER_PORT", 6432)
 if DATABASE == "postgresql":
     try:
         DATABASE_NAME = os.environ.get("DATABASE_NAME", "mobot")
-        DATABASE_USER = os.environ.get("DATABASE_USER", "mobot")
-        DATABASE_PASSWORD = os.environ.get("DATABASE_PASSWORD", "mobot")
+        DATABASE_USER = os.environ["DATABASE_USER"]
+        DATABASE_PASSWORD = os.environ["DATABASE_PASSWORD"]
         DATABASE_HOST = os.environ.get("DATABASE_HOST", "localhost")
     except KeyError:
         print("expecting environment variables for database fields")
@@ -135,7 +134,6 @@ if DATABASE == "postgresql":
             'USER': DATABASE_USER,
             'PASSWORD': DATABASE_PASSWORD,
             'PORT': DATABASE_PORT,
-            'DISABLE_SERVER_SIDE_CURSORS': True,
             'OPTIONS': {
                 'sslmode': DATABASE_SSL_MODE,
                 'sslrootcert': DATABASE_SSL_ROOT_CERT,
@@ -143,7 +141,7 @@ if DATABASE == "postgresql":
             'TEST': {
                 'NAME': f"{DATABASE_NAME}_test"
             },
-        }
+        },
     }
     CACHES = {
         'default': {
