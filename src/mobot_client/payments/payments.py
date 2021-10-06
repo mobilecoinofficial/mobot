@@ -155,6 +155,7 @@ class Payments:
             self.logger.exception("TxOut did not land yet, id: " + txo_id)
             raise e
 
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=30, multiplier=2))
     def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund") -> Payment:
         """Attempt to send MOB to customer; retry if we fail."""
         # customer_payments_address is b64 encoded, but full service wants a b58 address
@@ -195,7 +196,7 @@ class Payments:
                 else:
                     return payment
 
-    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=10, multiplier=2))
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=30, multiplier=2))
     def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund") -> str:
         receiver_receipt_fs = self.create_receiver_receipt(tx_proposal)
         confirmation = receiver_receipt_fs["confirmation"]
@@ -208,6 +209,7 @@ class Payments:
         self.logger.info(f"Send receipt {receiver_receipt} to {source}: {resp}")
         return receiver_receipt
 
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=15, multiplier=2))
     def create_receiver_receipt(self, tx_proposal: dict):
         receiver_receipts = self.mcc.create_receiver_receipts(tx_proposal)
         # I'm assuming there will only be one receiver receipt (not including change tx out).

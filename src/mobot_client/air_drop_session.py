@@ -50,7 +50,7 @@ class AirDropSession(BaseDropSession):
             amount_to_send_mob = (
                     amount_in_mob
                     + amount_paid_mob
-                    + mc.pmob2mob(self.payments.get_minimum_fee_pmob())
+                    + self.payments.minimum_fee_mob
             )
             self.payments.send_reply_payment(amount_to_send_mob, True, memo="Bonus")
 
