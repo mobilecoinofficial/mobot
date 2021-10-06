@@ -189,11 +189,11 @@ class Payments:
                     payment.status = PaymentStatus.TransactionSuccess
                 except Exception as e:
                     self.logger.exception("Exception sending receipt")
-                else:
                     self.messenger.log_and_send_message(
                         ChatStrings.COULD_NOT_GENERATE_RECEIPT,
                     )
-                return payment
+                else:
+                    return payment
 
     @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=10, multiplier=2))
     def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund") -> str:

@@ -4,7 +4,7 @@ import pytz
 
 from mobot_client.core.context import ChatContext
 from mobot_client.core.subscriber import Subscriber
-from mobot_client.models.messages import Message
+from mobot_client.models.messages import Message, PaymentStatus
 import mc_util
 
 from mobot_client.logger import SignalMessenger
@@ -103,8 +103,7 @@ class DropRunner(Subscriber):
         payment = message.payment
         message.refresh_from_db()
         source = str(message.customer.phone_number)
-        self.logger.info(f"Received payment from {source}")
-        self.logger.info(f"Received payment {payment}")
+        self.logger.info(f"Received payment {payment} from {source}")
         receipt_status = None
         transaction_status = "TransactionPending"
 
@@ -114,14 +113,14 @@ class DropRunner(Subscriber):
         self.logger.info(f"received receipt {payment.signal_payment.receipt}")
         receipt = mc_util.b64_receipt_to_full_service_receipt(payment.signal_payment.receipt)
 
-        while transaction_status == "TransactionPending":
+        while transaction_status == PaymentStatus.TransactionPending:
             receipt_status = self.payments.mcc.check_receiver_receipt_status(
                 self.payments.mcc.public_address, receipt
             )
             transaction_status = receipt_status["receipt_transaction_status"]
             self.logger.info(f"Waiting for {receipt}, current status {receipt_status}")
 
-        if transaction_status != "TransactionSuccess":
+        if transaction_status != PaymentStatus.TransactionSuccess:
             self.logger.error(f"failed {transaction_status}")
             return "The transaction failed!"
 
