@@ -38,7 +38,7 @@ class ConfigurationException(Exception):
 
 class DropRunner(Subscriber):
     """
-    MOBot is the container which holds all of the business logic relevant to a Drop.
+    A specific kind of Subscriber that runs Airdrops and Item drops. This is what used to be MOBot.
     """
     def __init__(self, store: Store, messenger: SignalMessenger, payments: Payments):
         super().__init__(store, messenger)
