@@ -160,8 +160,15 @@ class AirDropSession(BaseDropSession):
             )
         )
 
+    def handle_over_quota(self, drop_session: DropSession):
+        drop_session.state = SessionState.OUT_OF_STOCK
+        self.messenger.log_and_send_message(ChatStrings.OVER_QUOTA)
+        drop_session.save()
+
     def handle_active_airdrop_drop_session(self, message: Message, drop_session: DropSession):
-        if drop_session.state == SessionState.READY:
+        if not drop_session.drop.under_quota():
+            self.handle_over_quota(drop_session)
+        elif drop_session.state == SessionState.READY:
             self.handle_airdrop_session_ready_to_receive(message, drop_session)
         elif drop_session.state == SessionState.WAITING_FOR_PAYMENT:
             self.handle_drop_session_waiting_for_bonus_transaction(

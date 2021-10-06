@@ -207,10 +207,11 @@ class Drop(models.Model):
         if self.drop_type == DropType.AIRDROP:
             DropManager.logger.info("Checking if there are coins available to give out...")
             active_drop_sessions_count = DropSession.objects.initial_coin_sent_sessions().filter(drop=self).count()
+            bonus_available = self.num_bonus_sent() < self.initial_coins_available()
             logger.debug(
                 f"There are {active_drop_sessions_count} sessions on this airdrop with an initial limit of {self.initial_coin_limit}"
             )
-            return active_drop_sessions_count < self.initial_coin_limit and self.initial_coins_available() > 0
+            return active_drop_sessions_count < self.initial_coin_limit and self.initial_coins_available() > 0 and bonus_available
         else:
             return len(self.item.skus) > 0
 
