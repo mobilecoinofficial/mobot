@@ -9,6 +9,7 @@ from concurrent.futures import as_completed, ThreadPoolExecutor, Future
 from django.conf import settings
 
 from mobot_client.chat_strings import ChatStrings
+from mobot_client.concurrency import AutoCleanupExecutor
 from mobot_client.core import ConfigurationException
 from mobot_client.logger import SignalMessenger
 from mobot_client.models import Store
@@ -42,7 +43,7 @@ class Subscriber:
         self._futures = {}
 
     def _get_pool(self):
-        return ThreadPoolExecutor(max_workers=4)
+        return AutoCleanupExecutor(max_workers=8)
 
     def _isolated_handler(self, func):
         def isolated(*args, **kwargs):
@@ -110,7 +111,6 @@ class Subscriber:
                 self.logger.exception("Processing message failed!")
                 raise e
 
-    @Halo(text='Waiting for next message...', spinner='dots')
     def _get_next_message(self) -> Message:
         """
         Get a message off the DB, show a spinner while waiting
@@ -118,40 +118,27 @@ class Subscriber:
         :return: The next available message to process
         :rtype: Message
         """
-        while self._run:
-            try:
-                message = Message.objects.get_message(self.store)
-                if message:
-                    return message
-                else:
-                    time.sleep(1)
-            except Exception as e:
-                self.logger.exception("Exception getting message!")
-                raise e
+        with Halo(text='Waiting for next message...', spinner='dots') as spinner:
+            while self._run:
+                try:
+                    message = Message.objects.get_message(self.store)
+                    if message:
+                        return message
+                    else:
+                        time.sleep(1)
+                except Exception as e:
+                    self.logger.exception("Exception getting message!")
+                    raise e
 
     def _get_and_process(self, pool: ThreadPoolExecutor) -> Future[Message]:
         try:
             message: Message = self._get_next_message()
             self.logger.info("Got message!")
             process_fut = pool.submit(self.process_message, message)
-            self._futures[message.pk] = process_fut
+            process_fut.add_done_callback(self._done)
             return process_fut
         except Exception as e:
             self.logger.exception(f"Exception processing messages.")
-
-    def stop_chat(self):
-        """
-        Clean up all remaining response futures
-        :return: None
-        """
-        self._run = False
-        try:
-            for future in as_completed(self._futures.values()):
-                future.result()
-        except Exception:
-            self.logger.exception("Error stopping chat")
-
-        self.logger.warning("Stopping message processing!")
 
     def _done(self, fut: Future[Message]):
         """
@@ -161,24 +148,22 @@ class Subscriber:
         """
         try:
             result = fut.result()
-            del self._futures[result.pk]
+            self.logger.info(f"Finished processing: {result}")
         except TimeoutError as e:
             self.logger.exception("Message processing timed out.")
         except Exception as e:
-            self.logger.exception("Error cleaning up future")
+            self.logger.exception("Error resolving message future")
 
     def run_chat(self, process_max: int = 0) -> int:
         """Start looking for messages off DB and process.
                 :param process_max: Number of messages to process before stopping, if > 0
         """
         self._run = True
-        self.logger.info("Now running MOBot chat...")
         with self._get_pool() as pool:
             while self._run:
                 processed = self._get_and_process(pool)
                 processed.add_done_callback(self._done)
                 self._number_processed += 1
                 if 0 < process_max == self._number_processed:
-                    self.stop_chat()
-            self.stop_chat()
+                    self._run = False
 

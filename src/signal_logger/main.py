@@ -2,11 +2,16 @@
 import logging
 import time
 
+from concurrent.futures import Future
+from mobot_client.concurrency import AutoCleanupExecutor
+
 from signald import Signal as _Signal
 from signald.types import Message as SignalMessage
 
 from mobot_client.models.messages import Message
+from mobot_client.payments import Payments
 from mobot_client.payments.client import MCClient
+
 
 
 class SignalMessageException(Exception):
@@ -16,9 +21,9 @@ class SignalMessageException(Exception):
 class SignalLogger:
     """A signal logger that logs to our DB instead of running callbacks"""
 
-    def __init__(self, signal: _Signal, mcc: MCClient, *args, **kwargs):
+    def __init__(self, signal: _Signal, payments: Payments, *args, **kwargs):
         self.logger = logging.getLogger("SignalLogger")
-        self._mcc = mcc
+        self._payments = payments
         self._signal = signal
         self._run = False
 
@@ -30,7 +35,7 @@ class SignalLogger:
             try:
                 stored_message = Message.objects.create_from_signal(message)
                 if message.payment:
-                    payment = self._mcc.process_signal_payment(stored_message)
+                    payment = self._payments.process_signal_payment(stored_message)
                     stored_message.payment = payment
                 stored_message.save()
             except Exception as e:
@@ -47,6 +52,10 @@ class SignalLogger:
                     raise
                 return stored_message
 
+    def _done(self, fut: Future[Message]):
+        message = fut.result()
+        self.logger.info(f"Stored message from {message}")
+
     def listen(self, auto_send_receipts=True, stop_when_done=False):
         """
         Start the chat.
@@ -56,18 +65,26 @@ class SignalLogger:
         self._run = True
         self.logger.debug("Registering interrupt handler...")
         messages = self._signal.receive_messages()
-        while self._run:
-            try:
-                signal_message = next(messages)
-                self.logger.info(f"Signal received message {signal_message}... Processing!")
-                message = self._parse_message(signal_message, auto_send_receipts=auto_send_receipts)
-                self.logger.info(f"Stored message from {message}")
-            except StopIteration:
-                self.logger.error(f"Signal no longer sending messages!")
-                if stop_when_done:
+        with AutoCleanupExecutor(max_workers=4) as pool:
+            while self._run:
+                try:
+                    signal_message = next(messages)
+                    self.logger.info(f"Signal received message {signal_message}... Processing!")
+                    fut = pool.submit(self._parse_message, signal_message, auto_send_receipts=auto_send_receipts)
+                    fut.add_done_callback(self._done)
+                except StopIteration:
+                    self.logger.error(f"Signal no longer sending messages!")
+                    if stop_when_done:
+                        print("Stopping")
+                        self._run = False
+                        return
+                    else:
+                        time.sleep(0.5)
+                except SignalMessageException as e:
+                    self.logger.exception(f"Error parsing message from signal")
+                except KeyboardInterrupt:
                     self._run = False
-                else:
-                    time.sleep(0.5)
-            except SignalMessageException as e:
-                self.logger.exception(f"Error parsing message from signal")
+                    break
+
+
 

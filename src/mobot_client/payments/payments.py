@@ -6,6 +6,7 @@ import logging
 from typing import Optional
 
 import mc_util as mc
+import tenacity
 from signald import Signal
 
 from mobot_client.logger import SignalMessenger
@@ -139,7 +140,18 @@ class Payments:
     def get_minimum_fee_pmob(self) -> int:
         return self.mcc.minimum_fee_pmob
 
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=30, multiplier=2))
+    def get_txo_result(self, txo_id):
+        """Smaller method for getting TXO result, with retry"""
+        try:
+            with self.timers.get_timer("get_txo"):
+                self.mcc.get_txo(txo_id)
+        except Exception as e:
+            self.logger.exception("TxOut did not land yet, id: " + txo_id)
+            raise e
+
     def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund") -> Payment:
+        """Attempt to send MOB to customer; retry if we fail."""
         # customer_payments_address is b64 encoded, but full service wants a b58 address
         ctx = ChatContext.get_current_context()
         customer_payments_address = mc.b64_public_address_to_b58_wrapper(
@@ -157,29 +169,28 @@ class Payments:
                 txo_id=txo_id,
                 customer=ctx.customer,
             )
-
-        for _ in range(10):
             try:
-                with self.timers.get_timer("get_txo"):
-                    self.mcc.get_txo(txo_id)
-            except Exception:
-                print("TxOut did not land yet, id: " + txo_id)
+                txo = self.get_txo_result(txo_id)
+            except Exception as e:
+                self.logger.exception(f"Exception getting TXO result for {txo_id}")
             else:
-                receipt = self.send_payment_receipt(source, tx_proposal, memo)
-                signal_payment = SignalPayment.objects.create(
-                    note=memo,
-                    receipt=receipt
-                )
-                payment.signal_payment = signal_payment
-                payment.status = PaymentStatus.TransactionSuccess
+                try:
+                    receipt = self.send_payment_receipt(source, tx_proposal, memo)
+                    signal_payment = SignalPayment.objects.create(
+                        note=memo,
+                        receipt=receipt
+                    )
+                    payment.signal_payment = signal_payment
+                    payment.status = PaymentStatus.TransactionSuccess
+                except Exception as e:
+                    self.logger.exception("Exception sending receipt")
+                else:
+                    self.messenger.log_and_send_message(
+                        ChatStrings.COULD_NOT_GENERATE_RECEIPT,
+                    )
                 return payment
-            time.sleep(1.0)
-        else:
-            self.messenger.log_and_send_message(
-                ChatStrings.COULD_NOT_GENERATE_RECEIPT,
-            )
-        return payment
 
+    #@tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=10, multiplier=2))
     def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund") -> str:
         receiver_receipt_fs = self.create_receiver_receipt(tx_proposal)
         confirmation = receiver_receipt_fs["confirmation"]
@@ -191,7 +202,6 @@ class Payments:
         resp = self.signal.send_payment_receipt(source, receiver_receipt, memo)
         self.logger.info(f"Send receipt {receiver_receipt} to {source}: {resp}")
         return receiver_receipt
-
 
     def create_receiver_receipt(self, tx_proposal: dict):
         receiver_receipts = self.mcc.create_receiver_receipts(tx_proposal)
@@ -260,6 +270,10 @@ class Payments:
 
         drop_session.state = SessionState.REFUNDED
         drop_session.save()
+
+    #@tenacity.retry(wait=tenacity.wait_random_exponential(min=1, multiplier=2, max=10))
+    def process_signal_payment(self, message: Message) -> Payment:
+        return self.mcc.process_signal_payment(message)
 
     def handle_item_payment(self, amount_paid_mob: Decimal, drop_session: DropSession):
         item_cost_mob = drop_session.drop.item.price_in_mob

@@ -110,6 +110,5 @@ class MockPayments(Payments):
     def __init__(self, *args, **kwargs):
         self.get_payments_address = create_autospec(super().get_payments_address)
 
-    def get_minimum_fee_pmob(self) -> int:
-        return create_autospec()
+
 

@@ -4,14 +4,17 @@
 The entrypoint for the running MOBot.
 """
 import time
+from copy import deepcopy
 from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from multiprocessing import Process
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from signald import Signal
 
 from mobot_client.drop_runner import DropRunner
+from mobot_client.concurrency import AutoCleanupExecutor
 from mobot_client.payments import MCClient, Payments
 from signal_logger import SignalLogger
 
@@ -36,6 +39,12 @@ class Command(BaseCommand):
             '--subscribe',
             action='store_true',
             default=True
+        )
+        parser.add_argument(
+            '-c',
+            '--concurrency',
+            type=int,
+            default=1
         )
 
     def get_signal(self, cb_settings: ChatbotSettings, b64_public_address: str) -> Signal:
@@ -62,12 +71,14 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         cb_settings = ChatbotSettings.load()
+
         while not cb_settings.store:
             print("Awaiting settings... sleeping 60 seconds! Create a store and attach to ChatbotSettings to continue.")
             time.sleep(60)
             cb_settings.refresh_from_db()
         listen = kwargs.get('listen')
         subscribe = kwargs.get('subscribe')
+        concurrency = kwargs.get('concurrency')
 
         mcc = MCClient()
         signal = self.get_signal(cb_settings, mcc.b64_public_address)
@@ -80,21 +91,25 @@ class Command(BaseCommand):
             mcc=mcc,
         )
         futures = []
+        processes = []
 
         try:
-            logger = SignalLogger(signal=signal, mcc=mcc)
-            mobot = DropRunner(store=cb_settings.store, messenger=messenger, payments=payments)
-            with ThreadPoolExecutor() as pool:
+            logger = SignalLogger(signal=signal, payments=payments)
+            with AutoCleanupExecutor(max_workers=8) as pool:
                 if listen:
-                    listen_task = pool.submit(logger.listen, True, True)
-                    futures.append(listen_task)
+                    listen_task = Process(target=logger.listen, args=(True, True))
+                    listen_task.start()
+                    futures.append(pool.submit(listen_task.join))
                 if subscribe:
-                    subscribe_task = pool.submit(mobot.run_chat)
-                    futures.append(subscribe_task)
+                    mobot = DropRunner(store=cb_settings.store, messenger=messenger, payments=payments)
+                    futures.append(pool.submit(mobot.run_chat))
+
 
             for fut in as_completed(futures):
-                print(fut.result())
+                print(fut.done())
 
         except KeyboardInterrupt as e:
             print("Got an interrupt")
             pass
+        finally:
+            print("Done")

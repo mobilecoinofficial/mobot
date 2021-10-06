@@ -28,12 +28,11 @@ class AbstractMessageTest(LiveServerTestCase):
         self.payments = self.get_payments()
         self.subscriber = Subscriber(store=self.store, messenger=self.messenger)
 
-    def get_payments(self):
-        payments = MockPayments(mobilecoin_client=self.mcc, store=self.store, messenger=self.messenger,
-                                 signal=self.signal)
+    def get_payments(self) -> Payments:
+        payments = Payments(mobilecoin_client=self.mcc, store=self.store, messenger=self.messenger, signal=self.signal)
         payments.get_payments_address = MagicMock(autospec=True, return_value="123")
-        self.payments.has_enough_funds_for_payment = MagicMock(autospec=True, return_value=True)
-        self.payments.
+        payments.has_enough_funds_for_payment = MagicMock(autospec=True, return_value=True)
+        return payments
 
     def create_incoming_message(self, customer: Customer, store: Store = None, text: str = "", payment_mob: int = 0) -> Message:
         if not store:

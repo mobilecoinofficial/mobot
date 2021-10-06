@@ -24,6 +24,13 @@ from mobot_client.item_drop_session import ItemDropSession
 from mobot_client.chat_strings import ChatStrings
 from mobot_client.payments import Payments
 
+import os
+import django
+
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mobot.settings")
+django.setup()
+
 
 class ConfigurationException(Exception):
     pass
