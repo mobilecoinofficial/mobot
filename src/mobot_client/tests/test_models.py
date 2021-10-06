@@ -124,20 +124,16 @@ class ModelTests(LiveServerTestCase):
         coin = BonusCoinFactory.create_batch(size=3, drop=drop, number_available_at_start=10)
         futures = []
 
-        with AutoCleanupExecutor(max_workers=5) as pool:
-            for i in range(5):
+        with AutoCleanupExecutor(max_workers=10) as pool:
+            # Try to claim more than we've got
+            for i in range(35):
                 fut = pool.submit(BonusCoin.objects.find_and_claim_unclaimed_coin, drop)
                 futures.append(fut)
 
         for fut in as_completed(futures):
             print(fut.done())
 
-        self.assertEqual(drop.num_bonus_sent(), 5)
-
-
-
-
-
+        self.assertEqual(drop.num_bonus_sent(), 30)
 
     def test_active_drop_sessions_found_for_customer(self):
         '''Ensure that customers with old drop sessions don't find themselves unable to participate in current drops'''
