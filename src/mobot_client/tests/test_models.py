@@ -1,10 +1,13 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 import logging
+from concurrent.futures import as_completed
 from typing import List, Dict
 from collections import defaultdict
 from django.test import LiveServerTestCase
 
 import factory.random
+
+from mobot_client.concurrency import AutoCleanupExecutor
 from mobot_client.tests.factories import *
 
 from mobot_client.models import (Drop,
@@ -117,13 +120,22 @@ class ModelTests(LiveServerTestCase):
             BonusCoin.objects.claim_random_coin_for_session(session3)
 
     def test_claim_multithreaded(self):
-        from concurrent.futures import ThreadPoolExecutor
         drop = DropFactory.create(drop_type=DropType.AIRDROP)
         coin = BonusCoinFactory.create_batch(size=3, drop=drop, number_available_at_start=10)
+        futures = []
 
-        with ThreadPoolExecutor(max_workers=5) as pool:
+        with AutoCleanupExecutor(max_workers=5) as pool:
             for i in range(5):
-                pool.submit(BonusCoin.objects.find_and_claim_unclaimed_coin, drop)
+                fut = pool.submit(BonusCoin.objects.find_and_claim_unclaimed_coin, drop)
+                futures.append(fut)
+
+        for fut in as_completed(futures):
+            print(fut.done())
+
+        self.assertEqual(drop.num_bonus_sent(), 5)
+
+
+
 
 
 
