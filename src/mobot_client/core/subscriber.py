@@ -26,7 +26,7 @@ class ChatHandler:
 
 class Subscriber:
     """
-    MOBot is the container which holds all of the business logic relevant to a Drop.
+    Base class for all bots that subscribe to the Messages table
     """
 
     def __init__(self, store: Store, messenger: SignalMessenger):
