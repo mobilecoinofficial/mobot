@@ -109,21 +109,12 @@ Sorry 😭"""
 
     AIRDROP_SOLD_OUT_REFUND = """Thank you for sending {amount} MOB! 
 
-<<<<<<< HEAD
 Unfortunately, we ran out of MOB to distribute 😭. 
 We're returning your MOB and the network fee."""
     BONUS_SOLD_OUT_REFUND = """Thank you for sending {amount} MOB!
 
-Unfortunately, we ran out of bonuses 😭. 
-=======
 Unfortunately, we ran out of MOB to distribute 😭.
 
-We're returning your MOB and the network fee."""
-    BONUS_SOLD_OUT_REFUND = """Thank you for sending {amount} MOB!
-
-Unfortunately, we ran out of bonuses 😭.
-
->>>>>>> dev
 We're returning your MOB and the network fee."""
 
     AIRDROP_INITIALIZE = """Great! We've just sent you {amount} MOB (~{symbol}{value:.2f})
