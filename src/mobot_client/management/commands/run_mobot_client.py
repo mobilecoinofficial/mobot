@@ -40,12 +40,7 @@ class Command(BaseCommand):
             action='store_true',
             default=True
         )
-        parser.add_argument(
-            '-c',
-            '--concurrency',
-            type=int,
-            default=1
-        )
+
 
     def get_signal(self, cb_settings: ChatbotSettings, b64_public_address: str) -> Signal:
         store = cb_settings.store
@@ -78,7 +73,6 @@ class Command(BaseCommand):
             cb_settings.refresh_from_db()
         listen = kwargs.get('listen')
         subscribe = kwargs.get('subscribe')
-        concurrency = kwargs.get('concurrency')
 
         mcc = MCClient()
         signal = self.get_signal(cb_settings, mcc.b64_public_address)
