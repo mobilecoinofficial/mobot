@@ -190,7 +190,7 @@ class Payments:
                     )
                 return payment
 
-    #@tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=10, multiplier=2))
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=10, multiplier=2))
     def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund") -> str:
         receiver_receipt_fs = self.create_receiver_receipt(tx_proposal)
         confirmation = receiver_receipt_fs["confirmation"]
@@ -271,7 +271,7 @@ class Payments:
         drop_session.state = SessionState.REFUNDED
         drop_session.save()
 
-    #@tenacity.retry(wait=tenacity.wait_random_exponential(min=1, multiplier=2, max=10))
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, multiplier=2, max=10))
     def process_signal_payment(self, message: Message) -> Payment:
         return self.mcc.process_signal_payment(message)
 
