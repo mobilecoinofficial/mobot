@@ -246,7 +246,7 @@ class DropRunner(Subscriber):
                 self.handle_new_drop_session(active_drop)
             else:
                 self.logger.warning(f"No active drops; Sending Store Closed message to customer {customer}")
-                if not self.maybe_advertise_drop(message):
+                if not self.maybe_advertise_drop(customer):
                     self.messenger.log_and_send_message(ChatStrings.STORE_CLOSED_SHORT)
         else:
             self.logger.info(f"Found a drop session for customer {customer} of type {active_drop_session.drop.drop_type}")
