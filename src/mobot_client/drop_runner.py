@@ -81,6 +81,9 @@ class DropRunner(Subscriber):
             return False
 
     def handle_unsolicited_payment(self, message: Message):
+        """If we received an unsolicited payment, we should send back the MOB if there's more than enough to
+           cover transaction fees.
+        """
         amount_paid_mob = message.payment.amount_mob
         self.logger.warning("Could not find drop session for customer; Payment unsolicited!")
         minimum_fee_mob = self.payments.minimum_fee_mob
