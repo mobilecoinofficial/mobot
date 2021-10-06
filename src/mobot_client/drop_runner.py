@@ -14,7 +14,7 @@ from mobot_client.models import (
     CustomerStorePreferences,
     BonusCoin,
     Order,
-    Sku, SessionState, DropType, OrderStatus, Store,
+    Sku, SessionState, DropType, OrderStatus, Store, Customer,
 )
 from mobot_client.drop_session import (
     BaseDropSession,
@@ -54,7 +54,7 @@ class DropRunner(Subscriber):
         self.register_chat_handler("health", self.health_handler)
         self.register_chat_handler("", self.default_handler)
 
-    def maybe_advertise_drop(self, customer):
+    def maybe_advertise_drop(self, customer: Customer):
         """Figure out whether or not there's a drop running, and send a message if it is"""
         self.logger.info("Checking for advertising drop")
         drop_to_advertise = BaseDropSession.get_advertising_drop()
