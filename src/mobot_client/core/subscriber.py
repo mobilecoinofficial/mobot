@@ -36,7 +36,7 @@ class Subscriber:
         self.store: Store = store
         if not self.store:
             raise ConfigurationException("No store found!")
-        self.logger = logging.getLogger(f"MOBot({self.store})")
+        self.logger = logging.getLogger(f"Subscriber({self.store})")
         self.messenger = messenger
 
         self._number_processed = 0
