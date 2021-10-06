@@ -3,6 +3,7 @@
 import time
 from decimal import Decimal
 import logging
+from functools import cached_property
 from typing import Optional
 
 import mc_util as mc
@@ -52,6 +53,10 @@ class Payments:
 
     def get_minimum_fee_pmob(self) -> int:
         return self.mcc.minimum_fee_pmob
+
+    @cached_property
+    def minimum_fee_mob(self):
+        return mc.pmob2mob(self.minimum_fee_pmob)
 
     def get_payments_address(self, source):
         if isinstance(source, dict):
