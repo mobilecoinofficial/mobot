@@ -112,14 +112,13 @@ WSGI_APPLICATION = 'mobot.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
-PGBOUNCER_PORT = os.getenv("PGBOUNCER_PORT", 6432)
 
 if DATABASE == "postgresql":
     try:
         DATABASE_NAME = os.environ.get("DATABASE_NAME", "mobot")
         DATABASE_USER = os.environ["DATABASE_USER"]
         DATABASE_PASSWORD = os.environ["DATABASE_PASSWORD"]
-        DATABASE_HOST = os.environ.get("DATABASE_HOST", "localhost")
+        DATABASE_HOST = os.environ["DATABASE_HOST"]
     except KeyError:
         print("expecting environment variables for database fields")
 

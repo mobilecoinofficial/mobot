@@ -10,10 +10,12 @@ from decimal import Decimal
 from django.utils import timezone
 from signald.types import Payment as SignalPayment, Message as SignalMessage
 
-from mobot_client.models.messages import PaymentStatus
+from mobot_client.core.context import ChatContext
+from mobot_client.models.messages import PaymentStatus, Payment
 from signald import Signal
+from unittest.mock import create_autospec
 
-from mobot_client.payments import MCClient
+from mobot_client.payments import MCClient, Payments
 
 
 class MockMCC(MCClient):
@@ -101,3 +103,13 @@ class MockSignal(Signal):
 
     def send_read_receipt(self, recipient, timestamps, block: bool = True) -> None:
         pass
+
+
+class MockPayments(Payments):
+
+    def __init__(self, *args, **kwargs):
+        self.get_payments_address = create_autospec(super().get_payments_address)
+
+    def get_minimum_fee_pmob(self) -> int:
+        return create_autospec()
+

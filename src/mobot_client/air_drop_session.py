@@ -9,7 +9,7 @@ from mobot_client.models import (
     BonusCoin, SessionState, OutOfStockException, Customer,
 )
 
-import mobilecoin as mc
+import mc_util as mc
 from mobot_client.chat_strings import ChatStrings
 from mobot_client.models.messages import Message
 from mobot_client.payments import NotEnoughFundsException
@@ -185,6 +185,7 @@ class AirDropSession(BaseDropSession):
         else:
             customer_payments_address = self.payments.get_payments_address(customer.phone_number.as_e164)
             if customer_payments_address is None:
+                self.logger.warning("Customer payments address not resolved")
                 self.messenger.log_and_send_message(
                 ChatStrings.COUNTRY_RESTRICTED
             )

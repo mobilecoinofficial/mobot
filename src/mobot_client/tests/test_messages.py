@@ -1,5 +1,6 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 import logging
+from decimal import Decimal
 from typing import List
 from unittest.mock import MagicMock
 
@@ -14,7 +15,7 @@ from mobot_client.tests.factories import StoreFactory
 from mobot_client.models import Store, Customer
 from mobot_client.models.messages import Message, Payment, PaymentStatus, Direction
 from mobot_client.payments import Payments
-from mobot_client.tests.mock import TestMessage, MockSignal, MockMCC
+from mobot_client.tests.mock import TestMessage, MockSignal, MockMCC, MockPayments
 
 
 class AbstractMessageTest(LiveServerTestCase):
@@ -24,11 +25,15 @@ class AbstractMessageTest(LiveServerTestCase):
         self.mcc = MockMCC()
         self.signal = MockSignal()
         self.messenger = SignalMessenger(self.signal, self.store)
-        self.payments = Payments(mobilecoin_client=self.mcc, store=self.store, messenger=self.messenger, signal=self.signal)
-        self.payments.get_payments_address = MagicMock(autospec=True, return_value="123")
-        self.payments.has_enough_funds_for_payment = MagicMock(autospec=True, return_value=True)
-        self.payments.send_reply_payment = MagicMock(autospec=True)
+        self.payments = self.get_payments()
         self.subscriber = Subscriber(store=self.store, messenger=self.messenger)
+
+    def get_payments(self):
+        payments = MockPayments(mobilecoin_client=self.mcc, store=self.store, messenger=self.messenger,
+                                 signal=self.signal)
+        payments.get_payments_address = MagicMock(autospec=True, return_value="123")
+        self.payments.has_enough_funds_for_payment = MagicMock(autospec=True, return_value=True)
+        self.payments.
 
     def create_incoming_message(self, customer: Customer, store: Store = None, text: str = "", payment_mob: int = 0) -> Message:
         if not store:
