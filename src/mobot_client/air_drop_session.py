@@ -128,7 +128,7 @@ class AirDropSession(BaseDropSession):
         drop_session.save()
 
     def handle_drop_session_waiting_for_bonus_transaction(self, message, drop_session):
-        print("----------------WAITING FOR BONUS TRANSACTION------------------")
+        self.logger.info("----------------WAITING FOR BONUS TRANSACTION------------------")
         if message.text.lower() == "help":
             self.messenger.log_and_send_message(
                 ChatStrings.AIRDROP_COMMANDS
