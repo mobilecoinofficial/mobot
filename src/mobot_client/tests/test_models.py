@@ -4,6 +4,7 @@ from concurrent.futures import as_completed
 from typing import List, Dict
 from collections import defaultdict
 from django.test import LiveServerTestCase
+from django.db import connection
 
 import factory.random
 
@@ -121,19 +122,30 @@ class ModelTests(LiveServerTestCase):
 
     def test_claim_multithreaded(self):
         drop = DropFactory.create(drop_type=DropType.AIRDROP)
-        coin = BonusCoinFactory.create_batch(size=3, drop=drop, number_available_at_start=10)
+        BonusCoinFactory.create_batch(size=3, drop=drop, number_available_at_start=5)
         futures = []
 
-        with AutoCleanupExecutor(max_workers=10) as pool:
+        with AutoCleanupExecutor(max_workers=5) as pool:
             # Try to claim more than we've got
-            for i in range(35):
-                fut = pool.submit(BonusCoin.objects.find_and_claim_unclaimed_coin, drop)
+            def claim_and_close():
+                try:
+                    coin = BonusCoin.objects.find_and_claim_unclaimed_coin(drop=drop)
+                except Exception:
+                    print("Couldn't get a coin")
+                finally:
+                    connection.close()
+                    return coin
+
+            for i in range(20):
+                fut = pool.submit(claim_and_close)
                 futures.append(fut)
 
         for fut in as_completed(futures):
             print(fut.done())
 
-        self.assertEqual(drop.num_bonus_sent(), 30)
+        refreshed = BonusCoin.objects.filter(drop=drop)
+        for coin in refreshed:
+            self.assertEqual(coin.number_claimed, 5)
 
     def test_active_drop_sessions_found_for_customer(self):
         '''Ensure that customers with old drop sessions don't find themselves unable to participate in current drops'''
