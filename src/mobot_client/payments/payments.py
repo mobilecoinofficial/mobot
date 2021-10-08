@@ -4,7 +4,7 @@ import time
 from decimal import Decimal
 import logging
 from functools import cached_property
-from typing import Optional
+from typing import Optional, Union
 
 import mc_util as mc
 import tenacity
@@ -14,7 +14,7 @@ from mobot_client.logger import SignalMessenger
 from mobot_client.models import (
     SessionState,
     Store,
-    DropSession,
+    DropSession, Customer,
 )
 from mobot_client.models.messages import (
     Payment,
@@ -26,11 +26,19 @@ from mobot_client.utils import TimerFactory
 from mobot_client.core.context import ChatContext
 
 
-class NotEnoughFundsException(Exception):
+class PaymentException(Exception):
     pass
 
 
-class PaymentException(Exception):
+class NotEnoughFundsException(PaymentException):
+    pass
+
+
+class CustomerPaymentsAddressError(PaymentException):
+    pass
+
+
+class ExceptionSendingReceipt(PaymentException):
     pass
 
 
@@ -48,8 +56,20 @@ class Payments:
         self.messenger = messenger
         self.logger = logging.getLogger("MOBot.Payments")
         self.timers = TimerFactory("Payments", self.logger)
-        with self.timers.get_timer("Startup"):
-            self.logger.info("Payments started")
+
+    def _handle_payment_exception(self, e: Exception):
+        if isinstance(e, ExceptionSendingReceipt):
+            self.messenger.log_and_send_message(
+                ChatStrings.COULD_NOT_GENERATE_RECEIPT,
+            )
+        elif isinstance(e, CustomerPaymentsAddressError):
+            self.messenger.log_and_send_message(
+                ChatStrings.PAYMENTS_DEACTIVATED.format(number=self.store.phone_number),
+            )
+        else:
+            self.messenger.log_and_send_message(
+                ChatStrings.PAYMENT_EXCEPTION
+            )
 
     def get_minimum_fee_pmob(self) -> int:
         return self.mcc.minimum_fee_pmob
@@ -58,7 +78,7 @@ class Payments:
     def minimum_fee_mob(self):
         return mc.pmob2mob(self.minimum_fee_pmob)
 
-    def get_payments_address(self, source):
+    def get_payments_address(self, source: Union[dict, str]):
         if isinstance(source, dict):
             source = source["number"]
         else:
@@ -72,7 +92,7 @@ class Payments:
             self.logger.warning(f"Found no MobileCoin payment address for {source}. Response: {customer_signal_profile}")
         return mobilecoin_address
 
-    def _send_mob_to_customer(self, customer, amount_mob, cover_transaction_fee, memo="Refund") -> Optional[Payment]:
+    def _send_mob_to_customer(self, customer: Customer, amount_mob: Decimal, cover_transaction_fee: bool, memo="Refund") -> Optional[Payment]:
         self.logger.info(f"Sending mob to customer: {customer}, amount: {amount_mob}")
         with self.timers.get_timer("send_mob_to_customer"):
             source = customer.phone_number.as_e164
@@ -89,31 +109,30 @@ class Payments:
             customer_payments_address = self.get_payments_address(source)
 
             if customer_payments_address is None:
-                self.messenger.log_and_send_message(
-                    ChatStrings.PAYMENTS_DEACTIVATED.format(number=self.store.phone_number),
-                )
+                raise CustomerPaymentsAddressError("Customer Payment address is none")
             elif amount_mob > 0:
                 return self.send_mob_to_address(
-                    source, self.account_id, amount_mob, customer_payments_address, memo=memo
+                    source, amount_mob, customer_payments_address, memo=memo
                 )
 
-    def send_reply_payment(self, amount_mob, cover_transaction_fee, memo="Refund") -> Payment:
+    def send_reply_payment(self, amount_mob: Decimal, cover_transaction_fee: bool, memo="Refund") -> Payment:
         ctx = ChatContext.get_current_context()
         self.logger.info(f"Sending reply payment to {ctx.customer}: {amount_mob} MOB...")
 
         try:
-            payment = self._send_mob_to_customer(ctx.message.customer, amount_mob, cover_transaction_fee, memo)
+            payment = self._send_mob_to_customer(ctx.customer, amount_mob, cover_transaction_fee, memo)
             self.logger.info("Payment logged!")
-        except Exception:
+        except Exception as e:
             self.logger.exception(f"Failed sending reply payment to customer {ctx.customer}: {amount_mob} MOB")
             payment = Payment(
                 amount_mob=amount_mob,
                 status=PaymentStatus.Failure,
                 customer=ctx.customer,
             )
+            self._handle_payment_exception(e)
         payment.save()
         self.logger.info("Logging response object")
-        response = MobotResponse.objects.create(
+        MobotResponse.objects.create(
             incoming=ctx.message,
             outgoing_response=Message.objects.create(
                 direction=Direction.SENT,
@@ -125,27 +144,26 @@ class Payments:
         )
         return payment
 
-    def build_and_submit_transaction_with_proposal(self, account_id: str, amount_in_mob: Decimal,
+    def build_and_submit_transaction_with_proposal(self, amount_in_mob: Decimal,
                                                    customer_payments_address: str) -> (str, dict):
-        self.logger.info("Building and submitting with proposal")
-        with self.timers.get_timer("submit_transaction"):
-            transaction_log, tx_proposal = self.mcc.build_and_submit_transaction_with_proposal(account_id,
-                                                                                               amount=amount_in_mob,
-                                                                                               to_address=customer_payments_address)
-            list_of_txos = transaction_log["output_txos"]
+        self.logger.info(f"Building and submitting with proposal: {amount_in_mob} -> {customer_payments_address}")
+        transaction_log, tx_proposal = self.mcc.build_and_submit_transaction_with_proposal(self.account_id,
+                                                                                           amount=amount_in_mob,
+                                                                                           to_address=customer_payments_address)
+        list_of_txos = transaction_log["output_txos"]
 
-            if len(list_of_txos) > 1:
-                raise ValueError("Found more than one txout for this chat bot-initiated transaction.")
+        if len(list_of_txos) > 1:
+            raise ValueError("Found more than one txout for this chat bot-initiated transaction.")
 
-            txo_id = list_of_txos[0]["txo_id_hex"]
-            if not isinstance(txo_id, str):
-                raise Exception(f"TXO ID not a string: {txo_id}")
-            return txo_id, tx_proposal
+        txo_id = list_of_txos[0]["txo_id_hex"]
+        if not isinstance(txo_id, str):
+            raise Exception(f"TXO ID not a string: {txo_id}")
+        return txo_id, tx_proposal
 
     def get_minimum_fee_pmob(self) -> int:
         return self.mcc.minimum_fee_pmob
 
-    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=30, multiplier=2))
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=60, multiplier=5))
     def get_txo_result(self, txo_id):
         """Smaller method for getting TXO result, with retry"""
         try:
@@ -155,8 +173,8 @@ class Payments:
             self.logger.exception("TxOut did not land yet, id: " + txo_id)
             raise e
 
-    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=30, multiplier=2))
-    def send_mob_to_address(self, source, account_id: str, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund") -> Payment:
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=60, multiplier=5))
+    def send_mob_to_address(self, source, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund") -> Payment:
         """Attempt to send MOB to customer; retry if we fail."""
         # customer_payments_address is b64 encoded, but full service wants a b58 address
         ctx = ChatContext.get_current_context()
@@ -167,7 +185,7 @@ class Payments:
         with self.timers.get_timer("build_and_send_transaction"):
             self.logger.info(f"Sending {amount_in_mob} MOB to {customer_payments_address}")
             txo_id, tx_proposal = self.build_and_submit_transaction_with_proposal(
-                account_id, amount_in_mob, customer_payments_address
+                amount_in_mob, customer_payments_address
             )
             self.logger.info(f"TXO_ID: {txo_id}")
             payment = Payment(
@@ -190,13 +208,11 @@ class Payments:
                     payment.status = PaymentStatus.TransactionSuccess
                 except Exception as e:
                     self.logger.exception("Exception sending receipt")
-                    self.messenger.log_and_send_message(
-                        ChatStrings.COULD_NOT_GENERATE_RECEIPT,
-                    )
+                    raise ExceptionSendingReceipt(str(e))
                 else:
                     return payment
 
-    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=30, multiplier=2))
+    #@tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=30, multiplier=2))
     def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund") -> str:
         receiver_receipt_fs = self.create_receiver_receipt(tx_proposal)
         confirmation = receiver_receipt_fs["confirmation"]
@@ -220,10 +236,9 @@ class Payments:
         return receiver_receipts[0]
 
     def get_unspent_pmob(self) -> int:
-        with self.timers.get_timer("get_unspent_pmob"):
-            account_amount_response = self.mcc.get_balance_for_account(self.account_id)
-            unspent_pmob = int(account_amount_response["unspent_pmob"])
-            return unspent_pmob
+        account_amount_response = self.mcc.get_balance_for_account(self.account_id)
+        unspent_pmob = int(account_amount_response["unspent_pmob"])
+        return unspent_pmob
 
     def has_enough_funds_for_payment(self, payment_amount: Decimal) -> bool:
         """Return a bool to check if we can pay out the desired amount"""
@@ -236,7 +251,6 @@ class Payments:
 
     def handle_not_enough_paid(self, amount_paid_mob: Decimal, drop_session: DropSession):
         customer = drop_session.customer
-        source = drop_session.customer.phone_number.as_e164
         item_price = drop_session.drop.item.price_in_mob
         self.logger.warning(f"Customer {customer} payment of {amount_paid_mob} not enough for item price {item_price}")
 
@@ -269,7 +283,7 @@ class Payments:
             ChatStrings.WE_RECEIVED_MOB.format(mob=amount_paid_mob.normalize())
         )
 
-    def handle_out_of_stock(self, amount_paid_mob: Decimal, drop_session: DropSession):
+    def handle_out_of_stock(self, drop_session: DropSession):
         self.messenger.log_and_send_message(
             ChatStrings.OUT_OF_STOCK_REFUND
         )
@@ -278,7 +292,7 @@ class Payments:
         drop_session.state = SessionState.REFUNDED
         drop_session.save()
 
-    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, multiplier=2, max=10))
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, multiplier=2, max=20))
     def process_signal_payment(self, message: Message) -> Payment:
         return self.mcc.process_signal_payment(message)
 
@@ -286,10 +300,7 @@ class Payments:
         item_cost_mob = drop_session.drop.item.price_in_mob
         if amount_paid_mob < item_cost_mob:
             self.handle_not_enough_paid(amount_paid_mob, drop_session)
-        elif (
-                amount_paid_mob
-                > item_cost_mob + mc.pmob2mob(self.minimum_fee_pmob)
-        ):
+        elif amount_paid_mob > (item_cost_mob + mc.pmob2mob(self.minimum_fee_pmob)):
             self.handle_excess_payment(amount_paid_mob, drop_session)
         else:
             self.handle_payment_successful(amount_paid_mob, drop_session)
@@ -297,7 +308,7 @@ class Payments:
         skus = drop_session.drop.item.skus.order_by("sort_order")
 
         if skus.count() == 0:
-            self.handle_out_of_stock(amount_paid_mob, drop_session)
+            self.handle_out_of_stock(drop_session)
         else:
             return True
         return False

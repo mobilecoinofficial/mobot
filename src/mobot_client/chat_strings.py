@@ -61,6 +61,7 @@ MOBot OUT. Buh-bye!"""
     PAYMENTS_DEACTIVATED = """We have a refund for you, but your payments have been deactivated
 
 Please contact customer service at {number}"""
+    PAYMENT_EXCEPTION = """We had an unhandled exception sending you a payment. Please contact us!"""
 
     # Air Drop Strings
     AIRDROP_COMMANDS = """Commands available are:

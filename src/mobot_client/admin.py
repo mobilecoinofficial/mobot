@@ -1,5 +1,7 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 from django.contrib import admin
+import mc_util
+import json
 
 from .models import (
     Store,
@@ -20,6 +22,7 @@ from .models.messages import (
     Payment,
     RawSignalMessage
 )
+
 
 class StoreAdmin(admin.ModelAdmin):
     pass
@@ -118,12 +121,28 @@ class DropAdmin(admin.ModelAdmin):
 
 
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('customer', 'status', 'direction_friendly', 'status', 'updated', 'amount_mob',)
-    readonly_fields = ('customer', 'status', 'direction_friendly', 'updated', 'amount_mob',)
+    list_display = ('customer', 'status', 'direction_friendly', 'status', 'updated', 'amount_mob', 'raw_receipt',)
+    readonly_fields = ('customer', 'status', 'direction_friendly', 'updated', 'amount_mob', 'txo_id', 'memo', 'parsed_receipt',)
+    exclude = ('signal_payment',)
 
     @admin.display(description="direction")
     def direction_friendly(self, obj: Payment):
         return obj.message.get_direction_display()
+
+    @admin.display(description="parsed receipt")
+    def parsed_receipt(self, obj: Payment):
+        if obj.signal_payment:
+            return json.dumps(mc_util.b64_receipt_to_full_service_receipt(obj.signal_payment.receipt), indent=2)
+
+    @admin.display(description="receipt")
+    def raw_receipt(self, obj: Payment):
+        if obj.signal_payment:
+            return obj.signal_payment.receipt
+
+    @admin.display(description="receipt memo")
+    def memo(self, obj: Payment):
+        if obj.signal_payment:
+            return obj.signal_payment.note
 
 
 class MobotResponseAdmin(admin.ModelAdmin):

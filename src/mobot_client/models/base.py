@@ -344,7 +344,8 @@ class Customer(models.Model):
             return None
 
     def sessions_awaiting_payment(self):
-        return DropSession.objects.awaiting_payment_sessions()
+        """Find all active drop sessions for customer. Assumes only one active drop."""
+        return DropSession.objects.awaiting_payment_sessions().filter(customer=self)
 
     @admin.display(description='Awaiting Payment')
     def has_session_awaiting_payment(self):

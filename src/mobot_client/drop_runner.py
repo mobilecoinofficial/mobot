@@ -105,7 +105,7 @@ class DropRunner(Subscriber):
         source = str(message.customer.phone_number)
         self.logger.info(f"Received payment {payment} from {source}")
         receipt_status = None
-        transaction_status = "TransactionPending"
+        transaction_status = PaymentStatus.TransactionPending
 
         if isinstance(source, dict):
             source = source["number"]
@@ -126,7 +126,7 @@ class DropRunner(Subscriber):
 
         amount_paid_mob = mc.pmob2mob(receipt_status["txo"]["value_pmob"])
         customer = payment.message.customer
-        drop_session = customer.drop_sessions.filter(state=SessionState.WAITING_FOR_PAYMENT).first()
+        drop_session = customer.sessions_awaiting_payment().first()
 
         if drop_session:
             self.logger.info(f"Found drop session {drop_session} awaiting payment")
