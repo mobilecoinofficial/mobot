@@ -165,16 +165,28 @@ class Command(BaseCommand):
         source_address = source_info['main_address']
         source_account = source_info['account_id']
         split = kwargs['split']
+        total = 0
+
+        for txo, amount in self.mcc.get_all_unspent_txos_for_account(source_account):
+            self.logger.info(f"Unspent txo: {txo}, {amount}")
+            total += amount
+
+        self.logger.info(f"Total unspent: {total}")
 
         if split:
-            for n in range(num_txos):
-                self.logger.info("Splitting")
-                txo = self.mcc.build_and_submit_transaction(source_account, mob, source_address)
-                input_txos = [t['txo_id_hex'] for t in txo['input_txos']]
-                txo_id = txo['output_txos'][0]['txo_id_hex']
-                self.logger.info(f"Input: {' '.join(input_txos)} Output txo: {txo_id}")
-                time.sleep(6.0)
+            resp = self.mcc.split_txos(source_account, split_size_mob=mob, num_splits=num_txos)
+            inputs = [t['txo_id_hex'] for t in resp['transaction_log']['input_txos']]
+            outputs = [t['txo_id_hex'] for t in resp['transaction_log']['output_txos']]
+            self.logger.info(f"Inputs: {inputs}")
+            for input_txo in inputs:
+                self.logger.info(input_txo)
+            self.logger.info(f"Outputs:")
+            for output_txo in outputs:
+                self.logger.info(output_txo)
+
             self.logger.info("Done splitting")
+            for txo_id, amt in self.mcc.get_all_unspent_txos_for_account(source_account):
+                self.logger.info(f"Unspent txo: {txo_id} - {amt} MOB")
             sys.exit(0)
 
         self.cleanup_accounts(source_account, source_address)
