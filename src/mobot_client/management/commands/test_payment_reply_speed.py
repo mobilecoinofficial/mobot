@@ -106,7 +106,7 @@ class Command(BaseCommand):
                                              memo=f"speed test {number}")
 
         timers = TimerFactory("TestPayment", self.logger)
-        with timers.get_timer("PaymentTest"):
+        with timers.get_timer("TestPaymentReplySpeed"):
             with AutoCleanupExecutor(max_workers=threads) as pool:
                 for p in range(number):
                     fut = pool.submit(pay_with_context)
