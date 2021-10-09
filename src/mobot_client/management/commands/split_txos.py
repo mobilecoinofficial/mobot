@@ -89,26 +89,6 @@ class Command(BaseCommand):
             default="2cf3d1"
         )
         parser.add_argument(
-            '-n',
-            '--num-accounts',
-            required=False,
-            type=int,
-            default=1
-        )
-        parser.add_argument(
-            '-s',
-            '--sleep',
-            type=float,
-            default=6,
-            help="Time to sleep to avoid DB locking",
-        )
-        parser.add_argument(
-            '-d',
-            '--distribute',
-            default=False,
-            action='store_true'
-        )
-        parser.add_argument(
             '-x',
             '--split',
             action='store_true',
@@ -139,80 +119,13 @@ class Command(BaseCommand):
                 self.mcc.build_and_submit_transaction(account, mc_util.pmob2mob(balance - fee), source_address)
                 self.mcc.remove_account(account)
 
-
-    def create_and_fund(self, source, name, fund_amount: float = 0.1):
-        account = self.mcc.create_account(name)
-        self.logger.info(f"Funding created account {name}")
-        self.mcc.build_and_submit_transaction(source, fund_amount, account['main_address'])
-        self.logger.info("Sleeping seven seconds")
-        time.sleep(10)
-        return account
-
-    def distribute(self, source_account, num_accounts, amount_mob):
-        for n in range(num_accounts):
-            account = self.create_and_fund(source=source_account, name=f"test_account_{n}", fund_amount=amount_mob)
-            yield account
-
     def handle(self, *args, **kwargs):
         mob = kwargs['mob']
         num_txos = kwargs['num_txos']
-        sleep = kwargs['sleep']
         source = kwargs['source_account']
-
-        num_accounts = kwargs['num_accounts']
-        distribute = kwargs['distribute']
         source_info = self._load_account_prefix(source)
-        source_address = source_info['main_address']
         source_account = source_info['account_id']
         split = kwargs['split']
-        total = 0
-
-        for txo, amount in self.mcc.get_all_unspent_txos_for_account(source_account):
-            self.logger.info(f"Unspent txo: {txo}, {amount}")
-            total += amount
-
-        self.logger.info(f"Total unspent: {total}")
 
         if split:
-            resp = self.mcc.split_txos(source_account, split_size_mob=mob, num_splits=num_txos)
-            inputs = [t['txo_id_hex'] for t in resp['transaction_log']['input_txos']]
-            outputs = [t['txo_id_hex'] for t in resp['transaction_log']['output_txos']]
-            self.logger.info(f"Inputs: {inputs}")
-            for input_txo in inputs:
-                self.logger.info(input_txo)
-            self.logger.info(f"Outputs:")
-            for output_txo in outputs:
-                self.logger.info(output_txo)
-
-            self.logger.info("Done splitting")
-            for txo_id, amt in self.mcc.get_all_unspent_txos_for_account(source_account):
-                self.logger.info(f"Unspent txo: {txo_id} - {amt} MOB")
-            sys.exit(0)
-
-        self.cleanup_accounts(source_account, source_address)
-        timers = TimerFactory("TestPayment", self.logger)
-
-        if distribute:
-            created = self.distribute(source_account, num_accounts, mob)
-
-            wallets = itertools.cycle(created)
-
-            try:
-                for p in range(num_txos):
-                    account = next(wallets)
-                    print(account)
-                    account_id = account['account_id']
-                    main_address = account['main_address']
-                    self.logger.info(f"Account ID: {account_id}")
-                    self.mcc.build_and_submit_transaction(
-                        account_id=account_id,
-                        amount=mob,
-                        to_address=main_address)
-                    self.logger.info(f"Split uTXO #{p}")
-                    self.logger.info(f"Sleeping {sleep} seconds...")
-                    time.sleep(sleep)
-            except Exception as e:
-                self.logger.exception("Got exception... cleaning up!")
-            finally:
-                self.cleanup_accounts(source_account, source_address)
-
+            self.mcc.split_txos(source_account, split_size_mob=mob, num_splits=num_txos)
