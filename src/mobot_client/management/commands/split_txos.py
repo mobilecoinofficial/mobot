@@ -129,3 +129,6 @@ class Command(BaseCommand):
 
         if split:
             self.mcc.split_txos(source_account, split_size_mob=mob, num_splits=num_txos)
+        else:
+            unsplit = list(self.mcc.get_all_unspent_txos_for_account(source_account))
+            self.logger.info(f"Total number of unsplit TXOs: {len(unsplit)}")
