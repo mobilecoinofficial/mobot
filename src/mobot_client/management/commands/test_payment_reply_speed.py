@@ -101,11 +101,12 @@ class Command(BaseCommand):
 
         def pay_with_context() -> Payment:
             with self.reply_context(customer) as _:
-                return self.payments.send_reply_payment(amount_mob=mob,
-                                             cover_transaction_fee=True,
-                                             memo=f"speed test {number}")
+                return self.payments.send_reply_payment(
+                    amount_mob=mob,
+                    cover_transaction_fee=True,
+                    memo=f"speed test {number}")
 
-        timers = TimerFactory("TestPayment", self.logger)
+        timers = TimerFactory("ReplySpeed", self.logger)
         with timers.get_timer("TestPaymentReplySpeed"):
             with AutoCleanupExecutor(max_workers=threads) as pool:
                 for p in range(number):

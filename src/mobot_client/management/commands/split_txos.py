@@ -6,27 +6,19 @@ A command to send funds to customers, with a friendly apology if necessary
 import decimal
 from logging import getLogger
 from argparse import ArgumentParser
-import time
-import itertools
-import random
-from typing import List
-import json
-import sys
+
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
 from signald import Signal
 
-from mobot_client.concurrency import AutoCleanupExecutor
 from mobot_client.core.context import ChatContext
 from mobot_client.logger import SignalMessenger
-from mobot_client.chat_strings import ChatStrings
 from mobot_client.models import Customer, ChatbotSettings
-from mobot_client.models.messages import Message, Direction, Payment
+from mobot_client.models.messages import Message, Direction
 from mobot_client.payments import Payments
 from mobot_client.payments.client import MCClient
-from mobot_client.utils import TimerFactory
 import mc_util
 
 

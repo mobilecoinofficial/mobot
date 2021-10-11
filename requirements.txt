@@ -1,7 +1,7 @@
 # requirements for signald
 attrs
--e git+https://github.com/mobilecoinofficial/full-service.git@60d92306ebead045fbb009804f9085c3cfb9d87f#egg=mobilecoin-python-utils&subdirectory=python-utils
--e git+https://github.com/mobilecoinofficial/full-service.git@60d92306ebead045fbb009804f9085c3cfb9d87f#egg=mobilecoin-cli&subdirectory=cli
+-e git+https://github.com/mobilecoinofficial/full-service.git@3c364fc01868c7146c895e5dab9b5e7ef0e3d04e#egg=mobilecoin-python-utils&subdirectory=python-utils
+-e git+https://github.com/mobilecoinofficial/full-service.git@3c364fc01868c7146c895e5dab9b5e7ef0e3d04e#egg=mobilecoin-cli&subdirectory=cli
 
 base58==2.1.0
 django==3.2.7
