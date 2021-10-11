@@ -81,6 +81,14 @@ class Command(BaseCommand):
             default="2cf3d1"
         )
         parser.add_argument(
+            '-d',
+            '--destination-address',
+            help='Destination, if not splitting back to source account',
+            type=str,
+            required=False,
+            default=None,
+        )
+        parser.add_argument(
             '-x',
             '--split',
             action='store_true',
@@ -117,6 +125,7 @@ class Command(BaseCommand):
         source = kwargs['source_account']
         source_info = self._load_account_prefix(source)
         source_account = source_info['account_id']
+        destination = kwargs['destination_address']
         split = kwargs['split']
 
         if split:
