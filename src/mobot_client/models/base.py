@@ -323,6 +323,7 @@ class BonusCoin(models.Model):
 class Customer(models.Model):
     phone_number = PhoneNumberField(db_index=True, unique=True)
     received_sticker_pack = models.BooleanField(default=False)
+    admin_role = models.BooleanField(default=False)
 
     def matches_country_code_restriction(self, drop: Drop) -> bool:
         if not drop.number_restriction.strip():

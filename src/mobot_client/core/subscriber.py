@@ -43,7 +43,7 @@ class Subscriber:
         self._futures = {}
 
     def _get_pool(self):
-        return AutoCleanupExecutor(max_workers=8)
+        return AutoCleanupExecutor(max_workers=settings.MAX_MESSAGE_CONCURRENCY)
 
     def _isolated_handler(self, func):
         def isolated(*args, **kwargs):
@@ -76,15 +76,12 @@ class Subscriber:
             _, _, func = filtered
             return func
 
-    def _should_acknowledge_payment(self, message: Message) -> bool:
-        return message.payment is not None
-
-    def _should_acknowledge_load(self) -> bool:
-        return Message.objects.queue_size >= settings.CONCURRENCY_WARNING_MESSAGE_THRESHOLD
-
     def _ack_payment(self):
         self.logger.info("Acknowledging payment...")
         self.messenger.log_and_send_message(ChatStrings.PAYMENT_RECEIVED)
+
+    def _should_acknowledge_load(self) -> bool:
+        return Message.objects.queue_size >= settings.CONCURRENCY_WARNING_MESSAGE_THRESHOLD
 
     def _ack_heavy_load(self):
         self.logger.info("Acknowledging heavy load...")
@@ -99,7 +96,7 @@ class Subscriber:
         """
         with ChatContext(message) as ctx:
             try:
-                if self._should_acknowledge_payment(message):
+                if message.payment is not None:
                     self._ack_payment()
                 if self._should_acknowledge_load():
                     self._ack_heavy_load()
@@ -166,4 +163,3 @@ class Subscriber:
                 self._number_processed += 1
                 if 0 < process_max == self._number_processed:
                     self._run = False
-

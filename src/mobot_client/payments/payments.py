@@ -78,6 +78,7 @@ class Payments:
     def minimum_fee_mob(self):
         return mc.pmob2mob(self.minimum_fee_pmob)
 
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=30, multiplier=5))
     def get_payments_address(self, source: Union[dict, str]):
         if isinstance(source, dict):
             source = source["number"]
@@ -90,9 +91,11 @@ class Payments:
         mobilecoin_address = customer_signal_profile.get('mobilecoin_address')
         if not mobilecoin_address:
             self.logger.warning(f"Found no MobileCoin payment address for {source}. Response: {customer_signal_profile}")
+            raise CustomerPaymentsAddressError("Customer Payment address is none")
         return mobilecoin_address
 
-    def _send_mob_to_customer(self, customer: Customer, amount_mob: Decimal, cover_transaction_fee: bool, memo="Refund") -> Optional[Payment]:
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=2, max=100, multiplier=5))
+    def _send_mob_to_customer(self, customer: Customer, amount_mob: Decimal, cover_transaction_fee: bool, memo="Refund", batch: bool = False) -> Optional[Payment]:
         self.logger.info(f"Sending mob to customer: {customer}, amount: {amount_mob}")
         with self.timers.get_timer("send_mob_to_customer"):
             source = customer.phone_number.as_e164
@@ -108,9 +111,7 @@ class Payments:
             self.logger.info(f"Getting payment address for customer with # {source}")
             customer_payments_address = self.get_payments_address(source)
 
-            if customer_payments_address is None:
-                raise CustomerPaymentsAddressError("Customer Payment address is none")
-            elif amount_mob > 0:
+            if amount_mob > 0:
                 return self.send_mob_to_address(
                     source, amount_mob, customer_payments_address, memo=memo
                 )
@@ -144,6 +145,7 @@ class Payments:
         )
         return payment
 
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=300, multiplier=5))
     def build_and_submit_transaction_with_proposal(self, amount_in_mob: Decimal,
                                                    customer_payments_address: str) -> (str, dict):
         self.logger.info(f"Building and submitting with proposal: {amount_in_mob} -> {customer_payments_address}")
@@ -160,10 +162,7 @@ class Payments:
             raise Exception(f"TXO ID not a string: {txo_id}")
         return txo_id, tx_proposal
 
-    def get_minimum_fee_pmob(self) -> int:
-        return self.mcc.minimum_fee_pmob
-
-    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=60, multiplier=5))
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=300, multiplier=5))
     def get_txo_result(self, txo_id):
         """Smaller method for getting TXO result, with retry"""
         try:
@@ -173,7 +172,7 @@ class Payments:
             self.logger.exception("TxOut did not land yet, id: " + txo_id)
             raise e
 
-    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=60, multiplier=5))
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=300, multiplier=5))
     def send_mob_to_address(self, source, amount_in_mob: Decimal, customer_payments_address: str, memo="Refund") -> Payment:
         """Attempt to send MOB to customer; retry if we fail."""
         # customer_payments_address is b64 encoded, but full service wants a b58 address
@@ -212,7 +211,7 @@ class Payments:
                 else:
                     return payment
 
-    #@tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=30, multiplier=2))
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=30, multiplier=2))
     def send_payment_receipt(self, source: str, tx_proposal: dict, memo="Refund") -> str:
         receiver_receipt_fs = self.create_receiver_receipt(tx_proposal)
         confirmation = receiver_receipt_fs["confirmation"]
@@ -292,7 +291,6 @@ class Payments:
         drop_session.state = SessionState.REFUNDED
         drop_session.save()
 
-    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, multiplier=2, max=20))
     def process_signal_payment(self, message: Message) -> Payment:
         return self.mcc.process_signal_payment(message)
 

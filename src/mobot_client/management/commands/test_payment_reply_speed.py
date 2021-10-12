@@ -57,7 +57,7 @@ class Command(BaseCommand):
             required=False,
             type=decimal.Decimal,
             help='Amount of MOB to send',
-            default=decimal.Decimal("1e-9"),
+            default=decimal.Decimal("0.01"),
         )
         parser.add_argument(
             '-t',

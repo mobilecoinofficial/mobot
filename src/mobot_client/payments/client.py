@@ -5,6 +5,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Tuple
 
+import tenacity
 from django.utils import timezone
 import mobilecoin as mc
 import mc_util
@@ -46,6 +47,7 @@ class MCClient(Client):
         public_address = account_obj["main_address"]
         return public_address, account_id
 
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=0.5, multiplier=2, max=20))
     def check_receiver_receipt_status(self, address, receipt):
         try:
             return super().check_receiver_receipt_status(address, receipt)
@@ -90,19 +92,21 @@ class MCClient(Client):
             )
         return payment
 
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=0.5, multiplier=2, max=30))
     def get_receipt_status(self, receipt: str) -> dict:
         try:
             receipt = mc_util.b64_receipt_to_full_service_receipt(receipt)
-            self.logger.info(f"checking Receiver status")
+            self.logger.info(f"Checking Receiver status")
             receipt_status = self.check_receiver_receipt_status(
                 self.public_address, receipt
             )
-            self.logger.info(f"Got receipt status {receipt_status}")
+            self.logger.info("Got a receipt!")
             return receipt_status
         except Exception as e:
             self.logger.exception("Exception getting receipt status")
             raise CheckReceiptException(str(e))
 
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=0.5, multiplier=2, max=15))
     def process_signal_payment(self, message: Message) -> Payment:
         signal_payment = message.raw.payment
         receipt = signal_payment.receipt

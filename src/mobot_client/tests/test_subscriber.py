@@ -1,4 +1,5 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
+import timeit
 from mobot_client.core.context import ChatContext
 from mobot_client.tests.factories import StoreFactory, CustomerFactory, DropFactory, BonusCoinFactory
 from mobot_client.models.messages import Message, Payment, PaymentStatus, Direction
