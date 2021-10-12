@@ -98,6 +98,7 @@ class Subscriber:
             try:
                 if message.payment is not None:
                     self._ack_payment()
+                    time.sleep(1)
                 if self._should_acknowledge_load():
                     self._ack_heavy_load()
                 handler = self._find_handler(message)
