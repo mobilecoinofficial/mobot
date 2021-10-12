@@ -57,7 +57,7 @@ class Command(BaseCommand):
             required=False,
             type=decimal.Decimal,
             help='Amount of MOB to send',
-            default=decimal.Decimal("0.01"),
+            default=decimal.Decimal("0.1"),
         )
         parser.add_argument(
             '-t',
@@ -99,18 +99,18 @@ class Command(BaseCommand):
             self.logger.info(fut.result())
             self.logger.info("Paid out to customer")
 
-        def pay_with_context() -> Payment:
+        def pay_with_context(num) -> Payment:
             with self.reply_context(customer) as _:
                 return self.payments.send_reply_payment(
                     amount_mob=mob,
                     cover_transaction_fee=True,
-                    memo=f"speed test {number}")
+                    memo=f"speed test {num}")
 
         timers = TimerFactory("ReplySpeed", self.logger)
         with timers.get_timer("TestPaymentReplySpeed"):
             with AutoCleanupExecutor(max_workers=threads) as pool:
-                for p in range(number):
-                    fut = pool.submit(pay_with_context)
+                for payment in range(number):
+                    fut = pool.submit(pay_with_context, payment)
                     fut.add_done_callback(done_callback)
                     self.logger.info(f"Paid out payment number {number}")
         self.logger.exception(f"Payment to Customer {customer.phone_number.as_e164} of {mob} MOB failed!")

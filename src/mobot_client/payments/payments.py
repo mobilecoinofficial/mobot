@@ -97,53 +97,53 @@ class Payments:
     @tenacity.retry(wait=tenacity.wait_random_exponential(min=2, max=100, multiplier=5))
     def _send_mob_to_customer(self, customer: Customer, amount_mob: Decimal, cover_transaction_fee: bool, memo="Refund", batch: bool = False) -> Optional[Payment]:
         self.logger.info(f"Sending mob to customer: {customer}, amount: {amount_mob}")
-        with self.timers.get_timer("send_mob_to_customer"):
-            source = customer.phone_number.as_e164
+        source = customer.phone_number.as_e164
 
-            if not cover_transaction_fee:
-                amount_mob = amount_mob - Decimal(mc.pmob2mob(self.minimum_fee_pmob))
-            else:
-                # covering transaction fee includes reimbursing the user for the transaction
-                # fee that they spent sending us the original transaction that we are refunding
-                amount_mob = amount_mob + Decimal(mc.pmob2mob(self.minimum_fee_pmob))
+        if not cover_transaction_fee:
+            amount_mob = amount_mob - Decimal(mc.pmob2mob(self.minimum_fee_pmob))
+        else:
+            # covering transaction fee includes reimbursing the user for the transaction
+            # fee that they spent sending us the original transaction that we are refunding
+            amount_mob = amount_mob + Decimal(mc.pmob2mob(self.minimum_fee_pmob))
 
-            self.logger.info(f"Sending {amount_mob} MOB to {source}. Cover_transaction_fee: {cover_transaction_fee}")
-            self.logger.info(f"Getting payment address for customer with # {source}")
-            customer_payments_address = self.get_payments_address(source)
+        self.logger.info(f"Sending {amount_mob} MOB to {source}. Cover_transaction_fee: {cover_transaction_fee}")
+        self.logger.info(f"Getting payment address for customer with # {source}")
+        customer_payments_address = self.get_payments_address(source)
 
-            if amount_mob > 0:
-                return self.send_mob_to_address(
-                    source, amount_mob, customer_payments_address, memo=memo
-                )
+        if amount_mob > 0:
+            return self.send_mob_to_address(
+                source, amount_mob, customer_payments_address, memo=memo
+            )
 
     def send_reply_payment(self, amount_mob: Decimal, cover_transaction_fee: bool, memo="Refund") -> Payment:
-        ctx = ChatContext.get_current_context()
-        self.logger.info(f"Sending reply payment to {ctx.customer}: {amount_mob} MOB...")
+        with self.timers.get_timer("send_reply_payment"):
+            ctx = ChatContext.get_current_context()
+            self.logger.info(f"Sending reply payment to {ctx.customer}: {amount_mob} MOB...")
 
-        try:
-            payment = self._send_mob_to_customer(ctx.customer, amount_mob, cover_transaction_fee, memo)
-            self.logger.info("Payment logged!")
-        except Exception as e:
-            self.logger.exception(f"Failed sending reply payment to customer {ctx.customer}: {amount_mob} MOB")
-            payment = Payment(
-                amount_mob=amount_mob,
-                status=PaymentStatus.Failure,
-                customer=ctx.customer,
+            try:
+                payment = self._send_mob_to_customer(ctx.customer, amount_mob, cover_transaction_fee, memo)
+                self.logger.info("Payment logged!")
+            except Exception as e:
+                self.logger.exception(f"Failed sending reply payment to customer {ctx.customer}: {amount_mob} MOB")
+                payment = Payment(
+                    amount_mob=amount_mob,
+                    status=PaymentStatus.Failure,
+                    customer=ctx.customer,
+                )
+                self._handle_payment_exception(e)
+            payment.save()
+            self.logger.info("Logging response object")
+            MobotResponse.objects.create(
+                incoming=ctx.message,
+                outgoing_response=Message.objects.create(
+                    direction=Direction.SENT,
+                    status=MessageStatus.PROCESSED if payment.status == PaymentStatus.TransactionSuccess else MessageStatus.ERROR,
+                    store=self.store,
+                    customer=ctx.customer,
+                    payment=payment,
+                ),
             )
-            self._handle_payment_exception(e)
-        payment.save()
-        self.logger.info("Logging response object")
-        MobotResponse.objects.create(
-            incoming=ctx.message,
-            outgoing_response=Message.objects.create(
-                direction=Direction.SENT,
-                status=MessageStatus.PROCESSED if payment.status == PaymentStatus.TransactionSuccess else MessageStatus.ERROR,
-                store=self.store,
-                customer=ctx.customer,
-                payment=payment,
-            ),
-        )
-        return payment
+            return payment
 
     @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=300, multiplier=5))
     def build_and_submit_transaction_with_proposal(self, amount_in_mob: Decimal,
@@ -162,7 +162,7 @@ class Payments:
             raise Exception(f"TXO ID not a string: {txo_id}")
         return txo_id, tx_proposal
 
-    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=300, multiplier=5))
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=1, max=60, multiplier=5))
     def get_txo_result(self, txo_id):
         """Smaller method for getting TXO result, with retry"""
         try:
