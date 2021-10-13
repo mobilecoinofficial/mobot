@@ -6,6 +6,7 @@ import logging
 from functools import cached_property
 from typing import Optional, Union
 
+import mc_util
 import mc_util as mc
 import tenacity
 from signald import Signal

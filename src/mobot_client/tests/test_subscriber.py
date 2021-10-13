@@ -12,7 +12,7 @@ class SubscriberTestCase(AbstractMessageTest):
     def test_subscriber(self):
         customer = CustomerFactory.create()
         drop = DropFactory.create(store=self.store)
-        self.create_incoming_message(customer=customer, store=self.store, text="test")
+        self.create_incoming_message(customer=customer, text="test")
         TEST_RESPONSE = "Message Received!"
 
         def test_handler(ctx: ChatContext):
@@ -38,7 +38,7 @@ class SubscriberTestCase(AbstractMessageTest):
     def test_subscriber_acknowledges_payment(self):
         customer = CustomerFactory.create()
         drop = DropFactory.create(store=self.store)
-        self.create_incoming_message(customer=customer, store=self.store, text="test")
+        self.create_incoming_message(customer=customer, text="test")
         TEST_RESPONSE = "Message Received!"
 
         def test_handler(ctx: ChatContext):

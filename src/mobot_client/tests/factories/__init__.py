@@ -57,8 +57,8 @@ class DropFactory(factory.django.DjangoModelFactory):
     start_time = timezone.now() - timedelta(days=2)
     end_time = timezone.now() + timedelta(days=2)
     number_restriction = factory.Iterator(['+44', '+1'])
-    timezone = 'PST'
-    initial_coin_amount_mob = Decimal(f"{float(0.2):4f}")
+    timezone = 'Europe/London'
+    initial_coin_amount_mob = Decimal(f"{float(0.1):4f}")
 
     @factory.lazy_attribute
     def store_id(self):

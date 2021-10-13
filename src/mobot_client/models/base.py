@@ -184,8 +184,11 @@ class Drop(models.Model):
 
     @admin.display(description='Bonus Payments')
     def num_bonus_sent(self) -> int:
-        return BonusCoin.objects.filter(drop=self).aggregate(Sum('number_claimed'))[
+        coins_sent = BonusCoin.objects.filter(drop=self).aggregate(Sum('number_claimed'))[
             'number_claimed__sum']
+        if coins_sent is None:
+            return 0
+        return coins_sent
 
     def bonus_mob_disbursed(self) -> Decimal:
         if self.bonus_coins.count():
@@ -352,11 +355,8 @@ class Customer(models.Model):
     def has_session_awaiting_payment(self):
         return self.sessions_awaiting_payment().count() > 0
 
-    has_session_awaiting_payment.short_description = "Awaiting Payment"
-
     def fulfilled_drop_sessions(self):
         return DropSession.objects.sold_sessions().filter(customer=self)
-
 
     @admin.display(description='Fulfilled')
     def has_fulfilled_drop_session(self):
