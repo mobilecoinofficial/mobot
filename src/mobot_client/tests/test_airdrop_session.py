@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from mobot_client.chat_strings import ChatStrings
 from mobot_client.drop_runner import DropRunner
-from mobot_client.models import SessionState, Drop, Customer, DropSession
+from mobot_client.models import SessionState, Drop, Customer, DropSession, CustomerStorePreferences
 from mobot_client.tests.factories import CustomerFactory, DropFactory, BonusCoinFactory, OldDropFactory
 from mobot_client.models.messages import Message, Direction, Payment, SignalPayment, RawSignalMessage
 from mobot_client.tests.test_messages import AbstractMessageTest
@@ -38,7 +38,10 @@ class AirDropSessionTest(AbstractMessageTest):
         """A method to create a test to check whether a customer at a given state gets the response expected.
             :param customer: The customer
             :param drop: Drop to test session against
-            :param expected_responses
+            :param expected_responses: List of messages expected to be sent to customer by MOBot
+            :param expected_payment: List of payments expected to be sent by MOBot
+            :param expected_payment_memo: Expected memo field for payment
+            :
         """
 
         with mock.patch.object(self.payments, 'send_reply_payment', autospec=True) as send_reply_payment_fn:
@@ -89,8 +92,7 @@ class AirDropSessionTest(AbstractMessageTest):
     def test_can_start_drop(self):
         customer = CustomerFactory.create()
         drop = DropFactory.create(store=self.store)
-        bonus_coins = BonusCoinFactory.create(drop=drop)
-        amount_pmob = int(Decimal("1e12"))
+        _ = BonusCoinFactory.create(drop=drop)
         self.create_incoming_message(customer=customer, text="Hi")
         # Process a single message
         expected_responses = [
@@ -114,7 +116,7 @@ class AirDropSessionTest(AbstractMessageTest):
         self._state_response_test(customer, drop, expected_responses=expected_responses)
 
     def test_closed_but_advertising(self):
-        customer = CustomerFactory.create()
+        customer = CustomerFactory.create(phone_number="+14155556060")
         drop = DropFactory.create(store=self.store,
                                   advertisment_start_time=timezone.now() - timedelta(days=1),
                                   start_time=timezone.now() + timedelta(days=2),
@@ -135,16 +137,17 @@ class AirDropSessionTest(AbstractMessageTest):
 
     def test_country_code_mismatch(self):
         customer = CustomerFactory.create(phone_number="+18055551212")
-        drop = DropFactory.create(country_code_restriction="+44")
+        drop = DropFactory.create(number_restriction="+44")
+        bonus = BonusCoinFactory.create(drop=drop)
         self.create_incoming_message(customer=customer, text="Hi")
         expected_responses = [
             ChatStrings.COUNTRY_RESTRICTED
         ]
-        self._state_response_test(customer, expected_responses=expected_responses)
+        self._state_response_test(customer, drop, expected_responses=expected_responses)
 
     def test_initial_payment_sent(self):
         customer = CustomerFactory.create()
-        drop = DropFactory.create()
+        drop = DropFactory.create(initial_coin_amount_mob=Decimal("0.1"))
         BonusCoinFactory.create(drop=drop)
 
         self.create_incoming_message(customer=customer, text="yes")
@@ -160,6 +163,31 @@ class AirDropSessionTest(AbstractMessageTest):
                                   expected_fee_coverage=True,
                                   expected_payment_memo="Initial coins",
                                   outgoing_state=SessionState.WAITING_FOR_PAYMENT)
+
+    def test_bonus_payment_sent(self):
+        coin_amt = Decimal("1.0")
+        initial_amt = Decimal("0.1")
+        customer_sent_amount = Decimal("0.01")
+        customer = CustomerFactory.create()
+        drop = DropFactory.create(initial_coin_amount_mob=initial_amt)
+        BonusCoinFactory.create(amount_mob=coin_amt, drop=drop)
+        self.create_incoming_message(customer, payment_mob=customer_sent_amount)
+        sent_total = customer_sent_amount + coin_amt + initial_amt + self.payments.minimum_fee_mob
+        expected_responses = [
+            ChatStrings.PAYMENT_RECEIVED,
+            ChatStrings.REFUND_SENT.format(amount=sent_total - initial_amt, total_prize=sent_total),
+            ChatStrings.PRIZE.format(prize=coin_amt + initial_amt),
+            ChatStrings.AIRDROP_SUMMARY,
+            ChatStrings.NOTIFICATIONS_ASK,
+        ]
+        self._state_response_test(customer, drop,
+                                  incoming_state=SessionState.WAITING_FOR_PAYMENT,
+                                  expected_responses=expected_responses,
+                                  expected_payment=sent_total,
+                                  expected_payment_memo="Bonus",
+                                  expected_fee_coverage=True,
+                                  outgoing_state=SessionState.ALLOW_CONTACT_REQUESTED,
+                                  )
 
     def test_over_quota(self):
         customer = CustomerFactory.create()

@@ -1,12 +1,9 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
-
-import time
 from decimal import Decimal
 import logging
 from functools import cached_property
 from typing import Optional, Union
 
-import mc_util
 import mc_util as mc
 import tenacity
 from signald import Signal

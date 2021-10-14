@@ -192,8 +192,7 @@ class Drop(models.Model):
 
     def bonus_mob_disbursed(self) -> Decimal:
         if self.bonus_coins.count():
-            return BonusCoin.objects.with_sum_spent().filter(drop=self).aggregate(Sum('mob_claimed'))[
-                'mob_claimed__sum']
+            return BonusCoin.objects.with_sum_spent().filter(drop=self).aggregate(Sum('mob_claimed'))['mob_claimed__sum']
         else:
             return Decimal(0)
 
@@ -332,7 +331,9 @@ class Customer(models.Model):
         if not drop.number_restriction.strip():
             return True
         else:
-            return f"+{self.phone_number.country_code}" in [s.strip() for s in drop.number_restriction.split(',')]
+            customer_code = f"+{self.phone_number.country_code}"
+            restricted_to = [s.strip() for s in drop.number_restriction.replace(' ', '').split(',')]
+            return customer_code in restricted_to
 
     def active_drop_sessions(self):
         return DropSession.objects.active_drop_sessions().filter(customer=self)

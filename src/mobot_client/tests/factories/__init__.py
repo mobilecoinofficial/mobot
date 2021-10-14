@@ -56,9 +56,9 @@ class DropFactory(factory.django.DjangoModelFactory):
     advertisment_start_time = fake.date_time_between(start_date='-2d', end_date='+10d', tzinfo=pytz.utc)
     start_time = timezone.now() - timedelta(days=2)
     end_time = timezone.now() + timedelta(days=2)
-    number_restriction = factory.Iterator(['+44', '+1'])
+    number_restriction = '+1'
     timezone = 'Europe/London'
-    initial_coin_amount_mob = Decimal(f"{float(0.1):4f}")
+    initial_coin_amount_mob = Decimal("0.1")
 
     @factory.lazy_attribute
     def store_id(self):
@@ -111,7 +111,7 @@ class CustomerFactory(factory.django.DjangoModelFactory):
         model = Customer
         django_get_or_create = ('phone_number',)
 
-    phone_number = factory.Sequence(lambda n: f"+447911" + "%06d" % (n + 100000))
+    phone_number = "+14155550606"
 
 
 class BonusCoinFactory(factory.django.DjangoModelFactory):
