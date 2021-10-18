@@ -11,7 +11,6 @@ from django.conf import settings
 
 from mobot_client.models.messages import Message
 from mobot_client.payments import Payments
-from mobot_client.payments.client import MCClient
 
 
 

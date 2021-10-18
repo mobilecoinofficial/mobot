@@ -172,6 +172,10 @@ class Drop(models.Model):
         return amount * Decimal(self.conversion_rate_mob_to_currency)
 
     @cached_property
+    def initial_coin_amount_value_in_currency(self) -> Decimal:
+        return self.value_in_currency(self.initial_coin_amount_mob)
+
+    @cached_property
     def initial_coin_limit(self) -> int:
         if bonus_coins := self.bonus_coins.aggregate(Sum('number_available_at_start'))['number_available_at_start__sum']:
             return bonus_coins
@@ -345,6 +349,8 @@ class Customer(models.Model):
     def state(self) -> Optional[SessionState]:
         if active_session := self.active_drop_sessions().first():
             return active_session.get_state_display()
+        elif completed_session := self.completed_drop_sessions().first():
+            return completed_session.get_state_display()
         else:
             return None
 

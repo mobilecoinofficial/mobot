@@ -10,6 +10,7 @@ from django.db import models
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import IntegerChoices
+from django.utils.functional import cached_property
 from phonenumber_field.modelfields import PhoneNumberField
 from signald.types import Message as SignalMessage
 from tenacity import wait_random_exponential, retry, retry_if_exception_type
@@ -48,8 +49,16 @@ class Payment(models.Model):
     signal_payment = models.OneToOneField(SignalPayment, on_delete=models.CASCADE, null=True, blank=True)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, null=False, blank=False, related_name='payments')
 
+    @cached_property
+    def direction(self):
+        if hasattr(self, 'message'):
+            return self.message.get_direction_display()
+        else:
+            return Direction.SENT.label
+
     def __str__(self):
-        return f"Payment ({self.customer}) ({self.message.get_direction_display()}) ({self.amount_mob} PMOB)"
+        if hasattr(self, 'message'):
+            return f"Payment ({self.customer}) ({self.direction}) ({self.amount_mob} PMOB)"
 
 
 class RawMessageManager(models.Manager):

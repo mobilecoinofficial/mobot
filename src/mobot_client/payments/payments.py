@@ -92,25 +92,20 @@ class Payments:
             raise CustomerPaymentsAddressError("Customer Payment address is none")
         return mobilecoin_address
 
-    @tenacity.retry(wait=tenacity.wait_random_exponential(min=2, max=100, multiplier=5))
+    @tenacity.retry(wait=tenacity.wait_random_exponential(min=5, max=300, multiplier=2))
     def _send_mob_to_customer(self, customer: Customer, amount_mob: Decimal, cover_transaction_fee: bool, memo="Refund", batch: bool = False) -> Optional[Payment]:
         self.logger.info(f"Sending mob to customer: {customer}, amount: {amount_mob}")
-        source = customer.phone_number.as_e164
 
         if not cover_transaction_fee:
             amount_mob = amount_mob - Decimal(mc.pmob2mob(self.minimum_fee_pmob))
-        else:
-            # covering transaction fee includes reimbursing the user for the transaction
-            # fee that they spent sending us the original transaction that we are refunding
-            amount_mob = amount_mob + Decimal(mc.pmob2mob(self.minimum_fee_pmob))
 
-        self.logger.info(f"Sending {amount_mob} MOB to {source}. Cover_transaction_fee: {cover_transaction_fee}")
-        self.logger.info(f"Getting payment address for customer with # {source}")
-        customer_payments_address = self.get_payments_address(source)
+        self.logger.info(f"Sending {amount_mob} MOB to {customer.phone_number}. Cover_transaction_fee: {cover_transaction_fee}")
+        self.logger.info(f"Getting payment address for customer with # {customer.phone_number}")
+        customer_payments_address = self.get_payments_address(customer.phone_number.as_e164)
 
         if amount_mob > 0:
             return self.send_mob_to_address(
-                source, amount_mob, customer_payments_address, memo=memo
+                customer.phone_number.as_e164, amount_mob, customer_payments_address, memo=memo
             )
 
     def send_reply_payment(self, amount_mob: Decimal, cover_transaction_fee: bool, memo="Refund") -> Payment:
@@ -120,7 +115,7 @@ class Payments:
 
             try:
                 payment = self._send_mob_to_customer(ctx.customer, amount_mob, cover_transaction_fee, memo)
-                self.logger.info("Payment logged!")
+                self.logger.debug(f"Payment logged: {payment}")
             except Exception as e:
                 self.logger.exception(f"Failed sending reply payment to customer {ctx.customer}: {amount_mob} MOB")
                 payment = Payment(
@@ -130,7 +125,7 @@ class Payments:
                 )
                 self._handle_payment_exception(e)
             payment.save()
-            self.logger.info("Logging response object")
+            self.logger.debug("Logging response object")
             MobotResponse.objects.create(
                 incoming=ctx.message,
                 outgoing_response=Message.objects.create(
