@@ -4,10 +4,14 @@ import logging
 from django.utils import timezone
 
 from mobot_client.chat_strings import ChatStrings
-from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku, SessionState
+from mobot_client.logger import SignalMessenger
+from mobot_client.models import DropSession, Drop, CustomerStorePreferences, Order, Sku, SessionState, Store
+from mobot_client.models.messages import Message
+from mobot_client.payments import Payments
+
 
 class BaseDropSession:
-    def __init__(self, store, payments, messenger):
+    def __init__(self, store: Store, payments: Payments, messenger: SignalMessenger):
         self.store = store
         self.payments = payments
         self.messenger = messenger
@@ -61,6 +65,7 @@ class BaseDropSession:
         except (Exception,):
             return False
 
+
     def handle_drop_session_allow_contact_requested(self, message, drop_session):
         if message.text.lower() in ("y", "yes"):
             CustomerStorePreferences.objects.create(
@@ -68,9 +73,7 @@ class BaseDropSession:
             )
             drop_session.state = SessionState.COMPLETED
             drop_session.save()
-            self.messenger.log_and_send_message(
-                drop_session.customer, message.source, ChatStrings.BYE
-            )
+            self.messenger.log_and_send_message(ChatStrings.BYE)
             return
 
         if message.text.lower() == "n" or message.text.lower() == "no":
@@ -81,45 +84,35 @@ class BaseDropSession:
             drop_session.state = SessionState.COMPLETED
             drop_session.save()
             self.messenger.log_and_send_message(
-                drop_session.customer, message.source, ChatStrings.BYE
+                ChatStrings.BYE
             )
             return
 
         if message.text.lower() == "p" or message.text.lower() == "privacy":
             self.messenger.log_and_send_message(
-                drop_session.customer,
-                message.source,
-                ChatStrings.PRIVACY_POLICY_REPROMPT.format(url=self.store.privacy_policy_url)
+                ChatStrings.PRIVACY_POLICY_REPROMPT.format(url=self.store.privacy_policy_url),
             )
             return
 
         if message.text.lower() == "help":
             self.messenger.log_and_send_message(
-                drop_session.customer,
-                message.source,
                 ChatStrings.HELP
             )
             return
 
         self.messenger.log_and_send_message(
-            drop_session.customer,
-            message.source,
             ChatStrings.HELP
         )
 
-    def handle_cancel(self, message, drop_session: DropSession):
+    def handle_cancel(self, drop_session: DropSession):
         drop_session.state = SessionState.CANCELLED
         drop_session.save()
         self.messenger.log_and_send_message(
-            drop_session.customer,
-            message.source,
             ChatStrings.SESSION_CANCELLED
         )
 
-    def handle_privacy_policy_request(self, message, drop_session: DropSession):
+    def handle_privacy_policy_request(self, drop_session: DropSession):
         privacy_policy_url = drop_session.drop.store.privacy_policy_url
         self.messenger.log_and_send_message(
-            drop_session.customer,
-            message.source,
             ChatStrings.PRIVACY_POLICY.format(url=privacy_policy_url),
         )

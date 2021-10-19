@@ -49,7 +49,7 @@ For testing, we build and run locally, using the Signal staging network, and the
    git clone https://gitlab.com/signald/signald
    ```
    
-    Note: These instructions were written at commit `ce9d8c42eea6f174219a27208087e561eb7e94ff`.
+    Note: Latest signald should work just fine.
 
 1. Copy the `[signald-tcp.sh](./tools/signald-tcp.sh)` start script from this repository to the `signald/tools` directory.
 
@@ -140,6 +140,8 @@ For testing, we build and run locally, using the Signal staging network, and the
     ```
    
     Note: If you are having issues with psycopg2, you may want to make sure that Python 3.9.5 is installed and postgresql is installed.
+    If you've got old versions of the mobilecoin CLI and you're having trouble getting pip to install the desired hash, use
+    the pip args `--no-cache-dir` and `--force-reinstall`.
    
 1. Prepare the environment for Django. (Make sure you have obtained a [Google Maps Client Key](https://developers.google.com/maps/documentation/maps-static/get-api-key))
 
@@ -147,6 +149,9 @@ For testing, we build and run locally, using the Signal staging network, and the
     export SECRET_KEY=123
     export DEBUG=TRUE
     export GMAPS_CLIENT_KEY=...
+    export DATABASE=postgresql
+    export DATABASE_USER=...
+    export DATABASE_PASSWORD=...
     ```
 
 1. Run the database migrations
@@ -203,9 +208,13 @@ These are the instructions for creating an AirDrop for Coins.
     ```shell
     export SECRET_KEY=123
     export DEBUG=TRUE
+    export DATABASE=postgresql
+    export DATABASE_USER=mobot  # For our test
+    export DATABASE_PASSWORD=mobot # Again, for test
     ```
+
    
-1. Run the MOBot client
+3. Run the MOBot client
 
     ```shell
     python3 manage.py run_mobot_client
@@ -336,7 +345,7 @@ No extra configuration values are needed
 
 ## UnitTests
 
-To get a dump of your data, you can run the following from within the virutal environment:
+To get a dump of your data, you can run the following from within the virtual environment:
 
 ```shell
 python3 manage.py dumpdata mobot_client --indent 4 > ./mobot_client/fixtures/mobot_client.json

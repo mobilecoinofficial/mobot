@@ -5,5 +5,6 @@
 set -e
 
 python manage.py check_migration
+python manage.py test
 
 python manage.py run_mobot_client

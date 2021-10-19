@@ -9,13 +9,17 @@ from .models import (
     CustomerStorePreferences,
     CustomerDropRefunds,
     DropSession,
-    Message,
     BonusCoin,
     ChatbotSettings,
     Order,
     Sku,
 )
-
+from .models.messages import (
+    Message,
+    MobotResponse,
+    Payment,
+    RawSignalMessage
+)
 
 class StoreAdmin(admin.ModelAdmin):
     pass
@@ -53,7 +57,17 @@ class DropSessionAdmin(admin.ModelAdmin):
 
 
 class MessageAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('id', 'time_seconds', 'customer', 'direction', 'text', 'payment_friendly')
+    readonly_fields = ('payment_friendly',)
+
+    @admin.display(description='Precise Time', ordering='date')
+    def time_seconds(self, obj: Message):
+        return obj.date.strftime("%m/%d/%Y %H:%M:%S")
+
+    @admin.display(description='payment')
+    def payment_friendly(self, obj: Message):
+        if obj.payment:
+            return f"{obj.payment.amount_mob:.4f} MOB"
 
 
 class BonusCoinAdmin(admin.ModelAdmin):
@@ -63,6 +77,7 @@ class BonusCoinAdmin(admin.ModelAdmin):
     @admin.display(description='MOB')
     def amount_mob(self, obj: BonusCoin):
         return f"{obj.amount_mob:.4f}"
+
 
 class SkuAdmin(admin.ModelAdmin):
     readonly_fields = ('number_available',)
@@ -91,7 +106,6 @@ class DropAdmin(admin.ModelAdmin):
         BonusCoinInline
     ]
     list_display = ('name', 'store', 'is_active', 'num_initial_sent', 'num_bonus_sent', 'total_spent',)
-
     readonly_fields = ('initial_coin_limit', 'is_active', 'initial_coins_available', 'bonus_coins_available_display', 'total_spent')
 
     @admin.display(description='Bonus Coins')
@@ -102,6 +116,51 @@ class DropAdmin(admin.ModelAdmin):
     def total_spent(self, obj: Drop):
         return obj.initial_mob_disbursed() + obj.bonus_mob_disbursed()
 
+
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = ('customer', 'status', 'direction_friendly', 'status', 'updated', 'amount_mob',)
+    readonly_fields = ('customer', 'status', 'direction_friendly', 'updated', 'amount_mob',)
+
+    @admin.display(description="direction")
+    def direction_friendly(self, obj: Payment):
+        return obj.message.get_direction_display()
+
+
+class MobotResponseAdmin(admin.ModelAdmin):
+    list_display = ('customer', 'incoming_text', 'incoming_mob', 'outgoing_response_text',  'outgoing_mob')
+    readonly_fields = ('customer', 'incoming_text', 'outgoing_response_text', 'incoming_mob', 'outgoing_mob')
+
+    @admin.display(description="out")
+    def outgoing_response_text(self, obj: MobotResponse):
+        return obj.outgoing_response.text
+
+    @admin.display(description="in")
+    def incoming_text(self, obj: MobotResponse):
+        return obj.incoming.text
+
+    @admin.display(description="MOB in")
+    def incoming_mob(self, obj: MobotResponse):
+        if obj.incoming.payment is not None:
+            return obj.incoming.payment.amount_mob
+        else:
+            return 0
+
+    @admin.display(description="MOB out")
+    def outgoing_mob(self, obj: MobotResponse):
+        if obj.outgoing_response.payment is not None:
+            return obj.outgoing_response.payment.amount_mob
+        else:
+            return 0
+
+class RawSignalMessageAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'timestamp', 'source', 'text', 'is_payment')
+
+    @admin.display(description="payment")
+    def is_payment(self, obj: RawSignalMessage):
+        if obj.payment is None:
+            return "Y"
+        else:
+            return "N"
 
 
 admin.site.register(Store, StoreAdmin)
@@ -116,3 +175,6 @@ admin.site.register(Message, MessageAdmin)
 admin.site.register(BonusCoin, BonusCoinAdmin)
 admin.site.register(Sku, SkuAdmin)
 admin.site.register(Order, OrderAdmin)
+admin.site.register(RawSignalMessage, RawSignalMessageAdmin)
+admin.site.register(MobotResponse, MobotResponseAdmin)
+admin.site.register(Payment, PaymentAdmin)

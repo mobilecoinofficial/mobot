@@ -31,12 +31,13 @@ SIGNALD_PROCESS_TIMEOUT = os.getenv("SIGNALD_PROCESS_TIMEOUT", 20)
 FULLSERVICE_ADDRESS = os.getenv("FULLSERVICE_ADDRESS", "127.0.0.1")
 FULLSERVICE_PORT = os.getenv("FULLSERVICE_PORT", "9090")
 FULLSERVICE_URL = f"http://{FULLSERVICE_ADDRESS}:{FULLSERVICE_PORT}/wallet"
+CONCURRENCY_WARNING_MESSAGE_THRESHOLD = os.getenv("CONCURRENCY_WARNING_MESSAGE_THRESHOLD", 10)
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', False)
 
-DATABASE = os.environ.get('DATABASE', 'sqlite')
+DATABASE = os.environ.get('DATABASE', 'postgresql')
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1').split(',')
 
@@ -117,7 +118,7 @@ if DATABASE == "postgresql":
         DATABASE_NAME = os.environ.get("DATABASE_NAME", "mobot")
         DATABASE_USER = os.environ["DATABASE_USER"]
         DATABASE_PASSWORD = os.environ["DATABASE_PASSWORD"]
-        DATABASE_HOST = os.environ.get("DATABASE_HOST", "127.0.0.1")
+        DATABASE_HOST = os.environ["DATABASE_HOST"]
     except KeyError:
         print("expecting environment variables for database fields")
 
@@ -131,9 +132,7 @@ if DATABASE == "postgresql":
             'NAME': DATABASE_NAME,
             'USER': DATABASE_USER,
             'PASSWORD': DATABASE_PASSWORD,
-            'HOST': DATABASE_HOST,
             'PORT': DATABASE_PORT,
-            'DISABLE_SERVER_SIDE_CURSORS': True,
             'OPTIONS': {
                 'sslmode': DATABASE_SSL_MODE,
                 'sslrootcert': DATABASE_SSL_ROOT_CERT,

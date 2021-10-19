@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import random
+
 from decimal import Decimal
 from typing import Optional, Union
 import logging
@@ -11,6 +12,7 @@ from django.db.models import F, Sum
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.db import transaction
+
 from django.contrib import admin
 from phonenumber_field.modelfields import PhoneNumberField
 from tenacity import wait_random_exponential, retry, retry_if_exception_type
@@ -31,10 +33,10 @@ class OutOfStockException(SessionException):
 
 
 class Store(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, default="MOB")
     phone_number = PhoneNumberField(db_index=True)
-    description = models.TextField()
-    privacy_policy_url = models.URLField()
+    description = models.TextField(default="MOB")
+    privacy_policy_url = models.URLField(default="https://privacy.com")
 
     def __str__(self):
         return f"{self.name} [{self.phone_number.as_e164}]"
@@ -205,10 +207,11 @@ class Drop(models.Model):
         if self.drop_type == DropType.AIRDROP:
             DropManager.logger.info("Checking if there are coins available to give out...")
             active_drop_sessions_count = DropSession.objects.initial_coin_sent_sessions().filter(drop=self).count()
+            bonus_available = self.num_bonus_sent() < self.initial_coins_available()
             logger.debug(
                 f"There are {active_drop_sessions_count} sessions on this airdrop with an initial limit of {self.initial_coin_limit}"
             )
-            return active_drop_sessions_count < self.initial_coin_limit and self.initial_coins_available() > 0
+            return active_drop_sessions_count < self.initial_coin_limit and self.initial_coins_available() > 0 and bonus_available
         else:
             return len(self.item.skus) > 0
 
@@ -232,6 +235,32 @@ class BonusCoinQuerySet(models.QuerySet):
 
 
 class BonusCoinManager(models.Manager.from_queryset(BonusCoinQuerySet)):
+    def _claim_optimistic(self, coin: BonusCoin, number_claimed: int):
+        """Try to claim a coin using optimistic locking - assume we know the number claimed is the same as it was when we
+           entered the transaction, and fail if the update fails
+        """
+        with transaction.atomic():
+            updated = self.available_coins().filter(pk=coin.pk, number_claimed=number_claimed).select_for_update().update(number_claimed=number_claimed + 1)
+            if not updated:
+                raise ConcurrentModificationException()
+        coin.refresh_from_db()
+        return coin
+
+    @retry(wait=wait_random_exponential(multiplier=1, min=4, max=10), retry=retry_if_exception_type(ConcurrentModificationException))
+    def find_and_claim_unclaimed_coin(self, drop: Drop) -> BonusCoin:
+        coins_available = self.available_coins().filter(drop=drop)
+        coins_dist = [coin.number_remaining() for coin in coins_available]
+        if len(coins_available) > 0:
+            coin: BonusCoin = random.choices(coins_available, weights=coins_dist)[0]
+            if coin.number_remaining() < 1:
+                raise ConcurrentModificationException("Coin no longer available; looking for another")
+            logger.debug(f"Trying to claim a coin {coin} with number claimed {coin.number_claimed}")
+            claimed_coin = self._claim_optimistic(coin, coin.number_claimed)
+            logger.info(f"Got a coin! {claimed_coin}")
+            claimed_coin.save()
+            return claimed_coin
+        else:
+            raise OutOfStockException("No more bonus coins available to give out!")
 
     def _claim_optimistic(self, coin: BonusCoin, number_claimed: int):
         """Try to claim a coin using optimistic locking - assume we know the number claimed is the same as it was when we
@@ -326,19 +355,16 @@ class Customer(models.Model):
     def fulfilled_drop_sessions(self):
         return DropSession.objects.sold_sessions().filter(customer=self)
 
+
     @admin.display(description='Fulfilled')
     def has_fulfilled_drop_session(self):
         return self.fulfilled_drop_sessions().count() > 0
-
-    has_fulfilled_drop_session.short_description = "Fulfilled"
 
     def completed_drop_sessions(self):
         return DropSession.objects.completed_sessions().filter(customer=self)
 
     def has_completed_session(self):
         return self.completed_drop_sessions().count() > 0
-
-    has_completed_session.short_description = "Completed"
 
     def errored_sessions(self):
         return DropSession.objects.errored_sessions().filter(customer=self)
@@ -360,7 +386,7 @@ class Customer(models.Model):
     def has_store_preferences(self, store: Store) -> bool:
         return self.store_preferences(store) is not None
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.phone_number.as_e164}"
 
 
@@ -448,19 +474,6 @@ class DropSession(models.Model):
 
     def __str__(self):
         return f"{self.drop.name}"
-
-
-class MessageDirection(models.IntegerChoices):
-    RECEIVED = 0, 'received'
-    SENT = 1, 'sent'
-
-
-class Message(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="messages")
-    store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    text = models.TextField()
-    date = models.DateTimeField(auto_now_add=True)
-    direction = models.PositiveIntegerField(choices=MessageDirection.choices)
 
 
 class OrderStatus(models.IntegerChoices):

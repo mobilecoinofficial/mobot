@@ -1,9 +1,14 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 import logging
-from typing import List, Dict, Iterable
+from concurrent.futures import as_completed
+from typing import List, Dict
 from collections import defaultdict
-from django.test import TransactionTestCase
+from django.test import LiveServerTestCase
+from django.db import connection
+
 import factory.random
+
+from mobot_client.concurrency import AutoCleanupExecutor
 from mobot_client.tests.factories import *
 
 from mobot_client.models import (Drop,
@@ -11,19 +16,13 @@ from mobot_client.models import (Drop,
                                  Sku,
                                  DropType,
                                  BonusCoin,
-                                 Order,
-                                 OrderStatus,
                                  OutOfStockException)
 from mobot_client.models.states import SessionState
 
 factory.random.reseed_random('mobot cleanup')
 
-# l = logging.getLogger('django.db.backends')
-# l.setLevel(logging.DEBUG)
-# l.addHandler(logging.StreamHandler())
 
-
-class ModelTests(TransactionTestCase):
+class ModelTests(LiveServerTestCase):
 
     def setUp(self) -> None:
         self.logger = logging.getLogger("ModelTestsLogger")
@@ -121,6 +120,33 @@ class ModelTests(TransactionTestCase):
         with self.assertRaises(OutOfStockException):
             BonusCoin.objects.claim_random_coin_for_session(session3)
 
+    def test_claim_multithreaded(self):
+        drop = DropFactory.create(drop_type=DropType.AIRDROP)
+        BonusCoinFactory.create_batch(size=3, drop=drop, number_available_at_start=5)
+        futures = []
+
+        with AutoCleanupExecutor(max_workers=5) as pool:
+            # Try to claim more than we've got
+            def claim_and_close():
+                try:
+                    coin = BonusCoin.objects.find_and_claim_unclaimed_coin(drop=drop)
+                except Exception:
+                    print("Couldn't get a coin")
+                finally:
+                    connection.close()
+                    return coin
+
+            for i in range(20):
+                fut = pool.submit(claim_and_close)
+                futures.append(fut)
+
+        for fut in as_completed(futures):
+            print(fut.done())
+
+        refreshed = BonusCoin.objects.filter(drop=drop)
+        for coin in refreshed:
+            self.assertEqual(coin.number_claimed, 5)
+
     def test_active_drop_sessions_found_for_customer(self):
         '''Ensure that customers with old drop sessions don't find themselves unable to participate in current drops'''
         customer = CustomerFactory.create()
@@ -207,3 +233,4 @@ class ModelTests(TransactionTestCase):
         self.assertFalse(de_customer.matches_country_code_restriction(drop_single))
         self.assertTrue(de_customer.matches_country_code_restriction(drop_none))
         self.assertTrue(de_customer.matches_country_code_restriction(drop_list))
+

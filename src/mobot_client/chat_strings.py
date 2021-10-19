@@ -4,6 +4,7 @@
 class ChatStrings:
     # General
     BYE = "Thanks! MOBot OUT. Buh-bye!"
+    PAYMENT_RECEIVED = "We got your payment! Please be patient while we process!"
 
     PRIVACY_POLICY = "Our privacy policy is available here: {url}"
     PRIVACY_POLICY_REPROMPT = """Our privacy policy is available here: {url}
@@ -68,7 +69,6 @@ Please contact customer service at {number}"""
 'pay' - How to pay"""
 
     AIRDROP_RESPONSE = """We've sent you {amount} MOB (~{symbol}{value:.2f}). 
-
 Send us 0.001 MOB, and we'll send it back, plus more! 
 You could end up with as much as £50 of MOB"""
     AIRDROP_SUMMARY = (
@@ -109,12 +109,11 @@ Sorry 😭"""
 
     AIRDROP_SOLD_OUT_REFUND = """Thank you for sending {amount} MOB! 
 
-Unfortunately, we ran out of MOB to distribute 😭.
-
+Unfortunately, we ran out of MOB to distribute 😭. 
 We're returning your MOB and the network fee."""
     BONUS_SOLD_OUT_REFUND = """Thank you for sending {amount} MOB!
 
-Unfortunately, we ran out of bonuses 😭.
+Unfortunately, we ran out of MOB to distribute 😭.
 
 We're returning your MOB and the network fee."""
 
@@ -256,3 +255,4 @@ if you have any questions or issues"""
     WE_RECEIVED_MOB = "We received {amount_mob} MOB"
     PLUS_SIGN_HELP = "Whoops! Looks like you meant to hit the '+' button to the left of the text field."
     COINS_SENT = """{initial_num_sent} customers sent initial coins, totalling {total} MOB."""
+    MOBOT_HEAVY_LOAD = """MOBot is currently processing a large number ofg requests. Please be patient!"""
