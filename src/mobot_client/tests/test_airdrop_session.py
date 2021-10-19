@@ -175,7 +175,7 @@ class AirDropSessionTest(AbstractMessageTest):
             value=drop.value_in_currency(drop.initial_coin_amount_mob))
         self._state_response_test(customer,
                                   drop,
-                                  incoming_message="yes",
+                                  incoming_message="y",
                                   incoming_state=SessionState.READY,
                                   expected_responses=[expected_message],
                                   expected_payment=Decimal('1e-1'),
@@ -215,6 +215,8 @@ class AirDropSessionTest(AbstractMessageTest):
             CustomerStorePreferences.objects.create(store=self.store, customer=customer, allows_contact=False)
             expected_state = SessionState.COMPLETED
             expected_goodbye = ChatStrings.BYE
+        else:
+            expected_goodbye = ChatStrings.FUTURE_ALERTS
 
         expected_responses = [
             ChatStrings.PAYMENT_RECEIVED,

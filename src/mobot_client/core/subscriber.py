@@ -130,8 +130,9 @@ class Subscriber:
 
     def _get_and_process(self, pool: ThreadPoolExecutor) -> Future[Message]:
         try:
+            self.logger.info("Getting next message")
             message: Message = self._get_next_message()
-            self.logger.info("Got message!")
+            self.logger.info(f"Got message {message.pk}")
             process_fut = pool.submit(self.process_message, message)
             process_fut.add_done_callback(self._done)
             return process_fut

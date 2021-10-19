@@ -65,7 +65,6 @@ class BaseDropSession:
         except (Exception,):
             return False
 
-
     def handle_drop_session_allow_contact_requested(self, message, drop_session):
         if message.text.lower() in ("y", "yes"):
             CustomerStorePreferences.objects.create(
@@ -83,9 +82,7 @@ class BaseDropSession:
             customer_prefs.save()
             drop_session.state = SessionState.COMPLETED
             drop_session.save()
-            self.messenger.log_and_send_message(
-                ChatStrings.BYE
-            )
+            self.messenger.log_and_send_message(ChatStrings.BYE)
             return
 
         if message.text.lower() == "p" or message.text.lower() == "privacy":

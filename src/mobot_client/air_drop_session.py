@@ -94,16 +94,19 @@ class AirDropSession(BaseDropSession):
             )
         elif message.text.lower() == "y" or message.text.lower() == "yes":
             if not self.under_drop_quota(drop_session.drop):
+                self.logger.info("Got message while airdrop over")
                 self.messenger.log_and_send_message(
                     ChatStrings.AIRDROP_OVER
                 )
                 drop_session.state = SessionState.CANCELLED
             elif not self.initial_coin_funds_available(drop_session.drop):
+                self.logger.info("Got message while airdrop over")
                 self.messenger.log_and_send_message(
                     ChatStrings.AIRDROP_OVER
                 )
                 drop_session.state = SessionState.CANCELLED
             else:
+                self.logger.info(f"Sending initial mob to {message.customer.phone_number}")
                 amount_in_mob = drop_session.drop.initial_coin_amount_mob
                 value_in_currency = amount_in_mob * Decimal(
                     drop_session.drop.conversion_rate_mob_to_currency
@@ -167,6 +170,7 @@ class AirDropSession(BaseDropSession):
 
     def handle_active_airdrop_drop_session(self, message: Message, drop_session: DropSession):
         if not drop_session.drop.under_quota():
+            self.logger.info("Over quota")
             self.handle_over_quota(drop_session)
         elif drop_session.state == SessionState.READY:
             self.handle_airdrop_session_ready_to_receive(message, drop_session)

@@ -115,7 +115,7 @@ class Payments:
 
             try:
                 payment = self._send_mob_to_customer(ctx.customer, amount_mob, cover_transaction_fee, memo)
-                self.logger.debug(f"Payment logged: {payment}")
+                self.logger.debug(f"Payment logged: {amount_mob} MOB")
             except Exception as e:
                 self.logger.exception(f"Failed sending reply payment to customer {ctx.customer}: {amount_mob} MOB")
                 payment = Payment(
@@ -142,9 +142,13 @@ class Payments:
     def build_and_submit_transaction_with_proposal(self, amount_in_mob: Decimal,
                                                    customer_payments_address: str) -> (str, dict):
         self.logger.info(f"Building and submitting with proposal: {amount_in_mob} -> {customer_payments_address}")
-        transaction_log, tx_proposal = self.mcc.build_and_submit_transaction_with_proposal(self.account_id,
+        try:
+            transaction_log, tx_proposal = self.mcc.build_and_submit_transaction_with_proposal(self.account_id,
                                                                                            amount=amount_in_mob,
                                                                                            to_address=customer_payments_address)
+        except Exception as e:
+            self.logger.exception("Exception when building transaction!")
+            raise e
         list_of_txos = transaction_log["output_txos"]
 
         if len(list_of_txos) > 1:
