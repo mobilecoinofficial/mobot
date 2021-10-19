@@ -27,6 +27,7 @@ spec:
         runAsGroup: 1000
         fsGroup: 2000
         fsGroupChangePolicy: "OnRootMismatch"
+      {{- if .Values.backupsSidecar.enabled }}
       shareProcessNamespace: true
       initContainers:
       - name: restore-sidecar
@@ -64,6 +65,7 @@ spec:
           mountPath: /data
         - name: tmp
           mountPath: /tmp
+      {{- end }}
       containers:
       - name: full-service
         securityContext:
@@ -109,6 +111,7 @@ spec:
           mountPath: /data
         resources:
           {{- toYaml .Values.fullService.resources | nindent 12 }}
+      {{- if .Values.backupsSidecar.enabled }}
       - name: backups-sidecar
         securityContext:
           capabilities:
@@ -145,6 +148,7 @@ spec:
           readOnly: true
         - name: tmp
           mountPath: /tmp
+      {{- end }}
       nodeSelector:
         {{- toYaml .Values.fullService.nodeSelector | nindent 8 }}
       affinity:

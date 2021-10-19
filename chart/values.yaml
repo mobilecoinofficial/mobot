@@ -112,7 +112,9 @@ mobotDatabase:
   sslMode: "disable"
   sslRootCert: ""
 
+## Backup/Restore flat files to azure blob storage
 backupsSidecar:
+  enabled: false
   image:
     repository: mobilecoin/infra-replication-sidecar
     tag: v0.0.1

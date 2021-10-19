@@ -23,6 +23,7 @@ spec:
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
+      {{- if .Values.backupsSidecar.enabled }}
       shareProcessNamespace: true
       initContainers:
       - name: restore-sidecar
@@ -60,6 +61,7 @@ spec:
           mountPath: /signald
         - name: tmp
           mountPath: /tmp
+      {{- end }}
       containers:
       - name: signald
         securityContext:
@@ -80,6 +82,7 @@ spec:
           name: tmp
         resources:
           {{- toYaml .Values.signald.resources | nindent 12 }}
+      {{- if .Values.backupsSidecar.enabled }}
       - name: backups-sidecar
         securityContext:
           capabilities:
@@ -116,6 +119,7 @@ spec:
           readOnly: true
         - name: tmp
           mountPath: /tmp
+      {{- end }}
       nodeSelector:
         {{- toYaml .Values.signald.nodeSelector | nindent 8 }}
       affinity:
