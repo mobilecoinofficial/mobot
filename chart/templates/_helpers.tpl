@@ -115,3 +115,14 @@ fullService ConfigMap Name
     {{- include "chart.fullname" . }}-{{ .Values.fullServiceConfig.configMap.name }}
   {{- end }}
 {{- end }}
+
+{{/*
+backupSidecar Secret Name
+*/}}
+{{- define "chart.backupsSidecarSecretName" -}}
+  {{- if .Values.backupsSidecar.secret.external }}
+    {{- .Values.backupsSidecar.secret.name }}
+  {{- else }}
+    {{- include "chart.fullname" . }}-{{ .Values.backupsSidecar.secret.name }}
+  {{- end }}
+{{- end }}
