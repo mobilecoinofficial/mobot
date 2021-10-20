@@ -61,7 +61,6 @@ MOBot OUT. Buh-bye!"""
     PAYMENTS_DEACTIVATED = """We have a refund for you, but your payments have been deactivated
 
 Please contact customer service at {number}"""
-    PAYMENT_EXCEPTION = """We had an unhandled exception sending you a payment. Please contact us!"""
 
     # Air Drop Strings
     AIRDROP_COMMANDS = """Commands available are:
@@ -100,10 +99,8 @@ You could end up with as much as £50 of MOB"""
         "Here's how our MOB airdrop works:\n\n"
         "1. We send you some MOB to fund your wallet. It will be approx £3 worth\n"
         "2. Give sending MOB a try by giving us back a tiny bit, say 0.001 MOB\n"
-        "3. Give us a some time; we're currently tuning MOBot for high-concurrency!\n"
-        "4. We'll send you a random BONUS airdrop. You could receive as much as £50 in MOB"
-        "\n\nWhether you get £5 or £50, it’s yours to keep and spend however you like!\n"
-        "5. If you have any issues, please reach out to us in Twitch chat - we're here to help!\n"
+        "3. We'll send you a random BONUS airdrop. You could receive as much as £50 in MOB"
+        "\n\nWhether you get £5 or £50, it’s yours to keep and spend however you like"
     )
     READY = "Ready?"
     AIRDROP_OVER = """Too late! We've distributed all of the MOB allocated to this airdrop.
