@@ -111,3 +111,19 @@ mobotDatabase:
   port: "5432"
   sslMode: "disable"
   sslRootCert: ""
+
+## Backup/Restore flat files to azure blob storage
+backupsSidecar:
+  enabled: false
+  image:
+    repository: mobilecoin/infra-replication-sidecar
+    tag: v0.0.1
+  # Create backups-sidecar secret or set external 'false'
+  secret:
+    external: true
+    name: backups-sidecar
+
+    data:
+      ENCRYPT_KEY: <file encryption passphrase>
+      AZURE_STORAGE_ACCOUNT: <azure storage account name>
+      AZURE_STORAGE_KEY: <azure storage account access key>
