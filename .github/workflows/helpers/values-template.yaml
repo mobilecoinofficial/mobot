@@ -13,3 +13,6 @@ signald:
 full-service:
   image:
     tag: v1.0.1-testnet
+
+backupsSidecar:
+  enabled: true
