@@ -6,15 +6,24 @@ services:
     restart: always
     volumes:
     - db:/var/lib/postgresql/data
-    env_file:
-    - ./docker/env
+    environment:
+      POSTGRES_DB: mobot
+      POSTGRES_USER: mobot
+      POSTGRES_PASSWORD: mobot
     expose:
     - 5432
     ports:
     - 127.0.0.1:5432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       mobot:
         ipv4_address: 10.200.0.5
+    logging:
+      driver: none
 
   signald:
     image: mobilecoin/signald:v0.12.1
@@ -49,16 +58,25 @@ services:
 
   admin:
     restart: always
+    image: mobot:latest
     build:
       context: .
       dockerfile: ./Dockerfile
-    command: /usr/local/bin/admin_start.sh
-    env_file:
-    - ./docker/env
+    command: /usr/local/bin/start_admin.sh
+    environment:
+      DATABASE: postgresql
+      DATABASE_NAME: mobot
+      DATABASE_USER: mobot
+      DATABASE_PASSWORD: mobot
+      DATABASE_HOST: db
+      SECRET_KEY: badlocaldevsecretkey
+      ALLOWED_HOSTS: 10.200.0.8,localhost,127.0.0.1
+      DEBUG: "True"
     volumes:
     - signald:/signald
     depends_on:
-    - db
+      db:
+        condition: service_healthy
     expose:
     - 8000
     ports:
@@ -69,19 +87,30 @@ services:
 
   mobot-client:
     restart: always
+    image: mobot:latest
     build: 
       context: .
       dockerfile: ./Dockerfile
-    command: /usr/local/bin/mobot_client_start.sh
-    env_file:
-    - ./docker/env
+    command: /usr/local/bin/start_client.sh
+    environment:
+      DATABASE: postgresql
+      DATABASE_NAME: mobot
+      DATABASE_USER: mobot
+      DATABASE_PASSWORD: mobot
+      DATABASE_HOST: db
+      SIGNALD_ADDRESS: signald
+      FULLSERVICE_ADDRESS: full-service
+      SECRET_KEY: badlocaldevsecretkey
+      DEBUG: "True"
     volumes:
     - signald:/signald
     depends_on:
-    - db
-    - signald
-    - full-service
-    - admin
+      db:
+        condition: service_healthy
+      signald:
+        condition: service_started
+      full-service:
+        condition: service_started
     networks:
       mobot:
         ipv4_address: 10.200.0.9
