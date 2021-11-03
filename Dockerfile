@@ -24,12 +24,14 @@ RUN pip install -r requirements.txt
 
 COPY src/ /app/
 COPY privacy/ /privacy/
-COPY docker/admin_start.sh /usr/local/bin/admin_start.sh
-COPY docker/mobot_client_start.sh /usr/local/bin/mobot_client_start.sh
+COPY .docker/start_*.sh /usr/local/bin/
 
-RUN python manage.py collectstatic --noinput
+# Run static content and database migration generation
+RUN  python manage.py collectstatic --noinput \
+  && python manage.py makemigrations \
+  && python manage.py makemigrations mobot_client
 
 USER app
 EXPOSE 8000
 VOLUME /signald
-CMD [ "/bin/echo 'Start Client: /usr/local/bin/mobot_client_start.sh\nStart Admin /usr/local/bin/admin_start.sh'" ]
+CMD [ "/bin/echo 'Start Client: /usr/local/bin/startup_client.sh\nStart Admin /usr/local/bin/startup_admin.sh'" ]

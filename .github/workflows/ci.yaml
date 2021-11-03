@@ -75,7 +75,7 @@ jobs:
       env:
         DOCKER_IMAGE: ${{ env.DOCKER_REPO }}@${{ steps.docker_build.outputs.digest }}
       run: |
-        docker-compose -f ./docker/docker-compose.test.yaml \
+        docker-compose -f .docker/docker-compose.test.yaml \
           up --exit-code-from test
 
     - name: Publish to DockerHub
