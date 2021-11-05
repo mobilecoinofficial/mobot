@@ -172,6 +172,10 @@ class Drop(models.Model):
         return amount * Decimal(self.conversion_rate_mob_to_currency)
 
     @cached_property
+    def initial_coin_amount_value_in_currency(self) -> Decimal:
+        return self.value_in_currency(self.initial_coin_amount_mob)
+
+    @cached_property
     def initial_coin_limit(self) -> int:
         if bonus_coins := self.bonus_coins.aggregate(Sum('number_available_at_start'))['number_available_at_start__sum']:
             return bonus_coins
@@ -184,13 +188,15 @@ class Drop(models.Model):
 
     @admin.display(description='Bonus Payments')
     def num_bonus_sent(self) -> int:
-        return BonusCoin.objects.filter(drop=self).aggregate(Sum('number_claimed'))[
+        coins_sent = BonusCoin.objects.filter(drop=self).aggregate(Sum('number_claimed'))[
             'number_claimed__sum']
+        if coins_sent is None:
+            return 0
+        return coins_sent
 
     def bonus_mob_disbursed(self) -> Decimal:
         if self.bonus_coins.count():
-            return BonusCoin.objects.with_sum_spent().filter(drop=self).aggregate(Sum('mob_claimed'))[
-                'mob_claimed__sum']
+            return BonusCoin.objects.with_sum_spent().filter(drop=self).aggregate(Sum('mob_claimed'))['mob_claimed__sum']
         else:
             return Decimal(0)
 
@@ -208,9 +214,10 @@ class Drop(models.Model):
             DropManager.logger.info("Checking if there are coins available to give out...")
             active_drop_sessions_count = DropSession.objects.initial_coin_sent_sessions().filter(drop=self).count()
             bonus_available = self.num_bonus_sent() < self.initial_coins_available()
-            logger.debug(
+            logger.warning(
                 f"There are {active_drop_sessions_count} sessions on this airdrop with an initial limit of {self.initial_coin_limit}"
             )
+            logger.warning(f"There are {bonus_available} bonus coins available")
             return active_drop_sessions_count < self.initial_coin_limit and self.initial_coins_available() > 0 and bonus_available
         else:
             return len(self.item.skus) > 0
@@ -323,12 +330,15 @@ class BonusCoin(models.Model):
 class Customer(models.Model):
     phone_number = PhoneNumberField(db_index=True, unique=True)
     received_sticker_pack = models.BooleanField(default=False)
+    admin_role = models.BooleanField(default=False)
 
     def matches_country_code_restriction(self, drop: Drop) -> bool:
         if not drop.number_restriction.strip():
             return True
         else:
-            return f"+{self.phone_number.country_code}" in [s.strip() for s in drop.number_restriction.split(',')]
+            customer_code = f"+{self.phone_number.country_code}"
+            restricted_to = [s.strip() for s in drop.number_restriction.replace(' ', '').split(',')]
+            return customer_code in restricted_to
 
     def active_drop_sessions(self):
         return DropSession.objects.active_drop_sessions().filter(customer=self)
@@ -340,21 +350,21 @@ class Customer(models.Model):
     def state(self) -> Optional[SessionState]:
         if active_session := self.active_drop_sessions().first():
             return active_session.get_state_display()
+        elif completed_session := self.completed_drop_sessions().first():
+            return completed_session.get_state_display()
         else:
             return None
 
     def sessions_awaiting_payment(self):
-        return DropSession.objects.awaiting_payment_sessions()
+        """Find all active drop sessions for customer. Assumes only one active drop."""
+        return DropSession.objects.awaiting_payment_sessions().filter(customer=self)
 
     @admin.display(description='Awaiting Payment')
     def has_session_awaiting_payment(self):
         return self.sessions_awaiting_payment().count() > 0
 
-    has_session_awaiting_payment.short_description = "Awaiting Payment"
-
     def fulfilled_drop_sessions(self):
         return DropSession.objects.sold_sessions().filter(customer=self)
-
 
     @admin.display(description='Fulfilled')
     def has_fulfilled_drop_session(self):

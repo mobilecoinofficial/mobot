@@ -104,36 +104,18 @@ class DropRunner(Subscriber):
         message.refresh_from_db()
         source = str(message.customer.phone_number)
         self.logger.info(f"Received payment {payment} from {source}")
-        receipt_status = None
-        transaction_status = "TransactionPending"
 
-        if isinstance(source, dict):
-            source = source["number"]
+        amount_paid_mob = payment.amount_mob
 
-        self.logger.info(f"received receipt {payment.signal_payment.receipt}")
-        receipt = mc_util.b64_receipt_to_full_service_receipt(payment.signal_payment.receipt)
-
-        while transaction_status == PaymentStatus.TransactionPending:
-            receipt_status = self.payments.mcc.check_receiver_receipt_status(
-                self.payments.mcc.public_address, receipt
-            )
-            transaction_status = receipt_status["receipt_transaction_status"]
-            self.logger.info(f"Waiting for {receipt}, current status {receipt_status}")
-
-        if transaction_status != PaymentStatus.TransactionSuccess:
-            self.logger.error(f"failed {transaction_status}")
-            return "The transaction failed!"
-
-        amount_paid_mob = mc.pmob2mob(receipt_status["txo"]["value_pmob"])
         customer = payment.message.customer
-        drop_session = customer.drop_sessions.filter(state=SessionState.WAITING_FOR_PAYMENT).first()
+        drop_session = customer.sessions_awaiting_payment().first()
 
         if drop_session:
             self.logger.info(f"Found drop session {drop_session} awaiting payment")
             if drop_session.drop.drop_type == DropType.AIRDROP:
                 air_drop = AirDropSession(self.store, self.payments, self.messenger)
                 air_drop.handle_airdrop_payment(
-                    source, customer, amount_paid_mob, drop_session
+                    customer, amount_paid_mob, drop_session
                 )
             elif drop_session.drop.drop_type == DropType.ITEM:
                 item_drop = ItemDropSession(self.store, self.payments, self.messenger)

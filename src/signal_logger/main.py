@@ -7,10 +7,10 @@ from mobot_client.concurrency import AutoCleanupExecutor
 
 from signald import Signal as _Signal
 from signald.types import Message as SignalMessage
+from django.conf import settings
 
 from mobot_client.models.messages import Message
 from mobot_client.payments import Payments
-from mobot_client.payments.client import MCClient
 
 
 
@@ -65,7 +65,7 @@ class SignalLogger:
         self._run = True
         self.logger.debug("Registering interrupt handler...")
         messages = self._signal.receive_messages()
-        with AutoCleanupExecutor(max_workers=4) as pool:
+        with AutoCleanupExecutor(max_workers=settings.MAX_MESSAGE_CONCURRENCY) as pool:
             while self._run:
                 try:
                     signal_message = next(messages)

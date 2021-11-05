@@ -25,7 +25,7 @@ class AirDropSession(BaseDropSession):
     def bonus_coin_funds_available(self, drop_session: DropSession) -> bool:
         return self.payments.has_enough_funds_for_payment(drop_session.bonus_coin_claimed.amount_mob)
 
-    def handle_airdrop_payment(self, source, customer: Customer, amount_paid_mob: Decimal, drop_session: DropSession):
+    def handle_airdrop_payment(self, customer: Customer, amount_paid_mob: Decimal, drop_session: DropSession):
         refunded = False
         try:
             claimed_coin: BonusCoin = BonusCoin.objects.claim_random_coin_for_session(drop_session)
@@ -38,7 +38,7 @@ class AirDropSession(BaseDropSession):
                 raise NotEnoughFundsException("Not enough MOB in wallet to cover bonus coin")
             ###  This will stop us from sending an initial payment if bonus coins aren't available
         except (OutOfStockException, NotEnoughFundsException) as e:
-            self.logger.exception(f"Could not fulfill drop to customer {customer}")
+            self.logger.warning(f"Could not fulfill drop to customer {customer} because we're out of coins.")
             if not refunded:
                 self.messenger.log_and_send_message(
                     ChatStrings.BONUS_SOLD_OUT_REFUND.format(amount=amount_paid_mob.normalize())
@@ -94,16 +94,19 @@ class AirDropSession(BaseDropSession):
             )
         elif message.text.lower() == "y" or message.text.lower() == "yes":
             if not self.under_drop_quota(drop_session.drop):
+                self.logger.info("Got message while airdrop over")
                 self.messenger.log_and_send_message(
                     ChatStrings.AIRDROP_OVER
                 )
                 drop_session.state = SessionState.CANCELLED
             elif not self.initial_coin_funds_available(drop_session.drop):
+                self.logger.info("Got message while airdrop over")
                 self.messenger.log_and_send_message(
                     ChatStrings.AIRDROP_OVER
                 )
                 drop_session.state = SessionState.CANCELLED
             else:
+                self.logger.info(f"Sending initial mob to {message.customer.phone_number}")
                 amount_in_mob = drop_session.drop.initial_coin_amount_mob
                 value_in_currency = amount_in_mob * Decimal(
                     drop_session.drop.conversion_rate_mob_to_currency
@@ -167,6 +170,7 @@ class AirDropSession(BaseDropSession):
 
     def handle_active_airdrop_drop_session(self, message: Message, drop_session: DropSession):
         if not drop_session.drop.under_quota():
+            self.logger.info("Over quota")
             self.handle_over_quota(drop_session)
         elif drop_session.state == SessionState.READY:
             self.handle_airdrop_session_ready_to_receive(message, drop_session)

@@ -1,5 +1,7 @@
 # Copyright (c) 2021 MobileCoin. All rights reserved.
 from django.contrib import admin
+import mc_util
+import json
 
 from .models import (
     Store,
@@ -20,6 +22,7 @@ from .models.messages import (
     Payment,
     RawSignalMessage
 )
+
 
 class StoreAdmin(admin.ModelAdmin):
     pass
@@ -57,8 +60,9 @@ class DropSessionAdmin(admin.ModelAdmin):
 
 
 class MessageAdmin(admin.ModelAdmin):
-    list_display = ('id', 'time_seconds', 'customer', 'direction', 'text', 'payment_friendly')
-    readonly_fields = ('payment_friendly',)
+    list_display = ('id', 'time_seconds', 'customer', 'direction', 'text_friendly', 'payment_friendly')
+    readonly_fields = ('text_friendly', 'payment_friendly',)
+    exclude = ('payment', 'text',)
 
     @admin.display(description='Precise Time', ordering='date')
     def time_seconds(self, obj: Message):
@@ -68,6 +72,11 @@ class MessageAdmin(admin.ModelAdmin):
     def payment_friendly(self, obj: Message):
         if obj.payment:
             return f"{obj.payment.amount_mob:.4f} MOB"
+
+    @admin.display(description='text')
+    def text_friendly(self, obj: Message):
+        if obj.text:
+            return obj.text
 
 
 class BonusCoinAdmin(admin.ModelAdmin):
@@ -118,12 +127,33 @@ class DropAdmin(admin.ModelAdmin):
 
 
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('customer', 'status', 'direction_friendly', 'status', 'updated', 'amount_mob',)
-    readonly_fields = ('customer', 'status', 'direction_friendly', 'updated', 'amount_mob',)
+    list_display = ('customer', 'status', 'direction_friendly', 'status', 'updated', 'amount_mob', 'raw_receipt',)
+    readonly_fields = ('customer', 'status', 'direction_friendly', 'updated', 'amount_mob', 'txo_id', 'memo', 'parsed_receipt', 'related_message',)
+    exclude = ('signal_payment', 'message')
 
     @admin.display(description="direction")
     def direction_friendly(self, obj: Payment):
         return obj.message.get_direction_display()
+
+    @admin.display(description="parsed receipt")
+    def parsed_receipt(self, obj: Payment):
+        if obj.signal_payment:
+            return json.dumps(mc_util.b64_receipt_to_full_service_receipt(obj.signal_payment.receipt), indent=2)
+
+    @admin.display(description="receipt")
+    def raw_receipt(self, obj: Payment):
+        if obj.signal_payment:
+            return obj.signal_payment.receipt
+
+    @admin.display(description="receipt memo")
+    def memo(self, obj: Payment):
+        if obj.signal_payment:
+            return obj.signal_payment.note
+
+    @admin.display(description="related_message")
+    def related_message(self, obj: Payment):
+        if hasattr(obj, 'message'):
+            return obj.message
 
 
 class MobotResponseAdmin(admin.ModelAdmin):
